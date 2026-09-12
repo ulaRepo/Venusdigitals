@@ -3,9 +3,9 @@
     if (window.__DIGITAL_GROWNT_FEATURE_PAGES__) return;
     window.__DIGITAL_GROWNT_FEATURE_PAGES__ = true;
     const page = location.pathname.split('/').pop().toLowerCase();
-    const isAdmin = location.pathname.includes('/frontend/admin/');
+    const isAdmin = location.pathname.includes('/admin/');
     const API = isAdmin ? '/admin/dashboard/feature' : '/user/dashboard/feature';
-    const USER_NAV = ['/frontend/user/dashboard.html','/frontend/user/deposits.html','/frontend/user/withdrawals.html','/frontend/user/connect-wallet.html','/frontend/user/buy-plan.html','/frontend/user/cards.html','/frontend/user/portfolio.html','/frontend/user/copy-trading.html','/frontend/user/bot-trading.html','/frontend/user/markets.html','/frontend/user/mining.html','/frontend/user/trade.html','/frontend/user/real-estate.html','/frontend/user/my-loans.html','/frontend/user/stocks.html','/frontend/user/courses.html','/frontend/user/singalssubscriptions.html','/frontend/user/accounthistory.html','/frontend/user/tradinghistory.html','/frontend/user/transfer-funds.html','/frontend/user/support.html'];
+    const USER_NAV = ['/user/dashboard.html','/user/deposits.html','/user/withdrawals.html','/user/connect-wallet.html','/user/buy-plan.html','/user/cards.html','/user/portfolio.html','/user/copy-trading.html','/user/bot-trading.html','/user/markets.html','/user/mining.html','/user/trade.html','/user/real-estate.html','/user/my-loans.html','/user/stocks.html','/user/courses.html','/user/singalssubscriptions.html','/user/accounthistory.html','/user/tradinghistory.html','/user/transfer-funds.html','/user/support.html'];
     const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({
     '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'
   }
@@ -61,7 +61,7 @@
     });
     document.querySelectorAll('a[href^="/dashboard/"]').forEach(a=>{
       const p=a.getAttribute('href');
-      a.setAttribute('href','/frontend/user/'+p.slice('/dashboard/'.length).replace(/\/$/, '')+'.html')
+      a.setAttribute('href','/user/'+p.slice('/dashboard/'.length).replace(/\/$/, '')+'.html')
     })
   }
     function hideDynamicMain(){
@@ -87,7 +87,7 @@
     window.MARK_READ_URL=API+'/user/dashboard/notifications/read-all';
     window.NOTIF_UNREAD_URL=API+'/user/dashboard/notifications/unread';
     window.NOTIF_READ_BASE=API+'/user/dashboard/notifications';
-    window.NOTIF_PAGE_URL='/frontend/user/notification.html';
+    window.NOTIF_PAGE_URL='/user/notification.html';
   }
     async function refreshUnreadChrome(){
     ensureNotifEndpoints();
@@ -101,9 +101,26 @@
   }
     function applyKycChrome(user){
     const status=String(user.verificationStatus||user.verification_status||'not_verified').toLowerCase();
-    const kycIcon=document.querySelector('.kyc-pulse-icon');
+    let kycIcon=document.querySelector('.kyc-pulse-icon');
+    if(!kycIcon){
+      // Fallback: static KYC widget used on some templates (buy-plan/cards)
+      const candidates=[...document.querySelectorAll('a[href*="verify-account"], a[title*="Verify"], a[title*="KYC"], div[title*="KYC"], div[title*="Verify"], div[title*="Verification"]')];
+      kycIcon=candidates.find(el=>el.querySelector('i.fa-solid,i.fa-regular'))||null;
+      if(kycIcon && kycIcon.tagName==='DIV'){
+        const a=document.createElement('a');
+        a.className=(kycIcon.className||'')+' kyc-pulse-icon';
+        a.href='/user/verify-account.html';
+        a.innerHTML=kycIcon.innerHTML;
+        a.style.cssText=kycIcon.getAttribute('style')||'';
+        a.title=kycIcon.getAttribute('title')||'Verify Your Identity';
+        kycIcon.replaceWith(a);
+        kycIcon=a;
+      }else if(kycIcon){
+        kycIcon.classList.add('kyc-pulse-icon');
+      }
+    }
     if(!kycIcon)return;
-    kycIcon.setAttribute('href','/frontend/user/verify-account.html');
+    kycIcon.setAttribute('href','/user/verify-account.html');
     const icon=kycIcon.querySelector('i');
     if(status==='verified'){
       kycIcon.removeAttribute('href');
@@ -187,10 +204,10 @@
         try {
           const destination = new URL(url, window.location.href);
           const pathname = destination.pathname;
-          if (pathname === '/dashboard' || pathname === '/dashboard/') window.location.href = '/frontend/user/dashboard.html';
-          else if (pathname.startsWith('/dashboard/')) window.location.href = '/frontend/user/' + pathname.slice('/dashboard/'.length).replace(/\/$/, '') + '.html';
-          else if (pathname.startsWith('/user/') && !pathname.startsWith('/frontend/')) window.location.href = '/frontend' + pathname + (pathname.endsWith('.html')?'':'.html');
-          else window.location.href = destination.pathname.startsWith('/frontend/') ? destination.pathname+destination.search : destination.href;
+          if (pathname === '/dashboard' || pathname === '/dashboard/') window.location.href = '/user/dashboard.html';
+          else if (pathname.startsWith('/dashboard/')) window.location.href = '/user/' + pathname.slice('/dashboard/'.length).replace(/\/$/, '') + '.html';
+          else if (pathname.startsWith('/user/')) window.location.href = '/' + pathname + (pathname.endsWith('.html')?'':'.html');
+          else window.location.href = destination.pathname.startsWith('/') ? destination.pathname+destination.search : destination.href;
         } catch (_) {
           window.location.href = url;
         }
@@ -237,7 +254,7 @@
       return u;
     }catch(e){
       if((e.response&&e.response.status===401)||String(e.message||'').includes('Authentication')){
-        location.href='/frontend/login.html';
+        location.href='/login.html';
       }
       console.warn('loadProfile failed',e);
       return null;
@@ -265,7 +282,7 @@
     }
     catch(e){
       if(e.message.includes('disabled')){
-        location.replace('/frontend/user/dashboard.html');
+        location.replace('/user/dashboard.html');
         return
       }
       toast(e.message,false);
@@ -378,7 +395,7 @@
     function investmentRow(i){
     const p=i.plan||{
     };
-    return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[14px] flex items-center gap-3"><div class="flex-1"><div class="text-white font-medium">${esc(p.name||'Investment')}</div><div class="text-[#555] text-[.72rem] mt-1">${esc(i.active)} · ${money(i.amount)}</div></div><div class="text-right"><div class="text-grn text-[.8rem]">${money(i.profit_earned)}</div><div class="text-[#555] text-[.68rem]">Profit</div></div><a class="text-blue2" href="/frontend/user/plan-details.html?id=${encodeURIComponent(i._id)}"><i class="fa-solid fa-chevron-right"></i></a></div>`
+    return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[14px] flex items-center gap-3"><div class="flex-1"><div class="text-white font-medium">${esc(p.name||'Investment')}</div><div class="text-[#555] text-[.72rem] mt-1">${esc(i.active)} · ${money(i.amount)}</div></div><div class="text-right"><div class="text-grn text-[.8rem]">${money(i.profit_earned)}</div><div class="text-[#555] text-[.68rem]">Profit</div></div><a class="text-blue2" href="/user/plan-details.html?id=${encodeURIComponent(i._id)}"><i class="fa-solid fa-chevron-right"></i></a></div>`
   }
     async function myPlans(){
     const root=inner();
@@ -416,7 +433,7 @@
         const x=await post('/investments/'+encodeURIComponent(id)+'/cancel',{
         });
         toast(x.message,true);
-        location.href='/frontend/user/myplans.html'
+        location.href='/user/myplans.html'
       }
       catch(e){
         toast(e.message,false)
@@ -437,7 +454,7 @@
     </span></div>${
       c.status==='active'?`<div class="grid grid-cols-2 gap-3 mt-4 text-[.76rem]"><div><span class="text-[#555]">Expiry</span><div class="text-white">${esc(c.expiry_display||'--/--')}</div></div><div><span class="text-[#555]">Balance</span><div class="text-white">${money(c.balance)}</div></div></div>`:''
     }
-    </div>`).join(''):'<div class="text-center py-12 text-[#555]">No cards yet.</div>'}<a href="/frontend/user/apply-card.html" class="block w-full py-[11px] rounded-[10px] bg-brand-blue text-white text-center">Apply for Your First Card</a></div>`
+    </div>`).join(''):'<div class="text-center py-12 text-[#555]">No cards yet.</div>'}<a href="/user/apply-card.html" class="block w-full py-[11px] rounded-[10px] bg-brand-blue text-white text-center">Apply for Your First Card</a></div>`
   }
     async function applyCard(){
     const root=inner(),d=await get('/card-types');
@@ -466,7 +483,7 @@
         });
         toast(x.message,true);
         notify('Card Application Submitted',x.message);
-        location.href='/frontend/user/cards.html'
+        location.href='/user/cards.html'
       }
       catch(err){
         toast(err.message,false)
@@ -486,7 +503,7 @@
       c[0].toUpperCase()+c.slice(1)
     }
     </button>`).join('')}</div><div id="marketAssets" class="space-y-[7px]"></div>`;
-    const render=xs=>document.getElementById('marketAssets').innerHTML=xs.length?xs.map(x=>`<div onclick="location.href='/frontend/user/trade.html'" class="bg-[#111] border border-[#1e1e1e] rounded-[11px] p-[12px] flex items-center gap-3 cursor-pointer"><div class="w-9 h-9 rounded-full bg-[#1a1a1a] flex items-center justify-center overflow-hidden">${x.logo_url?`<img src="${esc(x.logo_url)}" class="w-full h-full object-cover">`:esc(String(x.symbol||'?').slice(0,1))}</div><div class="flex-1"><div class="text-white text-[.84rem]">${esc(x.name)}</div><div class="text-[#555] text-[.68rem]">${esc(x.symbol)}</div></div><div class="text-right"><div class="text-white text-[.82rem]">${money(x.price,'$')}</div><div class="text-[.68rem] ${Number(x.price_change_pct_24h||x.change_24h)>=0?'text-grn':'text-red2'}">${Number(x.price_change_pct_24h||x.change_24h)>=0?'+':''}${Number(x.price_change_pct_24h||x.change_24h).toFixed(2)}%</div></div></div>`).join(''):'<div class="text-center py-12 text-[#555]">No assets in this class</div>';
+    const render=xs=>document.getElementById('marketAssets').innerHTML=xs.length?xs.map(x=>`<div onclick="location.href='/user/trade.html'" class="bg-[#111] border border-[#1e1e1e] rounded-[11px] p-[12px] flex items-center gap-3 cursor-pointer"><div class="w-9 h-9 rounded-full bg-[#1a1a1a] flex items-center justify-center overflow-hidden">${x.logo_url?`<img src="${esc(x.logo_url)}" class="w-full h-full object-cover">`:esc(String(x.symbol||'?').slice(0,1))}</div><div class="flex-1"><div class="text-white text-[.84rem]">${esc(x.name)}</div><div class="text-[#555] text-[.68rem]">${esc(x.symbol)}</div></div><div class="text-right"><div class="text-white text-[.82rem]">${money(x.price,'$')}</div><div class="text-[.68rem] ${Number(x.price_change_pct_24h||x.change_24h)>=0?'text-grn':'text-red2'}">${Number(x.price_change_pct_24h||x.change_24h)>=0?'+':''}${Number(x.price_change_pct_24h||x.change_24h).toFixed(2)}%</div></div></div>`).join(''):'<div class="text-center py-12 text-[#555]">No assets in this class</div>';
     render(a);
     root.querySelectorAll('[data-cat]').forEach(b=>b.onclick=async()=>{
       const x=await get('/assets?asset_class='+b.dataset.cat);
@@ -519,7 +536,7 @@
       %</div><div class="text-[#555] text-[.62rem]">Win Rate</div></div><div><div class="text-white font-bold">${
         num(e.duration_days)
       }
-      </div><div class="text-[#555] text-[.62rem]">Days</div></div></div><a href="/frontend/user/copytrader-details.html?id=${e._id}" class="block mt-4 text-center py-2 rounded-lg bg-brand-blue text-white text-[.78rem]">View Expert</a></div>`).join('')}</div>`;
+      </div><div class="text-[#555] text-[.62rem]">Days</div></div></div><a href="/user/copytrader-details.html?id=${e._id}" class="block mt-4 text-center py-2 rounded-lg bg-brand-blue text-white text-[.78rem]">View Expert</a></div>`).join('')}</div>`;
 
     }
         function positions(){
@@ -543,7 +560,7 @@
       </div></div><div><span class="text-[#555]">Payout</span><div class="text-white">${
         money(payout)
       }
-      </div></div></div><div class="mt-3 h-[5px] bg-[#1a1a1a] rounded-full"><div style="width:${progress}%;height:100%;background:#4a6cf7"></div></div><a href="/frontend/user/copy-trading-position.html?id=${p._id}" class="block mt-3 text-center py-2 rounded-lg bg-brand-blue text-white text-[.78rem]">View Position</a></div>`}).join('')}</div>`;
+      </div></div></div><div class="mt-3 h-[5px] bg-[#1a1a1a] rounded-full"><div style="width:${progress}%;height:100%;background:#4a6cf7"></div></div><a href="/user/copy-trading-position.html?id=${p._id}" class="block mt-3 text-center py-2 rounded-lg bg-brand-blue text-white text-[.78rem]">View Position</a></div>`}).join('')}</div>`;
 
     }
         experts();
@@ -565,7 +582,7 @@
      · Profit ${
       money(p.accumulated_profit)
     }
-    </div><a class="block mt-3 text-center py-2 rounded-lg bg-brand-blue text-white" href="/frontend/user/copy-trading-position.html?id=${p._id}">View Position</a></div>`:`<form id="copyStart" class="mt-4"><label class="text-[#555] text-[.68rem]">Investment Amount</label><input name="amount" type="number" min="${e.min_startup_capital}" ${
+    </div><a class="block mt-3 text-center py-2 rounded-lg bg-brand-blue text-white" href="/user/copy-trading-position.html?id=${p._id}">View Position</a></div>`:`<form id="copyStart" class="mt-4"><label class="text-[#555] text-[.68rem]">Investment Amount</label><input name="amount" type="number" min="${e.min_startup_capital}" ${
       e.max_capital?`max="${e.max_capital}"`:''
     }
      required class="w-full mt-2 bg-[#0d0d0d] border border-[#1e1e1e] rounded-lg p-3 text-white"><div id="dailyProfit" class="text-grn text-[.78rem] mt-2">Estimated Daily Profit: ${
@@ -587,7 +604,7 @@
           });
           toast(x.message,true);
           notify('Started Copying Expert',x.message);
-          location.href='/frontend/user/copy-trading.html'
+          location.href='/user/copy-trading.html'
         }
         catch(err){
           toast(err.message,false)
@@ -612,7 +629,7 @@
         const x=await post('/copy/stop/'+id,{
         });
         toast(x.message,true);
-        location.href='/frontend/user/copy-trading.html'
+        location.href='/user/copy-trading.html'
       }
       catch(err){
         toast(err.message,false)
@@ -645,7 +662,7 @@
       %</div><div class="text-[#555] text-[.62rem]">Win Rate</div></div><div><div class="text-white">${
         b.max_duration_days||30
       }
-      </div><div class="text-[#555] text-[.62rem]">Days</div></div></div><a href="/frontend/user/bot-trading-details.html?id=${b._id}" class="block mt-4 text-center py-2 rounded-lg bg-brand-blue text-white text-[.78rem]">View Bot</a></div>`).join('')}</div>`;
+      </div><div class="text-[#555] text-[.62rem]">Days</div></div></div><a href="/user/bot-trading-details.html?id=${b._id}" class="block mt-4 text-center py-2 rounded-lg bg-brand-blue text-white text-[.78rem]">View Bot</a></div>`).join('')}</div>`;
 
     }
         function renderSubs(){
@@ -701,7 +718,7 @@
           amount:Number(e.currentTarget.amount.value)
         });
         toast(x.message,true);
-        location.href='/frontend/user/bot-trading.html'
+        location.href='/user/bot-trading.html'
       }
       catch(err){
         toast(err.message,false)
@@ -713,7 +730,7 @@
         const x=await post('/bots/stop/'+s._id,{
         });
         toast(x.message,true);
-        location.href='/frontend/user/bot-trading.html'
+        location.href='/user/bot-trading.html'
       }
       catch(err){
         toast(err.message,false)
@@ -745,7 +762,7 @@
       p.duration_days
     }
      days</div></div></div><button data-mine="${p._id}" class="w-full mt-3 py-2 rounded-lg bg-brand-blue text-white">Start Mining</button></div>`).join(''):'<div class="text-center py-12 text-[#555]">No mining plans available.</div>'}</div>${active.length?`<div class="mt-5"><div class="text-[#444] text-[.68rem] uppercase mb-2">Active Rigs</div><div class="space-y-2">${
-      active.map(s=>`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-3"><div class="flex justify-between"><div class="text-white">${esc(s.mining_plan_id?.name||'Mining Plan')}</div><span class="text-grn text-[.68rem]">active</span></div><div class="text-[#666] text-[.72rem] mt-2">Invested ${money(s.invested_amount)} · Earned ${money(s.accumulated_profit)} · ${daysLeft(s.expires_at)} days left</div><div class="h-[5px] bg-[#1a1a1a] rounded-full mt-2"><div style="width:${Math.min(100,Math.max(0,(Date.now()-new Date(s.started_at))/((new Date(s.expires_at)-new Date(s.started_at))||1)*100))}%;height:100%;background:#4a6cf7"></div></div><div class="flex gap-2 mt-3"><a class="flex-1 text-center py-2 rounded-lg bg-brand-blue text-white text-[.75rem]" href="/frontend/user/subscription-mining.html?id=${s._id}">View Details</a><button data-stopmine="${s._id}" class="flex-1 py-2 rounded-lg bg-[rgba(255,69,96,.1)] text-red2 text-[.75rem]">Stop Rig</button></div></div>`).join('')
+      active.map(s=>`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-3"><div class="flex justify-between"><div class="text-white">${esc(s.mining_plan_id?.name||'Mining Plan')}</div><span class="text-grn text-[.68rem]">active</span></div><div class="text-[#666] text-[.72rem] mt-2">Invested ${money(s.invested_amount)} · Earned ${money(s.accumulated_profit)} · ${daysLeft(s.expires_at)} days left</div><div class="h-[5px] bg-[#1a1a1a] rounded-full mt-2"><div style="width:${Math.min(100,Math.max(0,(Date.now()-new Date(s.started_at))/((new Date(s.expires_at)-new Date(s.started_at))||1)*100))}%;height:100%;background:#4a6cf7"></div></div><div class="flex gap-2 mt-3"><a class="flex-1 text-center py-2 rounded-lg bg-brand-blue text-white text-[.75rem]" href="/user/subscription-mining.html?id=${s._id}">View Details</a><button data-stopmine="${s._id}" class="flex-1 py-2 rounded-lg bg-[rgba(255,69,96,.1)] text-red2 text-[.75rem]">Stop Rig</button></div></div>`).join('')
     }
     </div></div>`:''}`;
     root.querySelectorAll('[data-mine]').forEach(b=>b.onclick=()=>mineForm(d.plans.find(p=>String(p._id)===b.dataset.mine)));
@@ -786,7 +803,7 @@
     async function dashboard(){
     const d=await get('/assets?asset_class=all'),root=document.getElementById('topAssetsContainer');
     if(!root)return;
-    const render=xs=>root.innerHTML=xs.length?xs.slice(0,12).map(a=>`<div class="asset-row flex items-center gap-[14px] py-[14px] px-[18px] border-b border-[#0d0d0d] cursor-pointer" onclick="location.href='/frontend/user/trade.html'"><div class="w-[44px] h-[44px] rounded-full bg-[#1a1a1a] flex items-center justify-center overflow-hidden">${a.logo_url?`<img src="${esc(a.logo_url)}" class="w-full h-full object-cover">`:esc(String(a.symbol||'?').slice(0,1))}</div><div class="flex-1"><div class="text-white font-medium">${esc(a.name)}</div><div class="text-[#555] text-[.72rem]">${esc(a.symbol)}</div></div><div class="text-right"><div class="text-white">${money(a.price,'$')}</div><div class="${Number(a.price_change_pct_24h||a.change_24h)>=0?'text-grn':'text-red2'} text-[.7rem]">${Number(a.price_change_pct_24h||a.change_24h)>=0?'+':''}${Number(a.price_change_pct_24h||a.change_24h).toFixed(2)}%</div></div></div>`).join(''):'<div class="text-center py-10 text-[#555]">No active assets are available.</div>';
+    const render=xs=>root.innerHTML=xs.length?xs.slice(0,12).map(a=>`<div class="asset-row flex items-center gap-[14px] py-[14px] px-[18px] border-b border-[#0d0d0d] cursor-pointer" onclick="location.href='/user/trade.html'"><div class="w-[44px] h-[44px] rounded-full bg-[#1a1a1a] flex items-center justify-center overflow-hidden">${a.logo_url?`<img src="${esc(a.logo_url)}" class="w-full h-full object-cover">`:esc(String(a.symbol||'?').slice(0,1))}</div><div class="flex-1"><div class="text-white font-medium">${esc(a.name)}</div><div class="text-[#555] text-[.72rem]">${esc(a.symbol)}</div></div><div class="text-right"><div class="text-white">${money(a.price,'$')}</div><div class="${Number(a.price_change_pct_24h||a.change_24h)>=0?'text-grn':'text-red2'} text-[.7rem]">${Number(a.price_change_pct_24h||a.change_24h)>=0?'+':''}${Number(a.price_change_pct_24h||a.change_24h).toFixed(2)}%</div></div></div>`).join(''):'<div class="text-center py-10 text-[#555]">No active assets are available.</div>';
     render(d.assets||[]);
     document.querySelectorAll('[data-asset-class],.asset-filter-pill').forEach(b=>b.onclick=async()=>{
       const c=b.dataset.assetClass||b.dataset.class||'all';
@@ -817,7 +834,7 @@
   }
     async function adminPlans(){
     const m=adminMain(),d=await get('/plans');
-    m.innerHTML=adminShell('Investment Plans','Manage system investment plans')+`<div class="flex justify-end"><a href="/frontend/admin/new-plan.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">New Plan</a></div><div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">${d.plans.length?d.plans.map(p=>`<div class="bg-surface-card rounded-xl border border-border shadow-card p-5"><div class="flex justify-between"><div><h3 class="font-semibold text-content">${
+    m.innerHTML=adminShell('Investment Plans','Manage system investment plans')+`<div class="flex justify-end"><a href="/admin/new-plan.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">New Plan</a></div><div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">${d.plans.length?d.plans.map(p=>`<div class="bg-surface-card rounded-xl border border-border shadow-card p-5"><div class="flex justify-between"><div><h3 class="font-semibold text-content">${
       esc(p.name)
     }
     </h3><p class="text-xs text-content-muted mt-1">${
@@ -838,7 +855,7 @@
     %</div></div><div><span class="text-content-muted">Duration</span><div class="text-content font-medium">${
       esc(p.expiration||`${p.duration} Days`)
     }
-    </div></div></div><div class="flex gap-2 mt-5"><a href="/frontend/admin/edit-plan.html?id=${p._id}" class="flex-1 text-center px-3 py-2 rounded-lg border border-border text-content text-sm">Edit</a><button data-del-plan="${p._id}" class="px-3 py-2 rounded-lg bg-danger/10 text-danger text-sm">Delete</button></div></div>`).join(''):'<div class="col-span-full text-center py-16 text-content-muted">No investment plans have been created.</div>'}</div>`;
+    </div></div></div><div class="flex gap-2 mt-5"><a href="/admin/edit-plan.html?id=${p._id}" class="flex-1 text-center px-3 py-2 rounded-lg border border-border text-content text-sm">Edit</a><button data-del-plan="${p._id}" class="px-3 py-2 rounded-lg bg-danger/10 text-danger text-sm">Delete</button></div></div>`).join(''):'<div class="col-span-full text-center py-16 text-content-muted">No investment plans have been created.</div>'}</div>`;
     m.querySelectorAll('[data-del-plan]').forEach(b=>b.onclick=async()=>{
       if(!confirm('Delete this investment plan?'))return;
       try{
@@ -862,7 +879,7 @@
     m.innerHTML=adminShell(edit?'Update Plan':'Add Investment Plan','Configure investment plan')+`<form id="adminPlanForm" class="bg-surface-card rounded-xl border border-border shadow-card p-6 space-y-5"><div class="grid grid-cols-1 md:grid-cols-2 gap-4">${[['name','Plan Name','text',p.name||''],['price','Plan Price ($)','number',p.price||0],['min_price','Min Deposit','number',(p.min_price??p.min)||0],['max_price','Max Deposit','number',(p.max_price??p.max)||0],['minr','Min Return','number',(p.minr??p.min_return)||0],['maxr','Max Return','number',(p.maxr??p.max_return)||0],['duration','Duration','number',p.duration||30],['expiration','Expiration','text',p.expiration||'30 Days'],['tag','Tag','text',p.tag||''],['t_interval','Increment Interval','text',p.increment_interval||'Daily'],['t_type','Increment Type','text',p.increment_type||'Percentage'],['t_amount','Increment Amount','number',(p.increment_amount??p.return)||0]].map(x=>`<label class="text-sm text-content-secondary">${
       x[1]
     }
-    <input name="${x[0]}" type="${x[2]}" value="${esc(x[3])}" class="mt-1.5 w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-content"></label>`).join('')}</div><label class="flex items-center gap-2 text-sm text-content"><input name="status" type="checkbox" ${p.status!=='inactive'?'checked':''}> Active</label><div class="flex gap-3"><button class="px-4 py-2 rounded-lg bg-primary text-white">${edit?'Update Plan':'Create Plan'}</button><a href="/frontend/admin/plans.html" class="px-4 py-2 rounded-lg border border-border text-content">Cancel</a></div></form>`;
+    <input name="${x[0]}" type="${x[2]}" value="${esc(x[3])}" class="mt-1.5 w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-content"></label>`).join('')}</div><label class="flex items-center gap-2 text-sm text-content"><input name="status" type="checkbox" ${p.status!=='inactive'?'checked':''}> Active</label><div class="flex gap-3"><button class="px-4 py-2 rounded-lg bg-primary text-white">${edit?'Update Plan':'Create Plan'}</button><a href="/admin/plans.html" class="px-4 py-2 rounded-lg border border-border text-content">Cancel</a></div></form>`;
     m.querySelector('#adminPlanForm').onsubmit=async e=>{
       e.preventDefault();
       const b=Object.fromEntries(new FormData(e.currentTarget));
@@ -870,7 +887,7 @@
       try{
         const x=edit?await put('/plans/'+id,b):await post('/plans',b);
         toast(x.message,true);
-        location.href='/frontend/admin/plans.html'
+        location.href='/admin/plans.html'
       }
       catch(err){
         toast(err.message,false)
@@ -879,7 +896,7 @@
   }
     async function adminCards(){
     const m=adminMain(),d=await get('/cards');
-    m.innerHTML=adminShell('Digital Cards','Manage card types and user applications')+statCards([['Pending',d.stats.pending],['Active Cards',d.stats.active],['Frozen',d.stats.frozen],['Card Types',d.stats.types]])+`<div class="flex justify-end"><a href="/frontend/admin/cards-create.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">New Card Type</a></div><div class="bg-surface-card rounded-xl border border-border shadow-card p-5"><h2 class="font-semibold text-content mb-4">Card Types</h2><div class="space-y-3">${d.types.map(t=>`<div class="flex items-center justify-between border-b border-border pb-3"><div><div class="font-medium text-content">${
+    m.innerHTML=adminShell('Digital Cards','Manage card types and user applications')+statCards([['Pending',d.stats.pending],['Active Cards',d.stats.active],['Frozen',d.stats.frozen],['Card Types',d.stats.types]])+`<div class="flex justify-end"><a href="/admin/cards-create.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">New Card Type</a></div><div class="bg-surface-card rounded-xl border border-border shadow-card p-5"><h2 class="font-semibold text-content mb-4">Card Types</h2><div class="space-y-3">${d.types.map(t=>`<div class="flex items-center justify-between border-b border-border pb-3"><div><div class="font-medium text-content">${
       esc(t.name)
     }
     </div><div class="text-xs text-content-muted">${
@@ -891,7 +908,7 @@
      · Fee ${
       money(t.fee)
     }
-    </div></div><div class="flex gap-2"><a href="/frontend/admin/cards-edit.html?id=${t._id}" class="text-sm text-primary">Edit</a><button data-cardtoggle="${t._id}" class="text-sm ${t.is_active?'text-danger':'text-success'}">${
+    </div></div><div class="flex gap-2"><a href="/admin/cards-edit.html?id=${t._id}" class="text-sm text-primary">Edit</a><button data-cardtoggle="${t._id}" class="text-sm ${t.is_active?'text-danger':'text-success'}">${
       t.is_active?'Disable':'Enable'
     }
     </button></div></div>`).join('')}</div></div><div class="bg-surface-card rounded-xl border border-border shadow-card p-5"><h2 class="font-semibold text-content mb-4">Applications</h2><div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">User</th><th>Card</th><th>Status</th><th></th></tr></thead><tbody>${d.cards.map(c=>`<tr class="border-t border-border"><td class="py-3">${
@@ -903,7 +920,7 @@
     </td><td>${
       esc(c.status)
     }
-    </td><td><a class="text-primary" href="/frontend/admin/cards-view.html?id=${c._id}">View</a></td></tr>`).join('')}</tbody></table></div></div>`;
+    </td><td><a class="text-primary" href="/admin/cards-view.html?id=${c._id}">View</a></td></tr>`).join('')}</tbody></table></div></div>`;
     m.querySelectorAll('[data-cardtoggle]').forEach(b=>b.onclick=async()=>{
       try{
         const x=await post('/card-types/'+b.dataset.cardtoggle+'/toggle',{
@@ -932,7 +949,7 @@
       try{
         const x=edit?await put('/card-types/'+id,b):await post('/card-types',b);
         toast(x.message,true);
-        location.href='/frontend/admin/admin-cards.html'
+        location.href='/admin/admin-cards.html'
       }
       catch(err){
         toast(err.message,false)
@@ -947,7 +964,7 @@
     </span><div class="text-content font-medium mt-1">${
       esc(x[1]??'—')
     }
-    </div></div>`).join('')}</div><div class="flex flex-wrap gap-2 mt-6">${c.status==='pending'?`<button id="approveCard" class="px-4 py-2 rounded-lg bg-success text-white">Approve & Issue Card</button><button id="rejectCard" class="px-4 py-2 rounded-lg bg-danger text-white">Reject Application</button>`:`<a href="/frontend/admin/cards-edit-user.html?id=${c._id}" class="px-4 py-2 rounded-lg border border-border text-content">Edit Card Details</a>${
+    </div></div>`).join('')}</div><div class="flex flex-wrap gap-2 mt-6">${c.status==='pending'?`<button id="approveCard" class="px-4 py-2 rounded-lg bg-success text-white">Approve & Issue Card</button><button id="rejectCard" class="px-4 py-2 rounded-lg bg-danger text-white">Reject Application</button>`:`<a href="/admin/cards-edit-user.html?id=${c._id}" class="px-4 py-2 rounded-lg border border-border text-content">Edit Card Details</a>${
       c.status==='frozen'?'<button id="unfreezeCard" class="px-4 py-2 rounded-lg bg-success text-white">Unfreeze Card</button>':'<button id="freezeCard" class="px-4 py-2 rounded-lg bg-warning text-white">Freeze Card</button>'
     }
     <button id="cancelCard" class="px-4 py-2 rounded-lg bg-danger text-white">Cancel Card</button>`}</div>${c.status==='active'?'<div class="mt-6 bg-surface-card border border-border rounded-xl p-5"><h3 class="font-semibold text-content mb-3">Fund Card</h3><p class="text-sm text-content-muted">Card balance can be managed from the card account.</p></div>':''}</div>`;
@@ -1011,7 +1028,7 @@
     async function adminExperts(){
         const m=adminMain(),d=await get('/experts');
         const stats=[['Total Experts',d.experts.length],['Active Experts',d.experts.filter(x=>x.is_active).length],['Inactive Experts',d.experts.filter(x=>!x.is_active).length],['Total Followers',d.experts.reduce((s,x)=>s+Number(x.followers_count||0),0)]];
-        m.innerHTML=adminShell('Manage Expert Traders','Create and manage copy trading experts')+statCards(stats)+`<div class="flex justify-end"><a href="/frontend/admin/admin-experts-create.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Add New Expert</a></div><div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">${d.experts.map(e=>`<div class="bg-surface-card rounded-xl border border-border p-5"><div class="flex items-center gap-3"><img src="${esc(e.profile_picture||'/temp/wallet/other.png')}" class="w-10 h-10 rounded-full object-cover"><div><div class="font-medium text-content">${
+        m.innerHTML=adminShell('Manage Expert Traders','Create and manage copy trading experts')+statCards(stats)+`<div class="flex justify-end"><a href="/admin/admin-experts-create.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Add New Expert</a></div><div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">${d.experts.map(e=>`<div class="bg-surface-card rounded-xl border border-border p-5"><div class="flex items-center gap-3"><img src="${esc(e.profile_picture||'/temp/wallet/other.png')}" class="w-10 h-10 rounded-full object-cover"><div><div class="font-medium text-content">${
       esc(e.name)
     }
     </div><div class="text-xs text-content-muted">${
@@ -1026,7 +1043,7 @@
     %</div><div class="text-content-muted text-xs">Win</div></div><div><div class="text-content">${
       e.duration_days
     }
-    </div><div class="text-content-muted text-xs">Days</div></div></div><div class="flex gap-2 mt-4"><a href="/frontend/admin/admin-experts-view.html?id=${e._id}" class="text-primary text-sm px-2 py-2">View</a><a href="/frontend/admin/admin-experts-edit.html?id=${e._id}" class="flex-1 text-center text-sm px-3 py-2 rounded-lg border border-border">Edit</a><button data-expert-toggle="${e._id}" class="px-3 py-2 rounded-lg ${e.is_active?'text-danger':'text-success'}">${
+    </div><div class="text-content-muted text-xs">Days</div></div></div><div class="flex gap-2 mt-4"><a href="/admin/admin-experts-view.html?id=${e._id}" class="text-primary text-sm px-2 py-2">View</a><a href="/admin/admin-experts-edit.html?id=${e._id}" class="flex-1 text-center text-sm px-3 py-2 rounded-lg border border-border">Edit</a><button data-expert-toggle="${e._id}" class="px-3 py-2 rounded-lg ${e.is_active?'text-danger':'text-success'}">${
       e.is_active?'Disable':'Enable'
     }
     </button></div></div>`).join('')}</div>`;
@@ -1059,7 +1076,7 @@
       try{
         const x=edit?await put('/experts/'+id,b):await post('/experts',b);
         toast(x.message,true);
-        location.href='/frontend/admin/admin-experts.html'
+        location.href='/admin/admin-experts.html'
       }
       catch(err){
         toast(err.message,false)
@@ -1069,7 +1086,7 @@
     async function adminBots(){
         const m=adminMain(),d=await get('/bots');
         const stats=[['Total Bots',d.stats.totalBots],['Active Bots',d.stats.activeBots],['Active Subscribers',d.stats.activeSubscribers],['Total Invested',money(d.stats.totalInvested)]];
-        m.innerHTML=adminShell('Manage Trading Bots','Create and manage AI trading bots')+statCards(stats)+`<div class="flex justify-end gap-2"><a href="/frontend/admin/bot-trading-subscriptions.html" class="px-4 py-2 rounded-lg border border-border text-content text-sm">Subscriptions</a><a href="/frontend/admin/admin-bot-trading-create.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Create Bot</a></div><div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">Bot</th><th>Strategy</th><th>Win Rate</th><th>Daily ROI</th><th>Range</th><th>Interval</th><th>Status</th><th>Actions</th></tr></thead><tbody>${d.bots.map(b=>`<tr class="border-t border-border"><td class="py-3 text-content">${
+        m.innerHTML=adminShell('Manage Trading Bots','Create and manage AI trading bots')+statCards(stats)+`<div class="flex justify-end gap-2"><a href="/admin/bot-trading-subscriptions.html" class="px-4 py-2 rounded-lg border border-border text-content text-sm">Subscriptions</a><a href="/admin/admin-bot-trading-create.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Create Bot</a></div><div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">Bot</th><th>Strategy</th><th>Win Rate</th><th>Daily ROI</th><th>Range</th><th>Interval</th><th>Status</th><th>Actions</th></tr></thead><tbody>${d.bots.map(b=>`<tr class="border-t border-border"><td class="py-3 text-content">${
       esc(b.name)
     }
     </td><td>${
@@ -1093,7 +1110,7 @@
     m</td><td>${
       b.is_active?'Active':'Inactive'
     }
-    </td><td class="flex gap-2 py-3"><a class="text-primary" href="/frontend/admin/bot-trading-edit.html?id=${b._id}">Edit</a><button data-bot-toggle="${b._id}" class="text-warning">Toggle</button><button data-bot-del="${b._id}" class="text-danger">Delete</button></td></tr>`).join('')}</tbody></table></div>`;
+    </td><td class="flex gap-2 py-3"><a class="text-primary" href="/admin/bot-trading-edit.html?id=${b._id}">Edit</a><button data-bot-toggle="${b._id}" class="text-warning">Toggle</button><button data-bot-del="${b._id}" class="text-danger">Delete</button></td></tr>`).join('')}</tbody></table></div>`;
         m.querySelectorAll('[data-bot-toggle]').forEach(btn=>btn.onclick=async()=>{
       try{
         const x=await post('/bots/'+btn.dataset.botToggle+'/toggle',{
@@ -1134,7 +1151,7 @@
       try{
         const r=edit?await put('/bots/'+id,x):await post('/bots',x);
         toast(r.message,true);
-        location.href='/frontend/admin/admin-bot-trading.html'
+        location.href='/admin/admin-bot-trading.html'
       }
       catch(err){
         toast(err.message,false)
@@ -1159,7 +1176,7 @@
     </td><td>${
       esc(x.status)
     }
-    </td><td><a class="text-primary" href="/frontend/admin/bot-trading-subscriptions-view.html?id=${x._id}">View</a></td></tr>`).join('')}</tbody></table></div>`
+    </td><td><a class="text-primary" href="/admin/bot-trading-subscriptions-view.html?id=${x._id}">View</a></td></tr>`).join('')}</tbody></table></div>`
   }
     async function adminBotSubView(){
     const m=adminMain(),id=new URLSearchParams(location.search).get('id'),d=await get('/bot-subscriptions/'+id),s=d.subscription;
@@ -1197,7 +1214,7 @@
     async function adminAssets(){
     const m=adminMain(),d=await get('/assets');
     const a=d.assets||[];
-    m.innerHTML=adminShell('Manage Trading Assets','Manage database-backed market assets')+`<div class="flex flex-wrap justify-end gap-2"><button id="refreshAllAssets" class="px-4 py-2 rounded-lg border border-border text-content text-sm">Refresh Live Prices</button><a href="/frontend/admin/create-assets.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Add Custom Asset</a></div>${statCards([['Crypto',a.filter(x=>x.asset_class==='crypto').length],['Forex',a.filter(x=>x.asset_class==='forex').length],['Stock',a.filter(x=>['stock','stocks'].includes(x.asset_class)).length],['Total',a.length]])}<div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">Name</th><th>Symbol</th><th>Class</th><th>Provider</th><th>Price</th><th>24h</th><th>Updated</th><th>Status</th><th>Actions</th></tr></thead><tbody>${a.map(x=>`<tr class="border-t border-border"><td class="py-3 text-content">${esc(x.name)}</td><td>${esc(x.symbol)}</td><td>${esc(x.asset_class)}</td><td>${esc(x.data_source||'manual')}</td><td>${money(x.price,'$')}</td><td>${Number(x.price_change_pct_24h??x.change_24h??0).toFixed(2)}%</td><td>${dt(x.updatedAt)}</td><td>${x.is_active?'Active':'Inactive'}</td><td class="flex flex-wrap gap-2 py-3"><button data-asset-refresh="${x._id}" class="text-primary">Refresh</button><a class="text-primary" href="/frontend/admin/edit-assets.html?id=${x._id}">Edit</a><button data-asset-toggle="${x._id}" class="text-warning">Toggle</button><button data-asset-del="${x._id}" class="text-danger">Delete</button></td></tr>`).join('')}</tbody></table></div>`;
+    m.innerHTML=adminShell('Manage Trading Assets','Manage database-backed market assets')+`<div class="flex flex-wrap justify-end gap-2"><button id="refreshAllAssets" class="px-4 py-2 rounded-lg border border-border text-content text-sm">Refresh Live Prices</button><a href="/admin/create-assets.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Add Custom Asset</a></div>${statCards([['Crypto',a.filter(x=>x.asset_class==='crypto').length],['Forex',a.filter(x=>x.asset_class==='forex').length],['Stock',a.filter(x=>['stock','stocks'].includes(x.asset_class)).length],['Total',a.length]])}<div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">Name</th><th>Symbol</th><th>Class</th><th>Provider</th><th>Price</th><th>24h</th><th>Updated</th><th>Status</th><th>Actions</th></tr></thead><tbody>${a.map(x=>`<tr class="border-t border-border"><td class="py-3 text-content">${esc(x.name)}</td><td>${esc(x.symbol)}</td><td>${esc(x.asset_class)}</td><td>${esc(x.data_source||'manual')}</td><td>${money(x.price,'$')}</td><td>${Number(x.price_change_pct_24h??x.change_24h??0).toFixed(2)}%</td><td>${dt(x.updatedAt)}</td><td>${x.is_active?'Active':'Inactive'}</td><td class="flex flex-wrap gap-2 py-3"><button data-asset-refresh="${x._id}" class="text-primary">Refresh</button><a class="text-primary" href="/admin/edit-assets.html?id=${x._id}">Edit</a><button data-asset-toggle="${x._id}" class="text-warning">Toggle</button><button data-asset-del="${x._id}" class="text-danger">Delete</button></td></tr>`).join('')}</tbody></table></div>`;
     m.querySelector('#refreshAllAssets').onclick=async()=>{
       const button=m.querySelector('#refreshAllAssets');
       button.disabled=true;
@@ -1259,7 +1276,7 @@
       try{
         const x=edit?await put('/assets/'+id,b):await post('/assets',b);
         toast(x.message,true);
-        location.href='/frontend/admin/assets.html'
+        location.href='/admin/assets.html'
       }
       catch(err){
         toast(err.message,false)
@@ -1268,7 +1285,7 @@
   }
     async function adminMiningPlans(){
     const m=adminMain(),d=await get('/mining-plans');
-    m.innerHTML=adminShell('Cloud Mining Plans','Create and manage mining plans')+statCards([['Total Plans',d.stats.totalPlans],['Active Plans',d.stats.activePlans],['Active Subscribers',d.stats.activeSubscribers],['Total Invested',money(d.stats.totalInvested)]])+`<div class="flex justify-end gap-2"><a href="/frontend/admin/mining-subscriptions.html" class="px-4 py-2 rounded-lg border border-border text-content text-sm">Subscriptions</a><a href="/frontend/admin/mining-plans-create.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">New Plan</a></div><div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">Plan</th><th>Hashrate</th><th>ROI</th><th>Duration</th><th>Range</th><th>Status</th><th>Actions</th></tr></thead><tbody>${d.plans.map(p=>`<tr class="border-t border-border"><td class="py-3 text-content">${
+    m.innerHTML=adminShell('Cloud Mining Plans','Create and manage mining plans')+statCards([['Total Plans',d.stats.totalPlans],['Active Plans',d.stats.activePlans],['Active Subscribers',d.stats.activeSubscribers],['Total Invested',money(d.stats.totalInvested)]])+`<div class="flex justify-end gap-2"><a href="/admin/mining-subscriptions.html" class="px-4 py-2 rounded-lg border border-border text-content text-sm">Subscriptions</a><a href="/admin/mining-plans-create.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">New Plan</a></div><div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">Plan</th><th>Hashrate</th><th>ROI</th><th>Duration</th><th>Range</th><th>Status</th><th>Actions</th></tr></thead><tbody>${d.plans.map(p=>`<tr class="border-t border-border"><td class="py-3 text-content">${
       esc(p.name)
     }
     </td><td>${
@@ -1289,7 +1306,7 @@
     </td><td>${
       p.is_active?'Active':'Inactive'
     }
-    </td><td><a class="text-primary mr-3" href="/frontend/admin/mining-plans-edit.html?id=${p._id}">Edit</a><button data-mine-del="${p._id}" class="text-danger">Delete</button></td></tr>`).join('')}</tbody></table></div>`;
+    </td><td><a class="text-primary mr-3" href="/admin/mining-plans-edit.html?id=${p._id}">Edit</a><button data-mine-del="${p._id}" class="text-danger">Delete</button></td></tr>`).join('')}</tbody></table></div>`;
     m.querySelectorAll('[data-mine-del]').forEach(b=>b.onclick=async()=>{
       if(!confirm('Delete this plan?'))return;
       try{
@@ -1318,7 +1335,7 @@
       try{
         const x=edit?await put('/mining-plans/'+id,b):await post('/mining-plans',b);
         toast(x.message,true);
-        location.href='/frontend/admin/mining-plans.html'
+        location.href='/admin/mining-plans.html'
       }
       catch(err){
         toast(err.message,false)
@@ -1361,7 +1378,7 @@
   }
     async function adminWallets(){
     const m=adminMain(),d=await get('/wallet-connections');
-    m.innerHTML=adminShell('Managers Connect Wallets','View and manage user wallet connections')+`<div class="flex justify-end"><a href="/frontend/admin/mwalletsettings.html" class="px-4 py-2 rounded-lg border border-border text-content text-sm">Settings</a></div><div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">Client</th><th>Email</th><th>Wallet</th><th>Status</th><th></th></tr></thead><tbody>${d.wallets.map(w=>`<tr class="border-t border-border"><td class="py-3">${
+    m.innerHTML=adminShell('Managers Connect Wallets','View and manage user wallet connections')+`<div class="flex justify-end"><a href="/admin/mwalletsettings.html" class="px-4 py-2 rounded-lg border border-border text-content text-sm">Settings</a></div><div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">Client</th><th>Email</th><th>Wallet</th><th>Status</th><th></th></tr></thead><tbody>${d.wallets.map(w=>`<tr class="border-t border-border"><td class="py-3">${
       esc(w.user_id?.name)
     }
     </td><td>${
@@ -1402,11 +1419,11 @@
   }
     async function adminTrades(){
     const m=adminMain(),d=await get('/trades'),t=d.trades;
-    m.innerHTML=adminShell('Manage Client Trades','View, create, edit and settle client trades')+`<div class="flex justify-end"><a href="/frontend/admin/create-trade.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Create Trade</a></div><div class="flex gap-2 mb-4">${['All','Binary','Spot','Open','Closed','Demo'].map(x=>`<button data-trade-filter="${x}" class="px-3 py-1.5 rounded-full border border-border text-xs text-content-secondary">${
+    m.innerHTML=adminShell('Manage Client Trades','View, create, edit and settle client trades')+`<div class="flex justify-end"><a href="/admin/create-trade.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Create Trade</a></div><div class="flex gap-2 mb-4">${['All','Binary','Spot','Open','Closed','Demo'].map(x=>`<button data-trade-filter="${x}" class="px-3 py-1.5 rounded-full border border-border text-xs text-content-secondary">${
       x
     }
     </button>`).join('')}</div><div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">User</th><th>Type</th><th>Asset</th><th>Action</th><th>Amount</th><th>Leverage</th><th>Entry Price</th><th>Status</th><th>Result</th><th>P/L</th><th>Opened</th><th>Actions</th></tr></thead><tbody id="tradeRows"></tbody></table></div>`;
-    const rows=m.querySelector('#tradeRows'),render=xs=>rows.innerHTML=xs.map(x=>`<tr class="border-t border-border"><td class="py-3">${esc(x.user_id?.name)}</td><td>${esc(x.asset_type)}</td><td>${esc(x.asset_name||x.trading_asset_id?.symbol)}</td><td>${esc(x.action)}</td><td>${money(x.amount)}</td><td>${x.leverage}x</td><td>${money(x.entry_price,'$')}</td><td>${esc(x.status)}</td><td>${esc(x.result||'—')}</td><td class="${Number(x.profit_loss)>=0?'text-success':'text-danger'}">${Number(x.profit_loss)>=0?'+':''}${money(x.profit_loss)}</td><td>${dt(x.opened)}</td><td><a class="text-primary mr-2" href="/frontend/admin/view-trade.html?id=${x._id}">View</a><a class="text-primary" href="/frontend/admin/edit-trade.html?id=${x._id}">Edit</a></td></tr>`).join('');
+    const rows=m.querySelector('#tradeRows'),render=xs=>rows.innerHTML=xs.map(x=>`<tr class="border-t border-border"><td class="py-3">${esc(x.user_id?.name)}</td><td>${esc(x.asset_type)}</td><td>${esc(x.asset_name||x.trading_asset_id?.symbol)}</td><td>${esc(x.action)}</td><td>${money(x.amount)}</td><td>${x.leverage}x</td><td>${money(x.entry_price,'$')}</td><td>${esc(x.status)}</td><td>${esc(x.result||'—')}</td><td class="${Number(x.profit_loss)>=0?'text-success':'text-danger'}">${Number(x.profit_loss)>=0?'+':''}${money(x.profit_loss)}</td><td>${dt(x.opened)}</td><td><a class="text-primary mr-2" href="/admin/view-trade.html?id=${x._id}">View</a><a class="text-primary" href="/admin/edit-trade.html?id=${x._id}">Edit</a></td></tr>`).join('');
     render(t);
     m.querySelectorAll('[data-trade-filter]').forEach(b=>b.onclick=()=>{
       const f=b.dataset.tradeFilter;
@@ -1442,7 +1459,7 @@
       try{
         const x=edit?await put('/trades/'+id,Object.fromEntries(new FormData(e.currentTarget))):await post('/trades',Object.fromEntries(new FormData(e.currentTarget)));
         toast(x.message,true);
-        location.href='/frontend/admin/managetrades.html'
+        location.href='/admin/managetrades.html'
       }
       catch(err){
         toast(err.message,false)
@@ -1495,7 +1512,7 @@
     </td><td>${
       esc(i.active)
     }
-    </td><td><a class="text-primary" href="/frontend/admin/active-investments-view.html?id=${i._id}">View</a></td></tr>`).join('')}</tbody></table></div>`
+    </td><td><a class="text-primary" href="/admin/active-investments-view.html?id=${i._id}">View</a></td></tr>`).join('')}</tbody></table></div>`
   }
     async function adminInvestmentView(){
     const m=adminMain(),id=new URLSearchParams(location.search).get('id'),d=await get('/investments/'+id),i=d.investment;
@@ -1552,7 +1569,7 @@
       try{
         const x=await put('/cards/'+id,Object.fromEntries(new FormData(e.currentTarget)));
         toast(x.message,true);
-        location.href='/frontend/admin/cards-view.html?id='+id
+        location.href='/admin/cards-view.html?id='+id
       }
       catch(err){
         toast(err.message,false)

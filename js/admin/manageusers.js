@@ -82,13 +82,13 @@
       const u = await r.json();
 
       if (u.role !== 'ADMIN') {
-        location.href = '/frontend/login.html';
+        location.href = '/login.html';
         return false;
       }
 
       return true;
     } catch (_) {
-      location.href = '/frontend/login.html';
+      location.href = '/login.html';
       return false;
     }
   }
@@ -196,7 +196,7 @@
 
               <td class="px-4 py-3">
                 <a
-                  href="/frontend/admin/user-details.html?id=${encodeURIComponent(u._id)}"
+                  href="/admin/user-details.html?id=${encodeURIComponent(u._id)}"
                   class="inline-flex items-center gap-1.5 bg-secondary text-secondary-foreground hover:bg-secondary-hover rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
                 >
                   Manage
@@ -357,7 +357,7 @@
   }
 
   function normalizeAdminNavigation() {
-    const base = `${window.location.origin}/frontend/admin`;
+    const base = `${window.location.origin}/admin`;
     const exact = {
       '/admin/dashboard': `${base}/adminDashboard.html`,
       '/admin/dashboard/': `${base}/adminDashboard.html`,
@@ -483,13 +483,13 @@
       const u = await r.json();
 
       if (u.role !== 'ADMIN') {
-        location.href = '/frontend/login.html';
+        location.href = '/login.html';
         return false;
       }
 
       return true;
     } catch (_) {
-      location.href = '/frontend/login.html';
+      location.href = '/login.html';
       return false;
     }
   }
@@ -593,7 +593,7 @@
 
               <td class="px-4 py-3">
                 <a
-                  href="/frontend/admin/user-details.html?id=${encodeURIComponent(u._id)}"
+                  href="/admin/user-details.html?id=${encodeURIComponent(u._id)}"
                   class="inline-flex items-center gap-1.5 bg-secondary text-secondary-foreground hover:bg-secondary-hover rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
                 >
                   Manage

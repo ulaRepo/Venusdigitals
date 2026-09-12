@@ -629,7 +629,7 @@
             setTimeout(
               () =>
                 (location.href =
-                  '/frontend/admin/manageusers.html'),
+                  '/admin/manageusers.html'),
               700
             );
           } else {
@@ -746,14 +746,14 @@
             ? getCurrentUser()
             : null;
           if (!verified || !current || current.role !== 'ADMIN') {
-            location.href = '/frontend/login.html';
+            location.href = '/login.html';
             return;
           }
         }
 
         if (!id) {
           location.href =
-            '/frontend/admin/manageusers.html';
+            '/admin/manageusers.html';
 
           return;
         }

@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
   function setNavLinks() {
-    const frontendBase = `${window.location.origin}/frontend/user`;
+    const frontendBase = `${window.location.origin}/user`;
     const map = {
       '/dashboard/': `${frontendBase}/dashboard.html`,
       '/dashboard': `${frontendBase}/dashboard.html`,
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const status = user.verificationStatus || 'not_verified';
     const kycIcon = document.querySelector('.kyc-pulse-icon');
     if (kycIcon) {
-      kycIcon.href = `${window.location.origin}/frontend/user/verify-account.html`;
+      kycIcon.href = `${window.location.origin}/user/verify-account.html`;
       const icon = kycIcon.querySelector('i');
       if (status === 'verified') {
         kycIcon.removeAttribute('href');
@@ -156,7 +156,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (title) title.textContent = 'KYC Under Review';
           if (desc) desc.textContent = 'Your identity documents have been submitted and are being reviewed. This usually takes 1–2 business days.';
           if (icon) icon.className = 'fa-solid fa-hourglass-half';
-          if (button) { button.textContent = 'View Status'; button.href = '/frontend/user/verify-account.html'; }
+          if (button) { button.textContent = 'View Status'; button.href = '/user/verify-account.html'; }
         } else if (status === 'verified') {
           verification.style.display = 'none';
           if (title) title.textContent = 'Verification Approved';
@@ -255,9 +255,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (url && url !== '#') {
       const destination = new URL(url, window.location.href);
       const pathname = destination.pathname;
-      if (pathname === '/dashboard' || pathname === '/dashboard/') window.location.href = `${window.location.origin}/frontend/user/dashboard.html`;
-      else if (pathname.startsWith('/dashboard/')) window.location.href = `${window.location.origin}/frontend/user/${pathname.slice('/dashboard/'.length)}.html`.replace('.html.html', '.html');
-      else if (pathname.startsWith('/user/')) window.location.href = `${window.location.origin}/frontend${pathname}`;
+      if (pathname === '/dashboard' || pathname === '/dashboard/') window.location.href = `${window.location.origin}/user/dashboard.html`;
+      else if (pathname.startsWith('/dashboard/')) window.location.href = `${window.location.origin}/user/${pathname.slice('/dashboard/'.length)}.html`.replace('.html.html', '.html');
+      else if (pathname.startsWith('/user/')) window.location.href = `${window.location.origin}${pathname}`;
       else window.location.href = destination.href;
     }
   };

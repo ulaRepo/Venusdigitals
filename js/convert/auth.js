@@ -90,7 +90,7 @@ async function getOrCreatePushSubscription() {
   const configResponse = await api.get('/auth/push-config');
   if (!configResponse.data?.enabled || !configResponse.data.publicKey) return null;
 
-  const registration = await navigator.serviceWorker.register('/frontend/sw.js', { scope: '/frontend/' });
+  const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
   await navigator.serviceWorker.ready;
   await registration.update();
 
