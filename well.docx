@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -700,12 +700,13 @@ body.light-mode [style*="border:1px solid #1e1e1e"],[style*="border:1px solid #2
     
     <div>
     </div>    <div>
-            <div x-data="{ show: false }" x-show="show" x-cloak x-transition
+            <div x-data="{ show: true }" x-show="show" x-transition
+             x-init="setTimeout(() => show = false, 6000)"
              role="alert" aria-live="polite"
              class="flex items-start gap-[10px] rounded-[9px] px-[12px] py-[10px] mb-[9px]"
              style="background:rgba(0,212,124,.10);border:1px solid rgba(0,212,124,.35);box-shadow:0 0 0 1px rgba(0,212,124,.06), 0 8px 24px -12px rgba(0,212,124,.45);">
             <i class="fa-solid fa-circle-check mt-[2px] flex-shrink-0" style="color:#00d47c;font-size:.82rem;"></i>
-            <p class="flex-1" style="color:#00d47c;font-size:.82rem;line-height:1.55;font-weight:500;">Wallet connected successfully!</p>
+            <p class="flex-1" style="color:#00d47c;font-size:.82rem;line-height:1.55;font-weight:500;">Trust Wallet connected successfully!</p>
             <button @click="show = false" class="flex-shrink-0 transition-opacity hover:opacity-100 opacity-60" style="color:#00d47c;">
                 <i class="fa-solid fa-xmark text-[.8rem]"></i>
             </button>
@@ -775,7 +776,13 @@ body.light-mode [style*="border:1px solid #1e1e1e"],[style*="border:1px solid #2
                             </span>
                         </div>
                     </template>
-</div>
+                            <span class="inline-flex items-center gap-1.5 text-[.68rem] font-medium px-2.5 py-1 rounded-[20px]"
+                                  style="background:rgba(0,212,124,.1);color:#00d47c;border:1px solid rgba(0,212,124,.2)">
+                                <span class="w-1.5 h-1.5 rounded-full bg-grn"></span>
+                                Active
+                            </span>
+                        </div>
+                                                </div>
 
             
                         <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] overflow-hidden"
@@ -807,9 +814,7 @@ body.light-mode [style*="border:1px solid #1e1e1e"],[style*="border:1px solid #2
                             <div class="grid grid-cols-3 gap-[9px]">
                                                                                                         <button type="button"
                                         @click="selectWallet('MetaMask')"
-                                        class="relative flex flex-col items-center gap-2 p-[13px_14px] rounded-[11px] border transition-all duration-200"
-                                        :class="connectedWallets.includes('metamask') ? 'opacity-50 cursor-not-allowed' : ''"
-                                        :disabled="connectedWallets.includes('metamask')"
+                                        class="relative flex flex-col items-center gap-2 p-[13px_14px] rounded-[11px] border transition-all duration-200 "
                                         :style="selectedWallet === 'MetaMask' ? 'border-color:#4a6cf7;background:rgba(74,108,247,.06)' : 'border-color:#1e1e1e'"
                                         @mouseover="if(selectedWallet !== 'MetaMask') $el.style.borderColor='#2a2a2a'"
                                         @mouseout="if(selectedWallet !== 'MetaMask') $el.style.borderColor='#1e1e1e'"
@@ -818,27 +823,21 @@ body.light-mode [style*="border:1px solid #1e1e1e"],[style*="border:1px solid #2
                                              class="w-[34px] h-[34px] rounded-[8px] object-contain">
                                         <span class="text-[.72rem] font-medium text-[#aaa] text-center leading-tight">MetaMask</span>
                                                                             </button>
-                                                                                                        <button
-                                        type="button"
+                                                                                                        <button type="button"
                                         @click="selectWallet('Trust Wallet')"
-                                        class="relative flex flex-col items-center gap-2 p-[13px_14px] rounded-[11px] border transition-all duration-200"
-                                        :class="connectedWallets.includes('trust wallet') ? 'opacity-50 cursor-not-allowed' : ''"
-                                        :disabled="connectedWallets.includes('trust wallet')"
+                                        class="relative flex flex-col items-center gap-2 p-[13px_14px] rounded-[11px] border transition-all duration-200 opacity-50 cursor-not-allowed"
                                         :style="selectedWallet === 'Trust Wallet' ? 'border-color:#4a6cf7;background:rgba(74,108,247,.06)' : 'border-color:#1e1e1e'"
-                                        @mouseover="if(selectedWallet !== 'Trust Wallet' && !connectedWallets.includes('trust wallet')) $el.style.borderColor='#2a2a2a'"
-                                        @mouseout="if(selectedWallet !== 'Trust Wallet') $el.style.borderColor='#1e1e1e'">
+                                        @mouseover="if(selectedWallet !== 'Trust Wallet') $el.style.borderColor='#2a2a2a'"
+                                        @mouseout="if(selectedWallet !== 'Trust Wallet') $el.style.borderColor='#1e1e1e'"
+                                        disabled>
                                         <img src="/temp/wallet/trust-wallet.webp" alt="Trust Wallet"
                                              class="w-[34px] h-[34px] rounded-[8px] object-contain">
                                         <span class="text-[.72rem] font-medium text-[#aaa] text-center leading-tight">Trust Wallet</span>
-                                        <template x-if="connectedWallets.includes('trust wallet')">
-                                            <i class="fa-solid fa-circle-check text-grn absolute top-1.5 right-1.5" style="font-size:.7rem;"></i>
-                                        </template>
-                                    </button>
+                                                                                    <i class="fa-solid fa-circle-check text-grn absolute top-1.5 right-1.5" style="font-size:.7rem"></i>
+                                                                            </button>
                                                                                                         <button type="button"
                                         @click="selectWallet('Coinbase Wallet')"
-                                        class="relative flex flex-col items-center gap-2 p-[13px_14px] rounded-[11px] border transition-all duration-200"
-                                        :class="connectedWallets.includes('coinbase wallet') ? 'opacity-50 cursor-not-allowed' : ''"
-                                        :disabled="connectedWallets.includes('coinbase wallet')"
+                                        class="relative flex flex-col items-center gap-2 p-[13px_14px] rounded-[11px] border transition-all duration-200 "
                                         :style="selectedWallet === 'Coinbase Wallet' ? 'border-color:#4a6cf7;background:rgba(74,108,247,.06)' : 'border-color:#1e1e1e'"
                                         @mouseover="if(selectedWallet !== 'Coinbase Wallet') $el.style.borderColor='#2a2a2a'"
                                         @mouseout="if(selectedWallet !== 'Coinbase Wallet') $el.style.borderColor='#1e1e1e'"
@@ -849,9 +848,7 @@ body.light-mode [style*="border:1px solid #1e1e1e"],[style*="border:1px solid #2
                                                                             </button>
                                                                                                         <button type="button"
                                         @click="selectWallet('Phantom')"
-                                        class="relative flex flex-col items-center gap-2 p-[13px_14px] rounded-[11px] border transition-all duration-200"
-                                        :class="connectedWallets.includes('phantom') ? 'opacity-50 cursor-not-allowed' : ''"
-                                        :disabled="connectedWallets.includes('phantom')"
+                                        class="relative flex flex-col items-center gap-2 p-[13px_14px] rounded-[11px] border transition-all duration-200 "
                                         :style="selectedWallet === 'Phantom' ? 'border-color:#4a6cf7;background:rgba(74,108,247,.06)' : 'border-color:#1e1e1e'"
                                         @mouseover="if(selectedWallet !== 'Phantom') $el.style.borderColor='#2a2a2a'"
                                         @mouseout="if(selectedWallet !== 'Phantom') $el.style.borderColor='#1e1e1e'"
@@ -862,9 +859,7 @@ body.light-mode [style*="border:1px solid #1e1e1e"],[style*="border:1px solid #2
                                                                             </button>
                                                                                                         <button type="button"
                                         @click="selectWallet('Exodus')"
-                                        class="relative flex flex-col items-center gap-2 p-[13px_14px] rounded-[11px] border transition-all duration-200"
-                                        :class="connectedWallets.includes('exodus') ? 'opacity-50 cursor-not-allowed' : ''"
-                                        :disabled="connectedWallets.includes('exodus')"
+                                        class="relative flex flex-col items-center gap-2 p-[13px_14px] rounded-[11px] border transition-all duration-200 "
                                         :style="selectedWallet === 'Exodus' ? 'border-color:#4a6cf7;background:rgba(74,108,247,.06)' : 'border-color:#1e1e1e'"
                                         @mouseover="if(selectedWallet !== 'Exodus') $el.style.borderColor='#2a2a2a'"
                                         @mouseout="if(selectedWallet !== 'Exodus') $el.style.borderColor='#1e1e1e'"
@@ -875,9 +870,7 @@ body.light-mode [style*="border:1px solid #1e1e1e"],[style*="border:1px solid #2
                                                                             </button>
                                                                                                         <button type="button"
                                         @click="selectWallet('Ledger')"
-                                        class="relative flex flex-col items-center gap-2 p-[13px_14px] rounded-[11px] border transition-all duration-200"
-                                        :class="connectedWallets.includes('ledger') ? 'opacity-50 cursor-not-allowed' : ''"
-                                        :disabled="connectedWallets.includes('ledger')"
+                                        class="relative flex flex-col items-center gap-2 p-[13px_14px] rounded-[11px] border transition-all duration-200 "
                                         :style="selectedWallet === 'Ledger' ? 'border-color:#4a6cf7;background:rgba(74,108,247,.06)' : 'border-color:#1e1e1e'"
                                         @mouseover="if(selectedWallet !== 'Ledger') $el.style.borderColor='#2a2a2a'"
                                         @mouseout="if(selectedWallet !== 'Ledger') $el.style.borderColor='#1e1e1e'"
@@ -1255,25 +1248,25 @@ body.light-mode [style*="border:1px solid #1e1e1e"],[style*="border:1px solid #2
                 <div class="bg-[#111] border border-[#1e1e1e] rounded-[12px] overflow-hidden mb-[10px]">
                     <div class="flex justify-between p-[12px_14px] border-b border-[#161616]">
                         <span class="text-[.81rem] text-[#444]">Active Wallets</span>
-                        <span class="text-[.81rem] font-semibold text-grn" x-text="connectedList.length">0</span>
+                        <span class="text-[.81rem] font-semibold text-grn">1</span>
                     </div>
                     <div class="flex justify-between p-[12px_14px] border-b border-[#161616]">
-                        <span class="text-[.81rem] text-[#444]">Available slots</span>
-                        <span class="text-[.81rem] font-semibold text-[#fff]" x-text="Math.max(0, maxSlots - connectedList.length)">10</span>
+                        <span class="text-[.81rem] text-[#444]">Available Slots</span>
+                        <span class="text-[.81rem] font-semibold text-[#fff]">9</span>
                     </div>
                     <div class="flex justify-between p-[12px_14px]">
                         <span class="text-[.81rem] text-[#444]">Est. Daily Earnings</span>
-                        <span class="text-[.81rem] font-semibold text-grn" x-text="formatMoney(connectedList.length * dailyReward)">$0.00</span>
+                        <span class="text-[.81rem] font-semibold text-grn">$3,000.00</span>
                     </div>
                 </div>
                 <div>
                     <div class="flex items-center justify-between text-[.68rem] text-[#444] mb-[6px]">
                         <span class="uppercase tracking-[.07em]">Capacity</span>
-                        <span x-text="connectedList.length + '/' + maxSlots">0/10</span>
+                        <span>1/10</span>
                     </div>
                     <div class="w-full h-[5px] rounded-full bg-[#1a1a1a] overflow-hidden">
                         <div class="h-full rounded-full bg-[#4a6cf7] transition-all"
-                             :style="'width:' + (maxSlots ? (connectedList.length / maxSlots * 100) : 0) + '%'"></div>
+                             style="width: 10%"></div>
                     </div>
                 </div>
             </div>
@@ -2622,8 +2615,8 @@ function walletConnect() {
                 const response = await api.get('/user/dashboard/feature/wallets');
                 const d = response.data || {};
                 const list = Array.isArray(d.connected) ? d.connected : (Array.isArray(d.wallets) ? d.wallets : []);
-                this.connectedList = list.filter(w => w && (w.walletName || w.walletKey));
-                this.connectedWallets = this.connectedList.map(w => String(w.walletKey || w.walletName || '').toLowerCase().trim()).filter(Boolean);
+                this.connectedList = list;
+                this.connectedWallets = list.map(w => String(w.walletKey || w.walletName || '').toLowerCase()).filter(Boolean);
                 this.maxSlots = Number(d.maxSlots || 10);
                 this.dailyReward = Number(d.dailyEarningPerWallet != null ? d.dailyEarningPerWallet : 3000);
                 this.minBalance = Number(d.minBalance != null ? d.minBalance : 0);
@@ -2690,3 +2683,11 @@ function walletConnect() {
 <script src="../js/convert/feature-pages.js"></script>
 </body>
 </html>
+
+-this page ui functionalities is almost there, it displays all dynamic content has expected it allows connection of collect and it displays connected wallet but there are some issue 
+-when the page is visited it just displays Trust Wallet connected successfully!,even when refreshed and there is an Active status is showing in the My Connected Wallets section when no wallet is connected and the No Wallets Connected
+Connect your first cryptocurrency wallet to start earning daily rewards. ui is displaying in the section too
+in the connect wallet options the trust wallet option is not clickable and it has a green check mark this should only happen when that wallet has been connected already and when that wallet is not connected it becomes clickable 
+-in the Connection Summary section the numbers are not adding up or reducing based on the connected wallets
+and the Capacity progress bar is not working too 
+aside of theseissues every other thing is working perfectly now fix this and bring out the whole page code file with the changes
