@@ -1,10 +1,7 @@
+
 // digital-grownt\frontend\js\convert\config.js
 (() => {
-  if (typeof axios === 'undefined') {
-    console.error('[Digital Grownt] axios is not loaded. Include axios before config.js');
-    return;
-  }
-  const API_BASE_URL = window.__DIGITAL_GROWNT_API_BASE_URL__ || window.location.origin;
+  const API_BASE_URL = 'https://venusdigital-backend.onrender.com';
   window.API_BASE_URL = API_BASE_URL;
   window.api = axios.create({
     baseURL: API_BASE_URL,
@@ -30,3 +27,4 @@
     }
   );
 })();
+
