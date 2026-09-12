@@ -65,8 +65,9 @@
     })
   }
     function hideDynamicMain(){
-    // Keep original page UI visible for connect-wallet (Alpine-driven).
-    if(String(location.pathname||'').includes('connect-wallet')) return;
+    // Keep original page UI visible for connect-wallet and admin plan forms (template forms).
+    const path=String(location.pathname||'');
+    if(path.includes('connect-wallet')||path.includes('new-plan')||path.includes('edit-plan')) return;
     const main=document.querySelector('main')||document.getElementById('main-content');
     if(main){
       main.dataset.featureDynamic='1';
@@ -312,113 +313,305 @@
       }
     }
   }
+    function planIntervalLabel(p){
+    const t=String(p.topup_type||p.increment_type||p.interval||'').toLowerCase();
+    if(t.includes('minute'))return 'Every 10 Minutes';
+    if(t.includes('hour'))return 'Hourly';
+    if(t.includes('week'))return 'Weekly';
+    if(t.includes('month'))return 'Monthly';
+    return 'Daily';
+  }
+    function planRate(p){
+    return Number(p.increment_amount??p.return??p.maxr??p.max_return??p.min_return??0);
+  }
     function planCard(p){
-    const min=Number((p.min_price??p.min)||0),max=Number((p.max_price??p.max)||0),rate=Number((p.increment_amount??p.return??p.maxr)||0);
-    return `<div class="bg-[#111] rounded-[13px] overflow-hidden border border-[#1e1e1e] p-[15px]"><div class="flex items-center justify-between"><div><div class="text-white font-medium text-[.95rem]">${esc(p.name)}</div><div class="text-[#555] text-[.72rem] mt-1">${esc(p.tag||'Investment Plan')}</div></div><i class="fa-solid fa-chart-bar text-blue2"></i></div><div class="grid grid-cols-2 gap-[9px] my-[14px]"><div class="bg-[#161616] rounded-[9px] p-[10px]"><div class="text-[#444] text-[.65rem]">MIN</div><div class="text-white font-bold">${money(min)}</div></div><div class="bg-[#161616] rounded-[9px] p-[10px]"><div class="text-[#444] text-[.65rem]">MAX</div><div class="text-white font-bold">${max?money(max):'Unlimited'}</div></div><div class="bg-[#161616] rounded-[9px] p-[10px]"><div class="text-[#444] text-[.65rem]">RETURN</div><div class="text-grn font-bold">${rate}%</div></div><div class="bg-[#161616] rounded-[9px] p-[10px]"><div class="text-[#444] text-[.65rem]">DURATION</div><div class="text-white font-bold">${esc(p.expiration||`${
-      p.duration||30
-    }
-     Days`)}</div></div></div><button data-invest="${p._id}" class="w-full py-[10px] rounded-[10px] bg-brand-blue text-white font-medium">Invest Now</button></div>`
+    const min=Number((p.min_price??p.min)||0);
+    const max=Number((p.max_price??p.max)||0);
+    const rate=planRate(p);
+    const tag=String(p.tag||p.type||'').toLowerCase();
+    const isVip=tag.includes('vip')||tag.includes('premium')||rate>=30;
+    const isPopular=tag.includes('popular')||tag.includes('starter');
+    const border=isVip?'border-[rgba(0,212,124,.35)]':'border-[#1e1e1e]';
+    const icon=isVip?'fa-star':(isPopular?'fa-bolt':'fa-layer-group');
+    const iconColor=isVip?'text-grn':(isPopular?'text-ylw':'text-blue2');
+    const perLabel=planIntervalLabel(p);
+    const sample=min||100;
+    const perEarn=sample*rate/100;
+    const monthly=perEarn*(perLabel.includes('Minute')?24*6:perLabel.includes('Hour')?24:30);
+    return `<div class="bg-[#0d0d0d] rounded-[16px] overflow-hidden border ${border} p-[18px] flex flex-col">
+      <div class="text-center mb-[14px]">
+        <div class="w-[42px] h-[42px] rounded-full bg-[#161616] flex items-center justify-center mx-auto mb-[10px]"><i class="fa-solid ${icon} ${iconColor}"></i></div>
+        <div class="text-white font-medium text-[1rem]">${esc(p.name)}</div>
+        <div class="text-[.68rem] mt-1 ${isVip?'text-grn':isPopular?'text-ylw':'text-[#666]'}">${esc(p.tag||'regular')}</div>
+        <div class="mt-[12px] font-sora text-[1.6rem] font-light ${isVip?'text-grn':'text-blue2'}">${rate}%</div>
+        <div class="text-[.72rem] text-[#555] mt-1">${esc(perLabel)}</div>
+      </div>
+      <div class="space-y-[8px] text-[.78rem] mb-[14px]">
+        <div class="flex justify-between text-[#555]"><span>MINIMUM</span><span class="text-white">${money(min)}</span></div>
+        <div class="flex justify-between text-[#555]"><span>MAXIMUM</span><span class="text-white">${max?money(max):'Unlimited'}</span></div>
+        <div class="flex justify-between text-[#555]"><span>DURATION</span><span class="text-white">${esc(p.expiration||`${p.duration||30} Days`)}</span></div>
+      </div>
+      <div class="bg-[#111] border border-[#1a1a1a] rounded-[12px] p-[12px] mb-[14px]">
+        <div class="text-[.65rem] text-[#444] uppercase tracking-[.06em] mb-[8px]">Calculate Returns</div>
+        <input data-calc-input="${p._id}" data-rate="${rate}" data-interval="${esc(perLabel)}" type="number" value="${sample}" class="w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] px-[12px] py-[10px] text-white outline-none mb-[8px]">
+        <div class="flex justify-between text-[.72rem]"><span class="text-[#555]">Per ${esc(perLabel.replace(/^Every /,''))}</span><span class="text-grn" data-calc-per="${p._id}">${money(perEarn)}</span></div>
+        <div class="flex justify-between text-[.72rem] mt-1"><span class="text-[#555]">Est. Monthly</span><span class="text-grn" data-calc-month="${p._id}">${money(monthly)}</span></div>
+      </div>
+      <button data-invest="${p._id}" class="mt-auto w-full py-[12px] rounded-[12px] bg-brand-blue text-white font-medium hover:opacity-90">Invest Now</button>
+    </div>`;
   }
     async function userPlans(){
     const root=inner();
+    showDynamicMain();
+    if(root) root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading plans...</div>';
     const d=await get('/plans');
-    root.innerHTML=shell('Investment Plans',`${d.plans.length} plans available`)+`<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[9px]">${d.plans.length?d.plans.map(planCard).join(''):'<div class="col-span-full text-center py-12 text-[#555]">No investment plans are available.</div>'}</div>`;
-    root.querySelectorAll('[data-invest]').forEach(b=>b.onclick=()=>openInvest(d.plans.find(p=>String(p._id)===b.dataset.invest),d.plans))
+    const plans=d.plans||[];
+    root.innerHTML=`<div class="flex items-center justify-between mb-[18px]">
+      <div class="flex items-center gap-3">
+        <div class="inner-back" onclick="history.back()"><i class="fa-solid fa-chevron-left"></i></div>
+        <div>
+          <div class="inner-title">Investment Plans</div>
+          <p class="text-[.72rem] text-[#444] mt-0.5">${plans.length} plans available</p>
+        </div>
+      </div>
+      <a href="/user/myplans.html" class="text-[.78rem] text-[#aaa] border border-[#1e1e1e] rounded-full px-3 py-1.5 no-underline">My Plans</a>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[12px]">${plans.length?plans.map(planCard).join(''):'<div class="col-span-full text-center py-12 text-[#555]">No investment plans are available.</div>'}</div>`;
+    root.querySelectorAll('[data-calc-input]').forEach(inp=>{
+      const sync=()=>{
+        const rate=Number(inp.dataset.rate||0);
+        const v=Number(inp.value||0);
+        const per=v*rate/100;
+        const interval=String(inp.dataset.interval||'');
+        const monthly=per*(interval.includes('Minute')?24*6:interval.includes('Hour')?24:30);
+        const id=inp.dataset.calcInput;
+        const perEl=root.querySelector(`[data-calc-per="${id}"]`);
+        const moEl=root.querySelector(`[data-calc-month="${id}"]`);
+        if(perEl)perEl.textContent=money(per);
+        if(moEl)moEl.textContent=money(monthly);
+      };
+      inp.addEventListener('input',sync);
+    });
+    root.querySelectorAll('[data-invest]').forEach(b=>b.onclick=()=>openInvest(plans.find(p=>String(p._id)===b.dataset.invest),plans));
   }
     function openInvest(p,allPlans=[]){
     if(!p)return;
     const old=document.getElementById('featureInvestDrawer');
     if(old)old.remove();
-    const min=Number((p.min_price??p.min)||0),max=Number((p.max_price??p.max)||0),rate=Number((p.increment_amount??p.return??p.maxr)||0);
+    const bal=Number(window.USER_BAL_VAL||0);
+    const min0=Number((p.min_price??p.min)||0);
+    const max0=Number((p.max_price??p.max)||0);
+    const rate0=planRate(p);
     const bg=document.createElement('div');
     bg.id='featureInvestDrawer';
-    bg.innerHTML=`<div class="feature-drawer-backdrop"></div><aside class="feature-invest-drawer"><div class="flex items-center justify-between p-[14px] border-b border-[#1e1e1e]"><div class="text-white font-medium">Invest in Plan</div><button id="closeInvest" class="text-[#777] text-xl">×</button></div><form id="investFeatureForm" class="p-[18px] space-y-[10px]"><div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-[#444] text-[.68rem] uppercase mb-[10px]">Select Investment Plan</div><select id="investPlan" class="w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] p-[11px] text-white">${allPlans.map(x=>`<option value="${x._id}" ${
-      String(x._id)===String(p._id)?'selected':''
-    }
-    >${
-      esc(x.name)
-    }
-    </option>`).join('')}</select></div><div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-[#444] text-[.68rem] uppercase mb-[10px]">Quick Amount</div><div class="flex flex-wrap gap-[6px]">${[100,250,500,1000,1500,2000].map(x=>`<button type="button" data-quick="${x}" class="flex-1 min-w-[70px] py-[7px] text-[.75rem] text-[#aaa] rounded-[8px] bg-[#1a1a1a] border border-[#222]">${
-      money(x)
-    }
-    </button>`).join('')}</div></div><div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-[#444] text-[.68rem] uppercase mb-[10px]">Enter Amount</div><input id="investAmount" type="number" min="${min}" ${max>0?`max="${max}"`:''} step="0.01" required class="w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] p-[12px] text-white text-xl" placeholder="0.00"><div class="flex justify-between mt-2 text-[.72rem] text-[#555]"><span>Min: ${money(min)}</span><span>Max: ${max?money(max):'Unlimited'}</span></div></div><div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-[#444] text-[.68rem] uppercase mb-[10px]">Your Investment Details</div><div class="space-y-2 text-[.8rem]"><div class="flex justify-between"><span class="text-[#555]">Name of Plan</span><span class="text-white">${esc(p.name)}</span></div><div class="flex justify-between"><span class="text-[#555]">Plan Price</span><span class="text-white">${money(p.price)}</span></div><div class="flex justify-between"><span class="text-[#555]">Duration</span><span class="text-white">${esc(p.expiration||`${
-      p.duration||30
-    }
-     Days`)}</span></div><div class="flex justify-between"><span class="text-[#555]">Return</span><span class="text-grn">${rate}%</span></div><div class="flex justify-between"><span class="text-[#555]">Payment Method</span><span class="text-white">Account Balance</span></div></div></div><button class="w-full py-[12px] rounded-[10px] bg-brand-blue text-white font-medium">Confirm Investment</button></form></aside>`;
+    bg.innerHTML=`<div class="feature-drawer-backdrop"></div>
+    <aside class="feature-invest-drawer">
+      <div class="flex items-center justify-between p-[14px] border-b border-[#1e1e1e]">
+        <div class="text-white font-medium">Invest in Plan</div>
+        <button type="button" id="closeInvest" class="text-[#777] text-xl">×</button>
+      </div>
+      <form id="investFeatureForm" class="p-[18px] space-y-[12px] overflow-y-auto" style="max-height:calc(100vh - 60px)">
+        <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+          <div class="text-[#444] text-[.68rem] uppercase mb-[10px]">Select Investment Plan</div>
+          <select id="investPlan" class="w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] p-[11px] text-white">${allPlans.map(x=>`<option value="${x._id}" ${String(x._id)===String(p._id)?'selected':''}>${esc(x.name)}</option>`).join('')}</select>
+        </div>
+        <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+          <div class="text-[#444] text-[.68rem] uppercase mb-[10px]">Enter Amount</div>
+          <div class="flex items-center rounded-[14px] px-[15px] py-[12px]" style="background:#0d0d0d;border:1px solid #1e1e1e;">
+            <span class="font-sora text-[1.4rem] font-[300] text-[#333] mr-[4px]">$</span>
+            <input id="investAmount" type="number" step="0.01" required class="flex-1 border-none outline-none font-sora text-[1.4rem] font-[300] w-full" style="background:transparent;color:#fff" value="${min0||''}" placeholder="0.00">
+          </div>
+          <div class="flex justify-between mt-[8px] text-[.72rem] text-[#555]"><span id="investMinLbl">Min: ${money(min0)}</span><span id="investMaxLbl">Max: ${max0?money(max0):'Unlimited'}</span></div>
+        </div>
+        <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+          <div class="text-[#444] text-[.68rem] uppercase mb-[10px]">Payment Method</div>
+          <div class="w-full flex items-center gap-[14px] px-[15px] py-[14px] rounded-[13px]" style="background:rgba(74,108,247,.06);border:1px solid #4a6cf7;">
+            <div class="w-[44px] h-[44px] rounded-[12px] bg-[#1a1a1a] flex items-center justify-center"><i class="fa-solid fa-wallet text-[#6e8efb]"></i></div>
+            <div class="flex-1"><div class="text-white text-[.88rem] font-[500]">Account Balance</div><div class="text-[#555] text-[.78rem] font-sora mt-[1px]" id="investBalLbl">${money(bal)}</div></div>
+            <div class="w-[20px] h-[20px] rounded-full flex items-center justify-center" style="background:rgba(74,108,247,.15);border:1px solid rgba(74,108,247,.4);"><i class="fa-solid fa-check text-[#6e8efb] text-[.6rem]"></i></div>
+          </div>
+        </div>
+        <div class="rounded-[12px] overflow-hidden" style="background:#111;border:1px solid #1e1e1e;" id="investDetailsBox"></div>
+        <div id="investError" class="text-[.78rem] text-red2 hidden"></div>
+        <button type="submit" id="investSubmitBtn" class="w-full py-[14px] rounded-[12px] text-[.95rem] font-[500] bg-brand-blue text-white">Confirm & Invest</button>
+      </form>
+    </aside>`;
     document.body.appendChild(bg);
-    const close=()=>bg.remove();
-    bg.querySelector('.feature-drawer-backdrop').onclick=close;
-    bg.querySelector('#closeInvest').onclick=close;
-    bg.querySelectorAll('[data-quick]').forEach(x=>x.onclick=()=>bg.querySelector('#investAmount').value=x.dataset.quick);
-    bg.querySelector('#investPlan').onchange=()=>{
-      const selected=allPlans.find(x=>String(x._id)===bg.querySelector('#investPlan').value);
-      if(selected){
-        close();
-        openInvest(selected,allPlans)
-      }
+    requestAnimationFrame(()=>bg.classList.add('open'));
+    const planSelect=bg.querySelector('#investPlan');
+    const amountInput=bg.querySelector('#investAmount');
+    const details=bg.querySelector('#investDetailsBox');
+    const err=bg.querySelector('#investError');
+    function currentPlan(){return allPlans.find(x=>String(x._id)===String(planSelect.value))||p;}
+    function renderDetails(){
+      const cp=currentPlan();
+      const min=Number((cp.min_price??cp.min)||0);
+      const max=Number((cp.max_price??cp.max)||0);
+      const rate=planRate(cp);
+      const amt=Number(amountInput.value||0);
+      bg.querySelector('#investMinLbl').textContent='Min: '+money(min);
+      bg.querySelector('#investMaxLbl').textContent='Max: '+(max?money(max):'Unlimited');
+      amountInput.min=min;
+      if(max>0)amountInput.max=max; else amountInput.removeAttribute('max');
+      details.innerHTML=`<div class="px-[14px] py-[10px]" style="border-bottom:1px solid #161616;"><div class="text-[#444] text-[.68rem] uppercase tracking-[.07em]">Your Investment Details</div></div>
+        ${[['Name of Plan',esc(cp.name)],['Plan Price',money(min)],['Duration',esc(cp.expiration||`${cp.duration||30} Days`)],['Profit',rate+'% '+planIntervalLabel(cp)],['Min Deposit',money(min)],['Max Deposit',max?money(max):'Unlimited'],['Min Return',(cp.min_return??rate)+'%'],['Max Return',(cp.max_return??rate)+'%'],['Bonus',money(cp.gift_bonus||cp.bonus||0)],['Payment Method','Account Balance']].map(([k,v])=>`<div class="flex items-center justify-between px-[14px] py-[10px]" style="border-bottom:1px solid #161616;"><span class="text-[#444] text-[.81rem]">${k}</span><span class="text-white text-[.81rem] font-[500]">${v}</span></div>`).join('')}
+        <div class="flex items-center justify-between px-[14px] py-[12px]"><span class="text-[#aaa] text-[.88rem] font-[500]">Amount to Invest</span><span class="font-sora text-[1.2rem] font-[700] text-blue2">${money(amt)}</span></div>`;
+    }
+    planSelect.onchange=()=>{
+      const cp=currentPlan();
+      const min=Number((cp.min_price??cp.min)||0);
+      amountInput.value=min||'';
+      renderDetails();
     };
+    amountInput.oninput=renderDetails;
+    renderDetails();
+    bg.querySelector('#closeInvest').onclick=()=>bg.remove();
+    bg.querySelector('.feature-drawer-backdrop').onclick=()=>bg.remove();
     bg.querySelector('#investFeatureForm').onsubmit=async e=>{
       e.preventDefault();
+      err.classList.add('hidden');
+      const cp=currentPlan();
+      const amount=Number(amountInput.value||0);
+      const min=Number((cp.min_price??cp.min)||0);
+      const max=Number((cp.max_price??cp.max)||0);
+      const balance=Number(window.USER_BAL_VAL||0);
+      if(amount<min){err.textContent=`Minimum investment is ${money(min)}`;err.classList.remove('hidden');return;}
+      if(max>0&&amount>max){err.textContent=`Maximum investment is ${money(max)}`;err.classList.remove('hidden');return;}
+      if(amount>balance){err.textContent=`Insufficient balance. Your available balance is ${money(balance)}`;err.classList.remove('hidden');return;}
+      const btn=bg.querySelector('#investSubmitBtn');
+      btn.disabled=true;btn.textContent='Processing…';
       try{
-        const d=await post('/investments',{
-          plan_id:p._id,amount:Number(bg.querySelector('#investAmount').value)
-        });
-        close();
-        toast(d.message,true);
-        notify('Plan Activated',d.message);
-        await userPlans()
+        const x=await post('/investments',{plan_id:cp._id,amount});
+        toast(x.message||'Investment successful.',true);
+        bg.remove();
+        if(typeof loadProfile==='function')await loadProfile();
+        await userPlans();
+      }catch(ex){
+        err.textContent=ex.response?.data?.message||ex.message||'Investment failed';
+        err.classList.remove('hidden');
+        btn.disabled=false;btn.textContent='Confirm & Invest';
       }
-      catch(err){
-        toast(err.message,false)
-      }
-    }
-  }
-    function investmentRow(i){
-    const p=i.plan||{
     };
-    return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[14px] flex items-center gap-3"><div class="flex-1"><div class="text-white font-medium">${esc(p.name||'Investment')}</div><div class="text-[#555] text-[.72rem] mt-1">${esc(i.active)} · ${money(i.amount)}</div></div><div class="text-right"><div class="text-grn text-[.8rem]">${money(i.profit_earned)}</div><div class="text-[#555] text-[.68rem]">Profit</div></div><a class="text-blue2" href="/user/plan-details.html?id=${encodeURIComponent(i._id)}"><i class="fa-solid fa-chevron-right"></i></a></div>`
   }
     async function myPlans(){
     const root=inner();
+    showDynamicMain();
+    if(root) root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
     const d=await get('/myplans');
-    root.innerHTML=shell('My Plans','Manage your investment plans')+`<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">${[['Total Invested',money(d.totalInvested)],['Total Profit',money(d.totalProfit)],['Active Plans',d.activePlans]].map(x=>`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><p class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-1">${
-      x[0]
-    }
-    </p><p class="text-white text-xl font-bold">${
-      x[1]
-    }
-    </p></div>`).join('')}</div><div class="space-y-[9px]">${d.investments.length?d.investments.map(investmentRow).join(''):'<div class="text-center py-12 text-[#555]">No investment history.</div>'}</div>`
+    const rows=d.investments||[];
+    const totalInvested=Number(d.totalInvested||0);
+    const totalProfit=Number(d.totalProfit||0);
+    const activeCount=Number(d.activePlans!=null?d.activePlans:(d.activeCount!=null?d.activeCount:rows.filter(x=>String(x.active).toLowerCase()==='yes'||x.active===true).length));
+    root.innerHTML=`<div class="mb-[18px]"><div class="inner-title">My Plans</div><p class="text-[.72rem] text-[#444] mt-0.5">Manage your active investment plans</p></div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-[10px] mb-[16px]">
+      <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-[.65rem] text-[#555] uppercase mb-2">Total Invested</div><div class="text-white font-sora text-[1.3rem]">${money(totalInvested)}</div></div>
+      <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-[.65rem] text-[#555] uppercase mb-2">Total Profit</div><div class="text-white font-sora text-[1.3rem]">${money(totalProfit)}</div></div>
+      <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-[.65rem] text-[#555] uppercase mb-2">Active Plans</div><div class="text-white font-sora text-[1.3rem]">${activeCount}</div></div>
+    </div>
+    <div class="flex items-center justify-between mb-[12px]"><a href="/user/buy-plan.html" class="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-brand-blue text-white text-[.8rem] no-underline"><i class="fa-solid fa-plus"></i> Browse Plans</a></div>
+    <div class="space-y-[8px]">${rows.length?rows.map(r=>{
+      const p=r.plan||{};
+      const active=String(r.active).toLowerCase()==='yes'||r.active===true;
+      const start=r.activated_at||r.createdAt;
+      const end=r.expire_date;
+      const leftMs=end?new Date(end)-Date.now():0;
+      const daysLeft=Math.max(0,Math.ceil(leftMs/86400000));
+      const dur=new Date(end)-new Date(start);
+      const prog=dur>0?Math.min(100,Math.max(0,(Date.now()-new Date(start))/dur*100)):0;
+      return `<a href="/user/plan-details.html?id=${r._id}" class="block no-underline bg-[#111] border border-[#1e1e1e] rounded-[13px] px-[14px] py-[12px] hover:border-[#2a2a2a]">
+        <div class="flex items-center gap-3">
+          <div class="w-[36px] h-[36px] rounded-[10px] bg-[#1a1a1a] flex items-center justify-center text-blue2"><i class="fa-solid fa-layer-group"></i></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-white text-[.9rem] font-medium">${esc(p.name||'Plan')}</div>
+            <div class="text-[.72rem] text-[#555]">${money(r.amount)} invested</div>
+          </div>
+          <div class="hidden sm:block flex-1 px-3">
+            <div class="text-[.65rem] text-[#555] mb-1">Progress ${daysLeft} days left</div>
+            <div class="h-[4px] bg-[#1a1a1a] rounded-full overflow-hidden"><div class="h-full bg-[#4a6cf7]" style="width:${prog}%"></div></div>
+          </div>
+          <div class="text-right mr-2">
+            <div class="text-grn text-[.8rem]">${money(r.profit_earned||0)}</div>
+            <div class="text-[.65rem] text-[#555]">${dt(start)} – ${dt(end)}</div>
+          </div>
+          <span class="text-[.68rem] px-2 py-1 rounded-full ${active?'text-grn bg-[rgba(0,212,124,.1)]':'text-[#888] bg-[#1a1a1a]'}">${active?'Active':'Expired'}</span>
+          <i class="fa-solid fa-chevron-right text-[#444] text-[.75rem]"></i>
+        </div>
+      </a>`;
+    }).join(''):'<div class="text-center py-12 text-[#555]">No investments yet.</div>'}</div>`;
   }
     async function planDetails(){
-    const root=inner(),id=new URLSearchParams(location.search).get('id');
-    if(!id){
-      toast('Investment id is required.',false);
-      return
-    }
-    const d=await get('/investments/'+encodeURIComponent(id)),i=d.investment,p=i.plan||{
-    };
-    const duration=new Date(i.expire_date)-new Date(i.activated_at||i.createdAt);
-    const progress=Math.min(100,Math.max(0,(Date.now()-new Date(i.activated_at||i.createdAt))/duration*100));
-    const projected=Number(i.amount||0)+Number(i.profit_earned||0);
-    root.innerHTML=shell(p.name||'Plan Details')+`<div class="grid grid-cols-2 gap-[9px] mb-[9px]">${[['Invested',money(i.amount)],['Profit',money(i.profit_earned)],['Projected Total ROI',money(projected)],['Status',i.active]].map(x=>`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-[#444] text-[.68rem] uppercase mb-1">${
-      x[0]
-    }
-    </div><div class="text-white font-bold">${
-      x[1]
-    }
-    </div></div>`).join('')}</div><div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="flex justify-between text-[.72rem] text-[#555] mb-2"><span>Investment Progress</span><span>${progress.toFixed(0)}%</span></div><div class="h-[5px] bg-[#1a1a1a] rounded-full overflow-hidden"><div style="width:${progress}%;height:100%;background:#4a6cf7"></div></div><div class="grid grid-cols-2 gap-3 mt-4 text-[.78rem]"><div><span class="text-[#555]">Started</span><div class="text-white">${dt(i.activated_at||i.createdAt)}</div></div><div><span class="text-[#555]">Expires</span><div class="text-white">${dt(i.expire_date)}</div></div></div></div>${i.active==='yes'?'<button id="cancelPlan" class="mt-3 w-full py-[11px] rounded-[10px] bg-[rgba(255,69,96,.1)] border border-[rgba(255,69,96,.2)] text-red2">Cancel Plan</button>':''}`;
-    const c=document.getElementById('cancelPlan');
-    if(c)c.onclick=async()=>{
-      if(!confirm('Cancel this investment?'))return;
-      try{
-        const x=await post('/investments/'+encodeURIComponent(id)+'/cancel',{
-        });
-        toast(x.message,true);
-        location.href='/user/myplans.html'
-      }
-      catch(e){
-        toast(e.message,false)
-      }
+    const root=inner();
+    showDynamicMain();
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){toast('Investment id is required.',false);return;}
+    if(root) root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    const d=await get('/investments/'+encodeURIComponent(id));
+    const i=d.investment||{};
+    const p=i.plan||{};
+    const active=String(i.active).toLowerCase()==='yes'||i.active===true;
+    const start=new Date(i.activated_at||i.createdAt);
+    const endD=new Date(i.expire_date);
+    const duration=Math.max(1,endD-start);
+    const progress=Math.min(100,Math.max(0,(Date.now()-start)/duration*100));
+    const dayNum=Math.min(Math.ceil((Date.now()-start)/86400000), Math.ceil(duration/86400000));
+    const totalDays=Math.max(1,Math.ceil(duration/86400000));
+    const invested=Number(i.amount||0);
+    const profit=Number(i.profit_earned||0);
+    const rate=planRate(p);
+    const projected=invested + (invested*rate/100*totalDays);
+    root.innerHTML=`<div class="flex items-center justify-between mb-[16px]">
+      <div class="flex items-center gap-3">
+        <div class="inner-back" onclick="location.href='/user/myplans.html'"><i class="fa-solid fa-chevron-left"></i></div>
+        <div>
+          <div class="inner-title">${esc(p.name||'Plan Details')}</div>
+          <p class="text-[.72rem] text-[#444] mt-0.5">${esc(planIntervalLabel(p))} for ${esc(i.inv_duration||p.expiration||(totalDays+' Days'))}</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-[.68rem] px-2 py-1 rounded-full ${active?'text-grn bg-[rgba(0,212,124,.1)]':'text-[#888] bg-[#1a1a1a]'}">${active?'Active':'Expired'}</span>
+        ${active?`<button id="cancelPlanBtn" class="text-[.72rem] text-red2 border border-[rgba(255,69,96,.3)] rounded-full px-3 py-1">Cancel Plan</button>`:''}
+      </div>
+    </div>
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] mb-[10px]">
+      <div class="flex justify-between text-[.72rem] text-[#555] mb-2"><span>Investment Progress</span><span>Day ${dayNum} of ${totalDays}</span></div>
+      <div class="h-[6px] bg-[#1a1a1a] rounded-full overflow-hidden mb-2"><div class="h-full bg-[#4a6cf7]" style="width:${progress}%"></div></div>
+      <div class="flex justify-between text-[.65rem] text-[#444]"><span>${dt(start)}</span><span>${progress.toFixed(0)}%</span><span>${dt(endD)}</span></div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-[10px] mb-[10px]">
+      <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-[.65rem] text-[#555] uppercase mb-2">Invested Amount</div><div class="text-white font-sora text-[1.2rem]">${money(invested)}</div></div>
+      <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-[.65rem] text-[#555] uppercase mb-2">Profit Earned</div><div class="text-white font-sora text-[1.2rem]">${money(profit)}</div></div>
+      <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-[.65rem] text-[#555] uppercase mb-2">Total Return</div><div class="text-white font-sora text-[1.2rem]">${money(invested+profit)}</div></div>
+    </div>
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] mb-[10px]">
+      <div class="text-[.8rem] text-white mb-3">Earnings Summary</div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-[8px] text-[.75rem]">
+        <div><div class="text-[#555]">ROI ${esc(planIntervalLabel(p))}</div><div class="text-grn mt-1">${money(invested*rate/100)}</div></div>
+        <div><div class="text-[#555]">Payments Received</div><div class="text-white mt-1">${Number(i.payments_count||0)}</div></div>
+        <div><div class="text-[#555]">Projected Total ROI</div><div class="text-blue2 mt-1">${money(projected)}</div></div>
+        <div><div class="text-[#555]">Next Payout</div><div class="text-white mt-1">${active?dt(new Date(Date.now()+3600000)):'—'}</div></div>
+      </div>
+    </div>
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+      <div class="text-[.8rem] text-white mb-3">Plan Information</div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-[10px] text-[.78rem]">
+        <div><div class="text-[#555]">Duration</div><div class="text-white mt-1">${esc(i.inv_duration||p.expiration||(totalDays+' Days'))}</div></div>
+        <div><div class="text-[#555]">Start Date</div><div class="text-white mt-1">${dt(start)}</div></div>
+        <div><div class="text-[#555]">End Date</div><div class="text-white mt-1">${dt(endD)}</div></div>
+        <div><div class="text-[#555]">Min Return</div><div class="text-white mt-1">${p.min_return??rate}%</div></div>
+        <div><div class="text-[#555]">Max Return</div><div class="text-white mt-1">${p.max_return??rate}%</div></div>
+        <div><div class="text-[#555]">ROI Interval</div><div class="text-white mt-1">${esc(planIntervalLabel(p))}</div></div>
+      </div>
+    </div>`;
+    const cancelBtn=root.querySelector('#cancelPlanBtn');
+    if(cancelBtn){
+      cancelBtn.onclick=async()=>{
+        if(!confirm('Cancel this investment plan?'))return;
+        try{
+          const x=await post('/investments/'+encodeURIComponent(id)+'/cancel',{});
+          toast(x.message||'Plan cancelled',true);
+          location.href='/user/myplans.html';
+        }catch(e){toast(e.message,false);}
+      };
     }
   }
     async function cards(){
@@ -814,66 +1007,131 @@
     </div></div>`).join('')}</div>`
   }
     async function adminPlans(){
-    const m=adminMain(),d=await get('/plans');
-    m.innerHTML=adminShell('Investment Plans','Manage system investment plans')+`<div class="flex justify-end"><a href="/admin/new-plan.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">New Plan</a></div><div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">${d.plans.length?d.plans.map(p=>`<div class="bg-surface-card rounded-xl border border-border shadow-card p-5"><div class="flex justify-between"><div><h3 class="font-semibold text-content">${
-      esc(p.name)
+    const m=adminMain();
+    showDynamicMain();
+    if(!m)return;
+    m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">Investment Plans</h1><p class="text-sm text-content-muted mt-1">Manage system investment plans</p></div><a href="/admin/new-plan.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium shadow-sm">+ New plan</a></div><div id="adminPlansGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"><div class="col-span-full text-center py-12 text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading plans...</div></div>`;
+    const d=await get('/plans');
+    const plans=d.plans||[];
+    const grid=m.querySelector('#adminPlansGrid');
+    if(!plans.length){
+      grid.innerHTML='<div class="col-span-full text-center py-12 text-content-muted">No investment plans yet. Create one to get started.</div>';
+      return;
     }
-    </h3><p class="text-xs text-content-muted mt-1">${
-      esc(p.tag||p.type||'Main')
-    }
-    </p></div><span class="text-xs ${p.status==='active'?'text-success':'text-danger'}">${
-      esc(p.status)
-    }
-    </span></div><div class="grid grid-cols-2 gap-3 mt-4 text-sm"><div><span class="text-content-muted">Min</span><div class="text-content font-medium">${
-      money(p.min_price??p.min)
-    }
-    </div></div><div><span class="text-content-muted">Max</span><div class="text-content font-medium">${
-      p.max_price||p.max?money(p.max_price??p.max):'Unlimited'
-    }
-    </div></div><div><span class="text-content-muted">Return</span><div class="text-success font-medium">${
-      p.increment_amount??p.return??p.maxr??0
-    }
-    %</div></div><div><span class="text-content-muted">Duration</span><div class="text-content font-medium">${
-      esc(p.expiration||`${p.duration} Days`)
-    }
-    </div></div></div><div class="flex gap-2 mt-5"><a href="/admin/edit-plan.html?id=${p._id}" class="flex-1 text-center px-3 py-2 rounded-lg border border-border text-content text-sm">Edit</a><button data-del-plan="${p._id}" class="px-3 py-2 rounded-lg bg-danger/10 text-danger text-sm">Delete</button></div></div>`).join(''):'<div class="col-span-full text-center py-16 text-content-muted">No investment plans have been created.</div>'}</div>`;
-    m.querySelectorAll('[data-del-plan]').forEach(b=>b.onclick=async()=>{
-      if(!confirm('Delete this investment plan?'))return;
-      try{
-        const x=await del('/plans/'+b.dataset.delPlan);
-        toast(x.message,true);
-        await adminPlans()
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    })
+    grid.innerHTML=plans.map(p=>{
+      const min=Number(p.min_price??p.min??0);
+      const max=Number(p.max_price??p.max??0);
+      const minr=Number(p.min_return??p.minr??0);
+      const maxr=Number(p.max_return??p.maxr??p.return??p.increment_amount??0);
+      const gift=Number(p.gift??p.gift_bonus??0);
+      const tag=String(p.tag||p.type||'');
+      const price=Number(p.price??min);
+      return `<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col">
+        <div class="flex items-start justify-between gap-2 mb-3">
+          <div>
+            <h3 class="text-lg font-semibold text-slate-900">${esc(p.name)} ${tag?`<span class="ml-1 inline-flex text-[.65rem] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600">${esc(tag)}</span>`:''}</h3>
+            <div class="text-2xl font-bold text-blue-600 mt-2">${money(price)}</div>
+          </div>
+        </div>
+        <div class="space-y-2 text-sm text-slate-600 flex-1">
+          <div class="flex justify-between"><span>Min Deposit</span><span class="font-medium text-slate-900">${money(min)}</span></div>
+          <div class="flex justify-between"><span>Max Deposit</span><span class="font-medium text-slate-900">${max?money(max):'Unlimited'}</span></div>
+          <div class="flex justify-between"><span>Min Return</span><span class="font-medium text-slate-900">${minr}%</span></div>
+          <div class="flex justify-between"><span>Max Return</span><span class="font-medium text-slate-900">${maxr}%</span></div>
+          <div class="flex justify-between"><span>Gift Bonus</span><span class="font-medium text-slate-900">${money(gift)}</span></div>
+          <div class="flex justify-between"><span>Duration</span><span class="font-medium text-slate-900">${esc(p.expiration||`${p.duration||30} Days`)}</span></div>
+        </div>
+        <div class="flex gap-2 mt-5">
+          <a href="/admin/edit-plan.html?id=${p._id}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm"><i class="fa-solid fa-pen text-[.7rem]"></i> Edit</a>
+          <button type="button" data-del-plan="${p._id}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 text-white text-sm"><i class="fa-solid fa-trash text-[.7rem]"></i> Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+    grid.querySelectorAll('[data-del-plan]').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Delete this investment plan?'))return;
+        try{
+          const x=await del('/plans/'+btn.dataset.delPlan);
+          toast(x.message||'Investment Plan deleted Successfully!',true);
+          adminPlans();
+        }catch(e){toast(e.message,false);}
+      };
+    });
   }
-    async function adminPlanForm(edit){
-    const m=adminMain(),id=edit?new URLSearchParams(location.search).get('id'):null;
-    let p={
-    };
-    if(edit){
-      const d=await get('/plans/'+id);
-      p=d.plan
+    async function adminPlanForm(isEdit){
+    const m=adminMain();
+    showDynamicMain();
+    if(!m)return;
+    // Keep original template form markup if present; only wire submit + fill edit values.
+    const form=document.querySelector('form[action*="addplan"], form[action*="editplan"], form#planForm, main form.role-form, main form[method="post"]');
+    // Prefer the main content form (not logout)
+    let planForm=null;
+    document.querySelectorAll('form').forEach(f=>{
+      if(f.dataset.authLogout)return;
+      if(f.querySelector('[name="name"]')||f.querySelector('#name')) planForm=f;
+    });
+    if(!planForm){
+      // fallback: build template-matching form
+      m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">${isEdit?'Edit Investment Plan':'Add Investment Plan'}</h1></div><a href="/admin/plans.html" class="px-4 py-2 rounded-lg border border-border text-sm">← Back</a></div>
+      <form id="planForm" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+        <label class="block text-sm"><span class="font-medium text-slate-700">Plan Name *</span><input name="name" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="Enter Plan name"></label>
+        <label class="block text-sm"><span class="font-medium text-slate-700">Plan Price ($) *</span><input name="price" type="number" step="0.01" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="Enter Plan price"></label>
+        <label class="block text-sm"><span class="font-medium text-slate-700">Plan Minimum Price ($) *</span><input name="min_price" type="number" step="0.01" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="Enter Plan minimum price"></label>
+        <label class="block text-sm"><span class="font-medium text-slate-700">Plan Maximum Price ($) *</span><input name="max_price" type="number" step="0.01" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="Enter Plan maximum price"></label>
+        <label class="block text-sm"><span class="font-medium text-slate-700">Minimum Return (%) *</span><input name="minr" type="number" step="0.01" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="Enter minimum return"></label>
+        <label class="block text-sm"><span class="font-medium text-slate-700">Maximum Return (%) *</span><input name="maxr" type="number" step="0.01" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="Enter maximum return"></label>
+        <label class="block text-sm"><span class="font-medium text-slate-700">Gift Bonus ($)</span><input name="gift" type="number" step="0.01" value="0" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium text-slate-700">Plan Tag</span><input name="tag" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="Popular, VIP, etc"></label>
+        <label class="block text-sm"><span class="font-medium text-slate-700">Top up Interval</span><select name="t_interval" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"><option>Monthly</option><option>Weekly</option><option>Daily</option><option>Hourly</option><option>Every 10 Minutes</option></select></label>
+        <label class="block text-sm"><span class="font-medium text-slate-700">Top up Type</span><select name="t_type" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"><option>Percentage</option><option>Fixed</option></select></label>
+        <label class="block text-sm"><span class="font-medium text-slate-700">Top up Amount (in % or $) *</span><input name="t_amount" type="number" step="0.01" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="top up amount"></label>
+        <label class="block text-sm"><span class="font-medium text-slate-700">Investment Duration *</span><input name="expiration" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="eg 1 Days, 2 Weeks, 1 Months"></label>
+        <div class="md:col-span-2"><button type="submit" class="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-medium">${isEdit?'Update Plan':'Add Plan'}</button></div>
+      </form>`;
+      planForm=m.querySelector('#planForm');
+    } else {
+      // reveal main content
+      showDynamicMain();
     }
-    m.innerHTML=adminShell(edit?'Update Plan':'Add Investment Plan','Configure investment plan')+`<form id="adminPlanForm" class="bg-surface-card rounded-xl border border-border shadow-card p-6 space-y-5"><div class="grid grid-cols-1 md:grid-cols-2 gap-4">${[['name','Plan Name','text',p.name||''],['price','Plan Price ($)','number',p.price||0],['min_price','Min Deposit','number',(p.min_price??p.min)||0],['max_price','Max Deposit','number',(p.max_price??p.max)||0],['minr','Min Return','number',(p.minr??p.min_return)||0],['maxr','Max Return','number',(p.maxr??p.max_return)||0],['duration','Duration','number',p.duration||30],['expiration','Expiration','text',p.expiration||'30 Days'],['tag','Tag','text',p.tag||''],['t_interval','Increment Interval','text',p.increment_interval||'Daily'],['t_type','Increment Type','text',p.increment_type||'Percentage'],['t_amount','Increment Amount','number',(p.increment_amount??p.return)||0]].map(x=>`<label class="text-sm text-content-secondary">${
-      x[1]
-    }
-    <input name="${x[0]}" type="${x[2]}" value="${esc(x[3])}" class="mt-1.5 w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-content"></label>`).join('')}</div><label class="flex items-center gap-2 text-sm text-content"><input name="status" type="checkbox" ${p.status!=='inactive'?'checked':''}> Active</label><div class="flex gap-3"><button class="px-4 py-2 rounded-lg bg-primary text-white">${edit?'Update Plan':'Create Plan'}</button><a href="/admin/plans.html" class="px-4 py-2 rounded-lg border border-border text-content">Cancel</a></div></form>`;
-    m.querySelector('#adminPlanForm').onsubmit=async e=>{
-      e.preventDefault();
-      const b=Object.fromEntries(new FormData(e.currentTarget));
-      b.status=e.currentTarget.status.checked;
+
+    let planId=new URLSearchParams(location.search).get('id');
+    if(isEdit && planId){
       try{
-        const x=edit?await put('/plans/'+id,b):await post('/plans',b);
-        toast(x.message,true);
-        location.href='/admin/plans.html'
-      }
-      catch(err){
-        toast(err.message,false)
-      }
+        const d=await get('/plans/'+encodeURIComponent(planId));
+        const p=d.plan||{};
+        const set=(n,v)=>{const el=planForm.querySelector(`[name="${n}"]`); if(el) el.value=v??'';};
+        set('name',p.name); set('price',p.price??p.min_price??p.min);
+        set('min_price',p.min_price??p.min); set('max_price',p.max_price??p.max);
+        set('minr',p.minr??p.min_return); set('maxr',p.maxr??p.max_return??p.return??p.increment_amount);
+        set('gift',p.gift??p.gift_bonus??0); set('tag',p.tag||'');
+        set('t_interval',p.increment_interval||p.t_interval||'Daily');
+        set('t_type',p.increment_type||p.t_type||'Percentage');
+        set('t_amount',p.increment_amount??p.t_amount??p.return??p.maxr);
+        set('expiration',p.expiration||`${p.duration||30} Days`);
+      }catch(e){toast(e.message,false);}
     }
+
+    planForm.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const fd=new FormData(planForm);
+      const body=Object.fromEntries(fd.entries());
+      // map return from t_amount if needed
+      body.return=body.t_amount;
+      body.increment_amount=body.t_amount;
+      try{
+        let x;
+        if(isEdit && planId){
+          x=await put('/plans/'+encodeURIComponent(planId), body);
+          toast(x.message||'Plan Successfully Updated',true);
+        } else {
+          x=await post('/plans', body);
+          toast(x.message||'Plan created successfully',true);
+        }
+        setTimeout(()=>{ location.href='/admin/plans.html'; }, 600);
+      }catch(err){
+        toast(err.response?.data?.message||err.message||'Save failed',false);
+      }
+    });
   }
     async function adminCards(){
     const m=adminMain(),d=await get('/cards');
