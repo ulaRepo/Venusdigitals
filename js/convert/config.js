@@ -1,5 +1,4 @@
 
-// digital-grownt\frontend\js\convert\config.js
 (() => {
   const API_BASE_URL = 'https://venusdigital-backend.onrender.com';
   window.API_BASE_URL = API_BASE_URL;
