@@ -157,6 +157,8 @@
     window.USER_CURR_SYM=sym;
     const balNum=Number(user.balance??user.account_bal??0);
     window.USER_BAL_VAL=balNum;
+    window.USER_NAME=String(user?.name||user?.full_name||'');
+
     const bal=sym+balNum.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
     if(typeof window.realBal!=='undefined')window.realBal=bal;
     const topBal=document.getElementById('topBal');
@@ -615,55 +617,166 @@
     }
   }
     async function cards(){
-    const root=inner(),d=await get('/cards');
-    root.innerHTML=shell('My Cards','Manage your digital cards')+`<div class="space-y-[9px]">${d.cards.length?d.cards.map(c=>`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="flex justify-between"><div><div class="text-white font-medium">${
-      esc(c.card_type_id?.name||c.cardType?.name||'Card')
+    const root=inner();
+    showDynamicMain();
+    if(root) root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    const d=await get('/cards');
+    const list=d.cards||[];
+    const isRevealed=s=>['active','frozen'].includes(String(s||'').toLowerCase());
+    function networkOf(c){
+      const n=String(c.card_type_id?.network||c.cardType?.network||c.network||c.card_type_id?.name||c.cardType?.name||'').toLowerCase();
+      if(n.includes('master')) return 'mastercard';
+      return 'visa';
     }
-    </div><div class="text-[#555] text-[.72rem] mt-1">${
-      esc(c.masked_number||'•••• •••• •••• ••••')
+    function last4(c){
+      const num=String(c.card_number||c.masked_number||'').replace(/\D/g,'');
+      if(num.length>=4) return num.slice(-4);
+      return '••••';
     }
-    </div></div><span class="text-[.68rem] px-2 py-1 rounded-full bg-[rgba(0,212,124,.1)] text-grn">${
-      esc(c.status)
+    function expiry(c){
+      if(c.expiry_display) return c.expiry_display;
+      if(c.expiry_month&&c.expiry_year){
+        const mm=String(c.expiry_month).padStart(2,'0');
+        const yy=String(c.expiry_year).slice(-2);
+        return mm+'/'+yy;
+      }
+      return '••/••';
     }
-    </span></div>${
-      c.status==='active'?`<div class="grid grid-cols-2 gap-3 mt-4 text-[.76rem]"><div><span class="text-[#555]">Expiry</span><div class="text-white">${esc(c.expiry_display||'--/--')}</div></div><div><span class="text-[#555]">Balance</span><div class="text-white">${money(c.balance)}</div></div></div>`:''
+    function cardFace(c){
+      const net=networkOf(c);
+      const revealed=isRevealed(c.status);
+      const holder=esc(c.card_holder||'CARD HOLDER');
+      const status=String(c.status||'pending');
+      const stColor=status==='active'?'#00d47c':status==='pending'?'#f5c542':status==='frozen'?'#3B7BFF':'#ff4560';
+      const bg=net==='mastercard'
+        ? 'background:linear-gradient(135deg,#1a1a2e 0%,#16213e 40%,#0f3460 100%);'
+        : 'background:linear-gradient(135deg,#0b1d4a 0%,#1a3a8a 45%,#2b5cff 100%);';
+      const brand=net==='mastercard'
+        ? `<div class="flex items-center" style="height:36px"><span style="width:28px;height:28px;border-radius:50%;background:#eb001b;display:inline-block"></span><span style="width:28px;height:28px;border-radius:50%;background:#f79e1b;display:inline-block;margin-left:-10px;opacity:.95"></span></div>`
+        : `<div style="font-family:Sora,sans-serif;font-weight:700;font-size:1.15rem;letter-spacing:.08em;color:#fff">VISA</div>`;
+      const numberLine=revealed
+        ? `•••• •••• •••• ${last4(c)}`
+        : `•••• •••• •••• ••••`;
+      const expLine=revealed ? expiry(c) : '••/••';
+      return `<div class="rounded-[18px] p-[20px] text-white relative overflow-hidden shadow-lg" style="${bg} min-height:190px">
+        <div class="absolute -right-8 -top-8 w-[120px] h-[120px] rounded-full opacity-10" style="background:#fff"></div>
+        <div class="flex justify-between items-start mb-6">
+          <div class="w-[42px] h-[32px] rounded-[6px] bg-gradient-to-br from-[#f5d76e] to-[#c9a227] opacity-90"></div>
+          ${brand}
+        </div>
+        <div class="font-mono tracking-[.18em] text-[1.05rem] mb-5">${numberLine}</div>
+        <div class="flex justify-between items-end">
+          <div>
+            <div class="text-[.58rem] uppercase tracking-[.12em] text-white/50 mb-1">Card Holder</div>
+            <div class="text-[.82rem] font-medium tracking-wide uppercase">${holder}</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[.58rem] uppercase tracking-[.12em] text-white/50 mb-1">Expires</div>
+            <div class="text-[.82rem] font-mono">${expLine}</div>
+          </div>
+        </div>
+        <div class="mt-3"><span class="text-[.65rem] px-2 py-0.5 rounded-full" style="color:${stColor};background:rgba(0,0,0,.25);border:1px solid ${stColor}55">${esc(status.charAt(0).toUpperCase()+status.slice(1))}</span></div>
+      </div>`;
     }
-    </div>`).join(''):'<div class="text-center py-12 text-[#555]">No cards yet.</div>'}<a href="/user/apply-card.html" class="block w-full py-[11px] rounded-[10px] bg-brand-blue text-white text-center">Apply for Your First Card</a></div>`
+    root.innerHTML=`<div class="flex items-center justify-between mb-[18px] flex-wrap gap-3">
+      <div><div class="inner-title">My Cards</div><p class="text-[.72rem] text-[#444] mt-0.5">Manage your virtual and physical debit cards</p></div>
+      <a href="/user/apply-card.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-blue text-white text-[.82rem] no-underline font-medium">+ Apply for Card</a>
+    </div>
+    ${list.length?`<div class="grid grid-cols-1 md:grid-cols-2 gap-[14px]">${list.map(c=>`<div>
+        ${cardFace(c)}
+        <button type="button" class="w-full mt-3 py-[10px] rounded-[10px] border border-[#1e1e1e] text-[#888] text-[.82rem]" onclick="return false">View Details</button>
+      </div>`).join('')}</div>`:`<div class="text-center py-20">
+      <div class="w-[64px] h-[64px] mx-auto mb-4 rounded-[14px] bg-[#111] border border-[#1e1e1e] flex items-center justify-center text-[#333] text-[1.6rem]"><i class="fa-regular fa-credit-card"></i></div>
+      <p class="text-[#555] text-[.9rem] mb-5">You don't have any cards yet.</p>
+      <a href="/user/apply-card.html" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-blue text-white text-[.88rem] no-underline font-medium">Apply for Your First Card</a>
+    </div>`}`;
   }
     async function applyCard(){
-    const root=inner(),d=await get('/card-types');
-    root.innerHTML=shell('Apply for a Card','Choose a card type')+`<form id="applyCardFeature" class="space-y-[9px]"><div class="grid grid-cols-1 md:grid-cols-2 gap-[9px]">${d.cardTypes.length?d.cardTypes.map(t=>`<label class="block cursor-pointer"><input type="radio" name="card_type_id" value="${t._id}" class="sr-only peer" required><div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] peer-checked:border-blue2"><div class="text-white font-medium">${
-      esc(t.name)
+    const root=inner();
+    showDynamicMain();
+    if(root) root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading card types...</div>';
+    const d=await get('/card-types');
+    const types=(d.cardTypes||[]).filter(t=>t.is_active!==false);
+    const fullName=(window.USER_NAME||document.querySelector('.sb-name')?.textContent||'').trim();
+    root.innerHTML=`<div class="mb-[18px] flex items-center gap-3">
+      <div class="inner-back" onclick="location.href='/user/cards.html'"><i class="fa-solid fa-chevron-left"></i></div>
+      <div><div class="inner-title">Apply for a Card</div><p class="text-[.72rem] text-[#444] mt-0.5">Choose a card type and fill in your details</p></div>
+    </div>
+    <form id="applyCardFeature" class="space-y-[14px]">
+      <div class="text-[.68rem] text-[#555] uppercase tracking-[.07em]">Select a Card Type</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[10px]" id="cardTypeGrid">
+        ${types.length?types.map(t=>{
+          const fee=Number(t.fee??t.issuance_fee??0);
+          const feeLbl=fee>0?money(fee)+' fee':'Free';
+          return `<label class="block cursor-pointer">
+            <input type="radio" name="card_type_id" value="${t._id}" class="sr-only peer" required>
+            <div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-[16px] h-full peer-checked:border-blue2 peer-checked:bg-[rgba(74,108,247,.06)] transition-all">
+              <div class="flex justify-between items-start gap-2 mb-2">
+                <div class="text-white font-medium">${esc(t.name)}</div>
+                <span class="text-[.68rem] px-2 py-0.5 rounded-full ${fee>0?'bg-[rgba(74,108,247,.15)] text-blue2':'bg-[rgba(0,212,124,.12)] text-grn'}">${feeLbl}</span>
+              </div>
+              <div class="text-[.72rem] text-[#555] mb-2">${esc(t.network||'')} · ${esc(t.type||'')}</div>
+              <p class="text-[.78rem] text-[#666] leading-relaxed">${esc(t.description||'')}</p>
+              ${t.delivery_days?`<div class="text-[.72rem] text-[#555] mt-3"><i class="fa-regular fa-clock mr-1"></i>Delivery: ~${esc(t.delivery_days)} days</div>`:''}
+            </div>
+          </label>`;
+        }).join(''):'<div class="col-span-full text-[#555] py-8 text-center">No card types available.</div>'}
+      </div>
+      <div id="applyCardFormPanel" class="hidden bg-[#111] border border-[#1e1e1e] rounded-[14px] p-[16px] space-y-[12px]">
+        <div class="text-[.68rem] text-[#555] uppercase tracking-[.07em]">Card Details</div>
+        <div><label class="text-[.72rem] text-[#666]">Card Holder Name</label><input name="card_holder" id="applyCardHolder" required class="w-full mt-1 bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] px-3 py-2.5 text-white outline-none" placeholder="Full name on card"></div>
+        <div><label class="text-[.72rem] text-[#666]">Street Address</label><input name="street" class="w-full mt-1 bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] px-3 py-2.5 text-white outline-none" placeholder="Street address"></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="text-[.72rem] text-[#666]">City</label><input name="city" class="w-full mt-1 bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] px-3 py-2.5 text-white outline-none"></div>
+          <div><label class="text-[.72rem] text-[#666]">Postcode</label><input name="postcode" class="w-full mt-1 bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] px-3 py-2.5 text-white outline-none"></div>
+        </div>
+        <div><label class="text-[.72rem] text-[#666]">Country</label><input name="country" class="w-full mt-1 bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] px-3 py-2.5 text-white outline-none" value="Nigeria"></div>
+        <div id="applyCardErr" class="text-red2 text-[.78rem] hidden"></div>
+        <button type="submit" class="w-full py-[13px] rounded-[12px] bg-brand-blue text-white font-medium">Submit Application</button>
+      </div>
+    </form>`;
+    const panel=root.querySelector('#applyCardFormPanel');
+    const holder=root.querySelector('#applyCardHolder');
+    function showForm(){
+      panel.classList.remove('hidden');
+      if(holder && !holder.value){
+        const name=(window.USER_NAME||document.querySelector('.sb-name')?.textContent||fullName||'').trim();
+        if(name) holder.value=name;
+      }
+      panel.scrollIntoView({behavior:'smooth',block:'nearest'});
     }
-    </div><div class="text-[#555] text-[.72rem] mt-1">${
-      esc(t.type)
-    }
-     · ${
-      esc(t.network)
-    }
-    </div><div class="text-grn text-[.82rem] mt-3">Fee: ${
-      money(t.fee||t.issuance_fee)
-    }
-    </div><div class="text-[#666] text-[.72rem] mt-1">${
-      esc(t.description||'')
-    }
-    </div></div></label>`).join(''):'<div class="text-center py-12 text-[#555]">No active card types are available.</div>'}</div><input name="card_holder" class="w-full bg-[#111] border border-[#1e1e1e] rounded-[10px] p-[12px] text-white" placeholder="Card holder name" required><input name="shipping_address" class="w-full bg-[#111] border border-[#1e1e1e] rounded-[10px] p-[12px] text-white" placeholder="Shipping address"><button class="w-full py-[11px] rounded-[10px] bg-brand-blue text-white">Submit Application</button></form>`;
+    root.querySelectorAll('input[name="card_type_id"]').forEach(r=>{
+      r.addEventListener('change', showForm);
+    });
+    // if profile loads late, try fill once more
+    setTimeout(()=>{
+      if(holder && !holder.value && window.USER_NAME) holder.value=String(window.USER_NAME).trim();
+    },800);
     root.querySelector('#applyCardFeature').onsubmit=async e=>{
       e.preventDefault();
-      const f=new FormData(e.currentTarget);
+      const fd=new FormData(e.currentTarget);
+      const body=Object.fromEntries(fd.entries());
+      if(!body.card_type_id){
+        const err=root.querySelector('#applyCardErr');
+        panel.classList.remove('hidden');
+        err.textContent='Please select a card type.';
+        err.classList.remove('hidden');
+        return;
+      }
+      body.shipping_address={street:body.street,city:body.city,postcode:body.postcode,country:body.country};
+      const err=root.querySelector('#applyCardErr');
       try{
-        const x=await post('/cards',{
-          card_type_id:f.get('card_type_id'),card_holder:f.get('card_holder'),shipping_address:f.get('shipping_address')
-        });
-        toast(x.message,true);
-        notify('Card Application Submitted',x.message);
-        location.href='/user/cards.html'
+        const x=await post('/cards',body);
+        toast(x.message||'Card application submitted. Pending review.',true);
+        setTimeout(()=>location.href='/user/cards.html',700);
+      }catch(ex){
+        err.textContent=ex.response?.data?.message||ex.message||'Application failed';
+        err.classList.remove('hidden');
+        panel.classList.remove('hidden');
       }
-      catch(err){
-        toast(err.message,false)
-      }
-    }
+    };
   }
+    
     async function markets(){
     const root=inner(),d=await get('/assets?asset_class=all'),a=d.assets||[];
     const cats=['all','crypto','forex','stock','etf','index'];
@@ -1134,135 +1247,170 @@
     });
   }
     async function adminCards(){
-    const m=adminMain(),d=await get('/cards');
-    m.innerHTML=adminShell('Digital Cards','Manage card types and user applications')+statCards([['Pending',d.stats.pending],['Active Cards',d.stats.active],['Frozen',d.stats.frozen],['Card Types',d.stats.types]])+`<div class="flex justify-end"><a href="/admin/cards-create.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">New Card Type</a></div><div class="bg-surface-card rounded-xl border border-border shadow-card p-5"><h2 class="font-semibold text-content mb-4">Card Types</h2><div class="space-y-3">${d.types.map(t=>`<div class="flex items-center justify-between border-b border-border pb-3"><div><div class="font-medium text-content">${
-      esc(t.name)
+    const m=adminMain();
+    showDynamicMain();
+    if(!m)return;
+    m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">Digital Cards</h1><p class="text-sm text-content-muted mt-1">Manage digital card types and user applications</p></div><a href="/admin/cards-create.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium">+ New Card Type</a></div><div class="text-center py-10 text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>`;
+    const d=await get('/cards');
+    const types=d.types||[];
+    const cards=d.cards||[];
+    const stats=d.stats||{pending:0,active:0,frozen:0,types:types.length};
+    const apps=cards.filter(c=>c.status==='pending');
+    const active=cards.filter(c=>c.status==='active');
+    const frozen=cards.filter(c=>c.status==='frozen');
+    const rejected=cards.filter(c=>c.status==='rejected'||c.status==='cancelled');
+    function rowsFor(list){
+      if(!list.length)return '<tr><td colspan="6" class="py-8 text-center text-content-muted">No records</td></tr>';
+      return list.map(c=>`<tr class="border-t border-border"><td class="py-3">${esc(c.user_id?.name||'—')}</td><td>${esc(c.card_type_id?.name||'—')}</td><td>${esc(c.card_holder||'—')}</td><td><span class="text-xs px-2 py-0.5 rounded-full bg-surface-alt">${esc(c.status)}</span></td><td class="text-content-muted text-xs">${dt(c.createdAt)}</td><td><a href="/admin/cards-view.html?id=${c._id}" class="text-primary text-sm">View</a></td></tr>`).join('');
     }
-    </div><div class="text-xs text-content-muted">${
-      esc(t.type)
-    }
-     · ${
-      esc(t.network)
-    }
-     · Fee ${
-      money(t.fee)
-    }
-    </div></div><div class="flex gap-2"><a href="/admin/cards-edit.html?id=${t._id}" class="text-sm text-primary">Edit</a><button data-cardtoggle="${t._id}" class="text-sm ${t.is_active?'text-danger':'text-success'}">${
-      t.is_active?'Disable':'Enable'
-    }
-    </button></div></div>`).join('')}</div></div><div class="bg-surface-card rounded-xl border border-border shadow-card p-5"><h2 class="font-semibold text-content mb-4">Applications</h2><div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">User</th><th>Card</th><th>Status</th><th></th></tr></thead><tbody>${d.cards.map(c=>`<tr class="border-t border-border"><td class="py-3">${
-      esc(c.user_id?.name||'—')
-    }
-    </td><td>${
-      esc(c.card_type_id?.name||'—')
-    }
-    </td><td>${
-      esc(c.status)
-    }
-    </td><td><a class="text-primary" href="/admin/cards-view.html?id=${c._id}">View</a></td></tr>`).join('')}</tbody></table></div></div>`;
-    m.querySelectorAll('[data-cardtoggle]').forEach(b=>b.onclick=async()=>{
-      try{
-        const x=await post('/card-types/'+b.dataset.cardtoggle+'/toggle',{
+    m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">Digital Cards</h1><p class="text-sm text-content-muted mt-1">Manage digital card types and user applications</p></div><a href="/admin/cards-create.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium">+ New Card Type</a></div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      ${[['PENDING',stats.pending,'fa-clock'],['ACTIVE CARDS',stats.active,'fa-credit-card'],['FROZEN',stats.frozen,'fa-snowflake'],['CARD TYPES',stats.types,'fa-layer-group']].map(([l,v,ico])=>`<div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm"><div class="flex justify-between items-start"><div class="text-xs text-slate-500 uppercase tracking-wide">${l}</div><i class="fa-solid ${ico} text-slate-300"></i></div><div class="text-2xl font-bold text-slate-900 mt-2">${v}</div></div>`).join('')}
+    </div>
+    <div class="flex gap-4 border-b border-border mb-4 text-sm overflow-x-auto" id="cardTabs">
+      <button type="button" data-tab="types" class="pb-2 border-b-2 border-primary text-primary font-medium">Card Types</button>
+      <button type="button" data-tab="apps" class="pb-2 border-b-2 border-transparent text-content-muted">Applications ${apps.length?`<span class="ml-1 text-xs bg-amber-100 text-amber-700 px-1.5 rounded-full">${apps.length}</span>`:''}</button>
+      <button type="button" data-tab="active" class="pb-2 border-b-2 border-transparent text-content-muted">Active</button>
+      <button type="button" data-tab="frozen" class="pb-2 border-b-2 border-transparent text-content-muted">Frozen</button>
+      <button type="button" data-tab="rejected" class="pb-2 border-b-2 border-transparent text-content-muted">Rejected</button>
+    </div>
+    <div id="tab-types" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+      <table class="w-full text-sm"><thead><tr class="text-left text-xs text-slate-500 uppercase bg-slate-50"><th class="px-4 py-3">#</th><th>Name</th><th>Type</th><th>Network</th><th>Fee</th><th>Cards</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${types.map((t,i)=>{
+        const count=cards.filter(c=>String(c.card_type_id?._id||c.card_type_id)===String(t._id)).length;
+        const active=t.is_active!==false;
+        return `<tr class="border-t border-slate-100"><td class="px-4 py-3">${i+1}</td><td class="font-medium">${esc(t.name)}</td><td>${esc(t.type||'')}</td><td>${esc(t.network||'')}</td><td>${money(t.fee??t.issuance_fee??0)}</td><td>${count}</td><td><span class="text-xs ${active?'text-emerald-600':'text-slate-400'}">${active?'Active':'Inactive'}</span></td><td class="space-x-2"><a href="/admin/cards-edit.html?id=${t._id}" class="text-xs px-2 py-1 rounded border border-slate-200">Edit</a><button type="button" data-toggle-type="${t._id}" data-active="${active?1:0}" class="text-xs px-2 py-1 rounded border border-slate-200">${active?'Disable':'Enable'}</button></td></tr>`;
+      }).join('')||'<tr><td colspan="8" class="py-8 text-center text-content-muted">No card types</td></tr>'}</tbody></table>
+    </div>
+    ${[['apps',apps],['active',active],['frozen',frozen],['rejected',rejected]].map(([id,list])=>`<div id="tab-${id}" class="hidden bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs text-slate-500 uppercase bg-slate-50"><th class="px-4 py-3">Client</th><th>Card</th><th>Holder</th><th>Status</th><th>Date</th><th></th></tr></thead><tbody>${rowsFor(list)}</tbody></table></div>`).join('')}`;
+    m.querySelectorAll('#cardTabs [data-tab]').forEach(btn=>{
+      btn.onclick=()=>{
+        m.querySelectorAll('#cardTabs [data-tab]').forEach(b=>{b.classList.remove('border-primary','text-primary','font-medium');b.classList.add('border-transparent','text-content-muted');});
+        btn.classList.add('border-primary','text-primary','font-medium');
+        btn.classList.remove('border-transparent','text-content-muted');
+        ['types','apps','active','frozen','rejected'].forEach(id=>{
+          const el=m.querySelector('#tab-'+id);
+          if(el) el.classList.toggle('hidden', id!==btn.dataset.tab);
         });
-        toast(x.message,true);
-        await adminCards()
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    })
+      };
+    });
+    m.querySelectorAll('[data-toggle-type]').forEach(btn=>{
+      btn.onclick=async()=>{
+        try{
+          const x=await put('/card-types/'+btn.dataset.toggleType,{is_active:btn.dataset.active!=='1'});
+          toast(x.message||(btn.dataset.active==='1'?'Card type disabled.':'Card type enabled.'),true);
+          adminCards();
+        }catch(e){toast(e.message,false);}
+      };
+    });
   }
     async function adminCardForm(edit){
-    const m=adminMain(),id=edit?new URLSearchParams(location.search).get('id'):null;
-    let t={
-    };
-    if(edit)t=(await get('/card-types/'+id)).type;
-    m.innerHTML=adminShell(edit?'Edit Card Type':'Create Card Type','Configure card type details')+`<form id="cardTypeForm" class="bg-surface-card rounded-xl border border-border shadow-card p-6 space-y-4">${[['name','Name','text',t.name||''],['type','Card Type','text',t.type||'Physical'],['network','Network','text',t.network||'Visa'],['fee','Fee','number',t.fee||0],['delivery_days','Delivery Days','number',t.delivery_days||0],['description','Description','text',t.description||'']].map(x=>`<label class="text-sm text-content-secondary">${
-      x[1]
+    const m=adminMain();
+    showDynamicMain();
+    if(!m)return;
+    const id=edit?new URLSearchParams(location.search).get('id'):null;
+    let t={};
+    if(edit&&id){
+      try{t=(await get('/card-types/'+id)).type||{};}catch(e){toast(e.message,false);}
     }
-    <input name="${x[0]}" type="${x[2]}" value="${esc(x[3])}" class="mt-1.5 w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-content"></label>`).join('')}<label class="flex gap-2 text-sm text-content"><input name="is_active" type="checkbox" ${t.is_active!==false?'checked':''}> Active</label><button class="px-4 py-2 rounded-lg bg-primary text-white">${edit?'Update Card Type':'Create Card Type'}</button></form>`;
+    m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">${edit?'Edit Card Type':'Create Card Type'}</h1><p class="text-sm text-content-muted mt-1">Configure card type details</p></div><a href="/admin/admin-cards.html" class="px-4 py-2 rounded-lg border border-border text-sm">← Back to Types</a></div>
+    <form id="cardTypeForm" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 max-w-2xl space-y-4">
+      <label class="block text-sm"><span class="font-medium text-slate-700">Name *</span><input name="name" required value="${esc(t.name||'')}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="e.g. Standard Virtual Card"></label>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <label class="block text-sm"><span class="font-medium text-slate-700">Card Type *</span><select name="type" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"><option ${t.type==='Virtual'?'selected':''}>Virtual</option><option ${t.type==='Physical'||!t.type?'selected':''}>Physical</option></select></label>
+        <label class="block text-sm"><span class="font-medium text-slate-700">Network *</span><select name="network" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"><option ${t.network==='Visa'||!t.network?'selected':''}>Visa</option><option ${t.network==='Mastercard'?'selected':''}>Mastercard</option></select></label>
+        <label class="block text-sm"><span class="font-medium text-slate-700">Issuance Fee ($) *</span><input name="fee" type="number" step="0.01" value="${t.fee??t.issuance_fee??0}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium text-slate-700">Delivery Days (physical only)</span><input name="delivery_days" type="number" value="${t.delivery_days||''}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="e.g. 7"></label>
+      </div>
+      <label class="block text-sm"><span class="font-medium text-slate-700">Description</span><textarea name="description" rows="3" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">${esc(t.description||'')}</textarea></label>
+      <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="is_active" value="1" ${t.is_active!==false?'checked':''}> Active (visible to users)</label>
+      <div class="flex gap-3 pt-2"><button type="submit" class="px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-medium">${edit?'Save Changes':'Create Card Type'}</button><a href="/admin/admin-cards.html" class="px-5 py-2.5 rounded-lg border border-border text-sm">Cancel</a></div>
+    </form>`;
     m.querySelector('#cardTypeForm').onsubmit=async e=>{
       e.preventDefault();
-      const b=Object.fromEntries(new FormData(e.currentTarget));
-      b.is_active=e.currentTarget.is_active.checked;
+      const fd=new FormData(e.currentTarget);
+      const body=Object.fromEntries(fd.entries());
+      body.is_active=fd.get('is_active')==='1';
       try{
-        const x=edit?await put('/card-types/'+id,b):await post('/card-types',b);
-        toast(x.message,true);
-        location.href='/admin/admin-cards.html'
-      }
-      catch(err){
-        toast(err.message,false)
-      }
-    }
+        if(edit&&id){const x=await put('/card-types/'+id,body);toast(x.message||'Card type updated successfully.',true);}
+        else{const x=await post('/card-types',body);toast(x.message||'Card type created successfully.',true);}
+        setTimeout(()=>location.href='/admin/admin-cards.html',600);
+      }catch(err){toast(err.response?.data?.message||err.message,false);}
+    };
   }
     async function adminCardView(){
-    const m=adminMain(),id=new URLSearchParams(location.search).get('id'),d=await get('/cards/'+id),c=d.card;
-    m.innerHTML=adminShell(`Card #${id}`,'Card details, actions, and transaction history')+`<div class="bg-surface-card rounded-xl border border-border shadow-card p-6"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">${[['User',c.user_id?.name],['Email',c.user_id?.email],['Card Type',c.card_type_id?.name],['Holder',c.card_holder],['Number',c.masked_number||c.card_number],['Expiry',c.expiry_display||'--/--'],['Status',c.status],['Balance',money(c.balance)]].map(x=>`<div><span class="text-content-muted">${
-      x[0]
+    const m=adminMain();
+    showDynamicMain();
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){toast('Card id required',false);return;}
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    const d=await get('/cards/'+id);
+    const c=d.card||{};
+    const name=c.card_type_id?.name||'Card';
+    const status=c.status||'pending';
+    let actions='';
+    if(status==='pending'){
+      actions=`<button data-act="approve" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Approve & Issue Card</button>
+        <button data-act="reject" class="px-4 py-2 rounded-lg border border-red-200 text-red-600 text-sm">Reject Application</button>`;
+    } else if(status==='active'){
+      actions=`<button data-act="freeze" class="px-4 py-2 rounded-lg border border-border text-sm">Freeze Card</button>
+        <button data-act="cancel" class="px-4 py-2 rounded-lg border border-red-200 text-red-600 text-sm">Cancel Card</button>`;
+    } else if(status==='frozen'){
+      actions=`<button data-act="unfreeze" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Unfreeze Card</button>
+        <button data-act="cancel" class="px-4 py-2 rounded-lg border border-red-200 text-red-600 text-sm">Cancel Card</button>`;
     }
-    </span><div class="text-content font-medium mt-1">${
-      esc(x[1]??'—')
-    }
-    </div></div>`).join('')}</div><div class="flex flex-wrap gap-2 mt-6">${c.status==='pending'?`<button id="approveCard" class="px-4 py-2 rounded-lg bg-success text-white">Approve & Issue Card</button><button id="rejectCard" class="px-4 py-2 rounded-lg bg-danger text-white">Reject Application</button>`:`<a href="/admin/cards-edit-user.html?id=${c._id}" class="px-4 py-2 rounded-lg border border-border text-content">Edit Card Details</a>${
-      c.status==='frozen'?'<button id="unfreezeCard" class="px-4 py-2 rounded-lg bg-success text-white">Unfreeze Card</button>':'<button id="freezeCard" class="px-4 py-2 rounded-lg bg-warning text-white">Freeze Card</button>'
-    }
-    <button id="cancelCard" class="px-4 py-2 rounded-lg bg-danger text-white">Cancel Card</button>`}</div>${c.status==='active'?'<div class="mt-6 bg-surface-card border border-border rounded-xl p-5"><h3 class="font-semibold text-content mb-3">Fund Card</h3><p class="text-sm text-content-muted">Card balance can be managed from the card account.</p></div>':''}</div>`;
-    m.querySelector('#approveCard')?.addEventListener('click',async()=>{
-      try{
-        const x=await post('/cards/'+id+'/approve',{
-        });
-        toast(x.message,true);
-        await adminCardView()
-      }
-      catch(e){
-        toast(e.message,false)
-      }
+    m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">${esc(name)}</h1><p class="text-sm text-content-muted mt-1">Card details and actions</p></div><a href="/admin/admin-cards.html" class="px-4 py-2 rounded-lg border border-border text-sm">← Back</a></div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        ${[['User',c.user_id?.name],['Email',c.user_id?.email],['Holder',c.card_holder],['Status',status],['Number',c.masked_number||c.card_number||'—'],['Expiry',c.expiry_display||((c.expiry_month&&c.expiry_year)?`${c.expiry_month}/${c.expiry_year}`:'—')],['CVV',c.cvv||'—'],['Balance',money(c.balance||0)],['Issued',dt(c.issued_at)],['Expires',dt(c.expires_at)]].map(([k,v])=>`<div><div class="text-content-muted text-xs uppercase mb-1">${k}</div><div class="text-content font-medium">${esc(v??'—')}</div></div>`).join('')}
+      </div>
+      <div class="flex flex-wrap gap-2 mt-6">
+        <a href="/admin/cards-edit-user.html?id=${c._id}" class="px-4 py-2 rounded-lg border border-border text-sm">Edit Card Details</a>
+        ${actions}
+      </div>
+    </div>`;
+    m.querySelectorAll('[data-act]').forEach(btn=>{
+      btn.onclick=async()=>{
+        const act=btn.dataset.act;
+        if(act==='cancel' && !confirm('Cancel this card? This cannot be undone.'))return;
+        try{
+          const x=await post('/cards/'+id+'/'+act,{});
+          toast(x.message||'Done',true);
+          adminCardView();
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
     });
-    m.querySelector('#rejectCard')?.addEventListener('click',async()=>{
+  }
+    async function adminCardEditUser(){
+    const m=adminMain();
+    showDynamicMain();
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){toast('Card id required',false);return;}
+    m.innerHTML='<div class="p-8 text-center text-content-muted">Loading...</div>';
+    const d=await get('/cards/'+id);
+    const c=d.card||{};
+    m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">Edit Card</h1></div><a href="/admin/cards-view.html?id=${id}" class="px-4 py-2 rounded-lg border border-border text-sm">Cancel</a></div>
+    <form id="editUserCardForm" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 max-w-xl space-y-4">
+      <label class="block text-sm"><span class="font-medium">Card Holder</span><input name="card_holder" value="${esc(c.card_holder||'')}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+      <label class="block text-sm"><span class="font-medium">Card Number</span><input name="card_number" value="${esc(c.card_number||'')}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono"></label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="block text-sm"><span class="font-medium">Expiry Month</span><input name="expiry_month" value="${c.expiry_month||''}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Expiry Year</span><input name="expiry_year" value="${c.expiry_year||''}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+      </div>
+      <label class="block text-sm"><span class="font-medium">CVV</span><input name="cvv" value="${esc(c.cvv||'')}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+      <label class="block text-sm"><span class="font-medium">Balance ($)</span><input name="balance" type="number" step="0.01" value="${c.balance||0}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+      <label class="block text-sm"><span class="font-medium">Status</span><select name="status" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">${['pending','active','frozen','cancelled','rejected'].map(s=>`<option value="${s}" ${c.status===s?'selected':''}>${s}</option>`).join('')}</select></label>
+      <button type="submit" class="px-5 py-2.5 rounded-lg bg-primary text-white text-sm">Save Changes</button>
+    </form>`;
+    m.querySelector('#editUserCardForm').onsubmit=async e=>{
+      e.preventDefault();
+      const body=Object.fromEntries(new FormData(e.currentTarget).entries());
       try{
-        const x=await post('/cards/'+id+'/reject',{
-        });
-        toast(x.message,true);
-        await adminCardView()
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    });
-    m.querySelector('#freezeCard')?.addEventListener('click',async()=>{
-      try{
-        const x=await post('/cards/'+id+'/freeze',{
-        });
-        toast(x.message,true);
-        await adminCardView()
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    });
-    m.querySelector('#unfreezeCard')?.addEventListener('click',async()=>{
-      try{
-        const x=await post('/cards/'+id+'/unfreeze',{
-        });
-        toast(x.message,true);
-        await adminCardView()
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    });
-    m.querySelector('#cancelCard')?.addEventListener('click',async()=>{
-      if(!confirm('Cancel this card? This cannot be undone.'))return;
-      try{
-        const x=await post('/cards/'+id+'/cancel',{
-        });
-        toast(x.message,true);
-        await adminCardView()
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    })
+        const x=await put('/cards/'+id,body);
+        toast(x.message||'Card updated successfully.',true);
+        setTimeout(()=>location.href='/admin/cards-view.html?id='+id,600);
+      }catch(err){toast(err.response?.data?.message||err.message,false);}
+    };
   }
     async function adminExperts(){
         const m=adminMain(),d=await get('/experts');
