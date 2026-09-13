@@ -798,131 +798,240 @@
     })
   }
     async function copyTrading(){
-        const root=inner(), d=await get('/experts');
-        root.innerHTML=shell('Copy Trading','Follow experienced traders')+`<div class="flex gap-2 mb-3"><button id="expertTab" class="px-3 py-2 rounded-lg bg-blue2 text-white text-[.75rem]">Experts</button><button id="positionTab" class="px-3 py-2 rounded-lg bg-[#111] text-[#777] text-[.75rem]">My Active Copies${d.activeCount?` (${
-      d.activeCount
-    })`:''}</button></div><div id="copyContent"></div>`;
-        const content=root.querySelector('#copyContent');
-        function experts(){
-            if(!d.experts.length){
-        content.innerHTML='<div class="text-center py-12 text-[#555]">No experts available.</div>';
-        return;
-      }
-            content.innerHTML=`<div class="grid grid-cols-1 md:grid-cols-2 gap-[9px]">${d.experts.map(e=>`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="flex items-center gap-3"><img src="${esc(e.profile_picture||'/temp/wallet/other.png')}" class="w-10 h-10 rounded-full object-cover"><div><div class="text-white font-medium">${
-        esc(e.name)
-      }
-      </div><div class="text-[#555] text-[.7rem]">${
-        esc(e.area_of_expertise)
-      }
-      </div></div></div><div class="grid grid-cols-3 gap-2 mt-4 text-center"><div><div class="text-grn font-bold">${
-        num(e.daily_roi)
-      }
-      %</div><div class="text-[#555] text-[.62rem]">Daily ROI</div></div><div><div class="text-white font-bold">${
-        num(e.win_rate)
-      }
-      %</div><div class="text-[#555] text-[.62rem]">Win Rate</div></div><div><div class="text-white font-bold">${
-        num(e.duration_days)
-      }
-      </div><div class="text-[#555] text-[.62rem]">Days</div></div></div><a href="/user/copytrader-details.html?id=${e._id}" class="block mt-4 text-center py-2 rounded-lg bg-brand-blue text-white text-[.78rem]">View Expert</a></div>`).join('')}</div>`;
-
+    const root=inner();
+    showDynamicMain();
+    if(root) root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    const d=await get('/experts');
+    const experts=d.experts||[];
+    const positions=d.positions||[];
+    const activeCount=Number(d.activeCount||positions.filter(x=>x.status==='active').length);
+    root.innerHTML=`<div class="mb-[14px] flex items-center gap-3">
+      <div class="inner-back" onclick="history.back()"><i class="fa-solid fa-chevron-left"></i></div>
+      <div class="inner-title">Copy Trading</div>
+    </div>
+    <div class="flex gap-4 border-b border-[#1a1a1a] mb-[14px] text-[.85rem]">
+      <button type="button" id="expertTab" class="pb-2 border-b-2 border-blue2 text-white">Available Experts</button>
+      <button type="button" id="positionTab" class="pb-2 border-b-2 border-transparent text-[#555]">My Active Copies${activeCount?` (${activeCount})`:''}</button>
+    </div>
+    <div id="copyContent"></div>`;
+    const content=root.querySelector('#copyContent');
+    function renderExperts(){
+      if(!experts.length){ content.innerHTML='<div class="text-center py-12 text-[#555]">No experts available.</div>'; return; }
+      content.innerHTML=experts.map(e=>{
+        const daily=Number(e.daily_roi||0);
+        const total=Number(e.total_roi||daily*Number(e.duration_days||30));
+        const win=Number(e.win_rate||0);
+        const min=Number(e.min_startup_capital||0);
+        const initials=String(e.name||'EX').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+        return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-[14px] mb-[10px]">
+          <div class="flex items-start gap-3 mb-3">
+            <div class="w-[42px] h-[42px] rounded-full bg-[#1a1a1a] flex items-center justify-center text-[.72rem] text-blue2 font-semibold overflow-hidden flex-shrink-0">
+              ${e.profile_picture?`<img src="${esc(e.profile_picture)}" class="w-full h-full object-cover">`:`${esc(initials)}`}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <div class="text-white font-medium text-[.9rem]">${esc(e.name)}</div>
+                <span class="text-[.65rem] text-blue2 px-2 py-0.5 rounded-full bg-[rgba(74,108,247,.12)]">${esc(e.area_of_expertise||'Mixed')}</span>
+              </div>
+              <div class="text-[.68rem] text-[#555] mt-0.5">${Number(e.followers_count||0).toLocaleString()} followers</div>
+            </div>
+            <div class="text-right"><div class="text-grn font-sora font-bold text-[.95rem]">${daily.toFixed(2)}%</div><div class="text-[.62rem] text-[#555]">Daily ROI</div></div>
+          </div>
+          <div class="grid grid-cols-4 gap-2 text-center text-[.72rem] mb-3">
+            <div><div class="text-white font-medium">${e.duration_days||30}d</div><div class="text-[#555]">Duration</div></div>
+            <div><div class="text-grn font-medium">${total.toFixed(1)}%</div><div class="text-[#555]">Total ROI</div></div>
+            <div><div class="text-white font-medium">${win}%</div><div class="text-[#555]">Win Rate</div></div>
+            <div><div class="text-blue2 font-medium">${money(min)}</div><div class="text-[#555]">Min Cap</div></div>
+          </div>
+          <a href="/user/copytrader-details.html?id=${e._id}" class="block text-center py-[10px] rounded-[10px] border border-[rgba(74,108,247,.35)] text-blue2 text-[.82rem] no-underline">→ View Expert</a>
+        </div>`;
+      }).join('');
     }
-        function positions(){
-            if(!d.positions.length){
-        content.innerHTML=`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[32px] text-center"><i class="fa-solid fa-users text-[#2a2a2a] text-[2.5rem] mb-[12px] block"></i><p class="text-[#aaa] text-[.88rem] mb-[12px]">You are not copying any experts yet.</p><button id="browseExperts" class="text-blue2 text-[.82rem]">Browse Experts</button></div>`;
-        content.querySelector('#browseExperts').onclick=experts;
-        return;
-      }
-            content.innerHTML=`<div class="space-y-[9px]">${d.positions.map(p=>{const progress=Math.min(100,Math.max(0,(Date.now()-new Date(p.started_at))/((new Date(p.expires_at)-new Date(p.started_at))||1)*100));const payout=Number(p.invested_amount)+Number(p.accumulated_profit)+Number(p.admin_profit_adjustment||0);return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="flex justify-between"><div class="text-white font-medium">${
-        esc(p.expert?.name||'Expert')
-      }
-      </div><span class="text-grn text-[.68rem]">${
-        esc(p.status)
-      }
-      </span></div><div class="grid grid-cols-3 gap-2 mt-3 text-[.76rem]"><div><span class="text-[#555]">Invested</span><div class="text-white">${
-        money(p.invested_amount)
-      }
-      </div></div><div><span class="text-[#555]">Profit</span><div class="text-grn">${
-        money(p.accumulated_profit)
-      }
-      </div></div><div><span class="text-[#555]">Payout</span><div class="text-white">${
-        money(payout)
-      }
-      </div></div></div><div class="mt-3 h-[5px] bg-[#1a1a1a] rounded-full"><div style="width:${progress}%;height:100%;background:#4a6cf7"></div></div><a href="/user/copy-trading-position.html?id=${p._id}" class="block mt-3 text-center py-2 rounded-lg bg-brand-blue text-white text-[.78rem]">View Position</a></div>`}).join('')}</div>`;
-
+    function renderPositions(){
+      if(!positions.length){ content.innerHTML='<div class="text-center py-12 text-[#555]">No copy positions yet.</div>'; return; }
+      content.innerHTML=positions.map(p=>{
+        const e=p.expert||p.expert_id||{};
+        const inv=Number(p.invested_amount||0);
+        const profit=Number(p.accumulated_profit||p.current_profit||0);
+        const adj=Number(p.admin_profit_adjustment||0);
+        const payout=inv+profit+adj;
+        const daily=Number(p.daily_roi_snapshot||e.daily_roi||0);
+        const start=new Date(p.started_at||p.createdAt);
+        const endD=new Date(p.expires_at);
+        const totalDays=Math.max(1,Math.ceil((endD-start)/86400000));
+        const dayNum=Math.min(totalDays,Math.max(0,Math.floor((Date.now()-start)/86400000)));
+        const progress=Math.min(100,Math.max(0,(Date.now()-start)/(endD-start)*100));
+        const remain=Math.max(0,totalDays-dayNum);
+        const status=String(p.status||'active');
+        const stColor=status==='active'?'text-grn bg-[rgba(0,212,124,.1)]':status==='settled'?'text-ylw bg-[rgba(245,197,66,.1)]':'text-[#888] bg-[#1a1a1a]';
+        return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-[14px] mb-[10px]">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="flex-1"><div class="text-white font-medium">${esc(e.name||'Expert')}</div><span class="text-[.68rem] text-blue2">${esc(e.area_of_expertise||'')}</span></div>
+            <span class="text-[.72rem] px-[10px] py-[4px] rounded-full ${stColor}">${esc(status.charAt(0).toUpperCase()+status.slice(1))}</span>
+          </div>
+          <div class="grid grid-cols-2 gap-[9px] mb-[12px]">
+            <div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#444] uppercase mb-1">Invested</div><div class="font-sora font-bold text-white">${money(inv)}</div></div>
+            <div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#444] uppercase mb-1">Profit</div><div class="font-sora font-bold text-grn">${money(profit)}</div></div>
+            <div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#444] uppercase mb-1">Daily ROI</div><div class="font-sora font-bold text-grn">${daily.toFixed(2)}%</div></div>
+            <div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#444] uppercase mb-1">Total Payout</div><div class="font-sora font-bold text-blue2">${money(payout)}</div></div>
+          </div>
+          <div class="mb-[12px]"><div class="w-full bg-[#1a1a1a] rounded-full h-[5px] overflow-hidden"><div class="bg-brand-blue h-[5px] rounded-full" style="width:${progress}%"></div></div>
+            <div class="text-[#444] text-[.72rem] mt-[5px]">Day ${dayNum} of ${totalDays} — ${remain} days remaining</div></div>
+          <a href="/user/copy-trading-position.html?id=${p._id}" class="block py-[10px] rounded-[10px] bg-brand-blue text-white text-[.82rem] font-medium text-center no-underline">View Position</a>
+        </div>`;
+      }).join('');
     }
-        experts();
-        root.querySelector('#expertTab').onclick=experts;
-        root.querySelector('#positionTab').onclick=positions;
-
+    renderExperts();
+    root.querySelector('#expertTab').onclick=()=>{
+      root.querySelector('#expertTab').className='pb-2 border-b-2 border-blue2 text-white';
+      root.querySelector('#positionTab').className='pb-2 border-b-2 border-transparent text-[#555]';
+      renderExperts();
+    };
+    root.querySelector('#positionTab').onclick=()=>{
+      root.querySelector('#positionTab').className='pb-2 border-b-2 border-blue2 text-white';
+      root.querySelector('#expertTab').className='pb-2 border-b-2 border-transparent text-[#555]';
+      renderPositions();
+    };
   }
     async function copyDetails(){
-    const root=inner(),id=new URLSearchParams(location.search).get('id'),d=await get('/experts/'+id),e=d.expert,p=d.activePosition;
-    root.innerHTML=shell(e.name,e.area_of_expertise)+`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="flex items-center gap-3"><img src="${esc(e.profile_picture||'/temp/wallet/other.png')}" class="w-14 h-14 rounded-full object-cover"><div><div class="text-white font-medium">${esc(e.name)}</div><div class="text-[#555] text-[.72rem]">${esc(e.bio||'')}</div></div></div><div class="grid grid-cols-2 gap-3 mt-4">${[['Daily ROI',e.daily_roi+'%'],['Duration',e.duration_days+' days'],['Total ROI',e.total_roi+'%'],['Min Capital',money(e.min_startup_capital)],['Max Capital',money(e.max_capital)],['Win Rate',e.win_rate+'%']].map(x=>`<div class="bg-[#161616] rounded-lg p-3"><div class="text-[#555] text-[.68rem]">${
-      x[0]
+    const root=inner();
+    showDynamicMain();
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){toast('Expert id required',false);return;}
+    if(root) root.innerHTML='<div class="p-8 text-center text-[#555]">Loading...</div>';
+    const d=await get('/experts/'+encodeURIComponent(id));
+    const e=d.expert||{};
+    const p=d.activePosition;
+    const daily=Number(e.daily_roi||0);
+    const total=Number(e.total_roi||daily*Number(e.duration_days||30));
+    const min=Number(e.min_startup_capital||0);
+    const max=Number(e.max_capital||0);
+    const initials=String(e.name||'EX').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+    let body='';
+    if(p){
+      const inv=Number(p.invested_amount||0);
+      const profit=Number(p.accumulated_profit||0);
+      const exp=p.expires_at;
+      body=`<div class="bg-[#111] border border-[rgba(74,108,247,.3)] rounded-[13px] p-[15px] mb-[9px]">
+        <div class="flex items-center gap-[8px] mb-[14px]"><span class="bg-[rgba(0,212,124,.1)] text-grn text-[.72rem] px-[10px] py-[3px] rounded-full">Active</span><h3 class="font-medium text-[.95rem] text-white">Your Active Position</h3></div>
+        <div class="grid grid-cols-2 gap-[9px] mb-[14px]">
+          <div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#444] uppercase mb-1">Invested</div><div class="font-sora font-bold text-white">${money(inv)}</div></div>
+          <div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#444] uppercase mb-1">Profit</div><div class="font-sora font-bold text-grn">${money(profit)}</div></div>
+          <div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#444] uppercase mb-1">ROI Locked</div><div class="font-sora font-bold text-grn">${daily.toFixed(2)}%</div></div>
+          <div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#444] uppercase mb-1">Expires</div><div class="font-sora font-bold text-white">${dt(exp)}</div></div>
+        </div>
+        <div class="flex items-center gap-[9px]">
+          <a href="/user/copy-trading-position.html?id=${p._id}" class="flex-1 py-[12px] rounded-[12px] bg-brand-blue text-white text-[.88rem] font-medium text-center no-underline">View Position</a>
+          <button type="button" id="stopExpertBtn" class="flex-1 py-[12px] rounded-[12px] bg-[rgba(255,69,96,.1)] text-red2 text-[.88rem] font-medium border border-[rgba(255,69,96,.2)]">Stop Copying</button>
+        </div>
+      </div>`;
+    } else {
+      body=`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+        <div class="text-white font-medium mb-3">Start Copying ${esc(e.name||'')}</div>
+        <label class="text-[.68rem] text-[#555] uppercase">Investment Amount (USD)</label>
+        <input id="copyAmount" type="number" step="0.01" min="${min}" ${max>0?`max="${max}"`:''} value="" placeholder="0.00" class="w-full mt-1 mb-2 bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] px-3 py-3 text-white text-xl outline-none">
+        <div class="text-[.72rem] text-ylw mb-3">⚠ Min ${money(min)}${max?` — Max ${money(max)}`:''}</div>
+        <div class="flex justify-between text-[.78rem] mb-1"><span class="text-[#555]">Estimated Daily Profit</span><span class="text-grn" id="estDaily">$0.00</span></div>
+        <div class="flex justify-between text-[.78rem] mb-4"><span class="text-[#555]">Plan Duration</span><span class="text-white">${e.duration_days||30} days</span></div>
+        <button type="button" id="startCopyBtn" class="w-full py-[13px] rounded-[12px] bg-brand-blue text-white font-medium">Start Copying — ${e.duration_days||30} Day Plan</button>
+      </div>`;
     }
-    </div><div class="text-white font-bold mt-1">${
-      x[1]
-    }
-    </div></div>`).join('')}</div>${p?`<div class="mt-4 bg-[rgba(0,212,124,.05)] border border-[rgba(0,212,124,.2)] rounded-lg p-3"><div class="text-grn font-medium">Your Active Position</div><div class="text-[#aaa] text-[.76rem] mt-2">Invested ${
-      money(p.invested_amount)
-    }
-     · Profit ${
-      money(p.accumulated_profit)
-    }
-    </div><a class="block mt-3 text-center py-2 rounded-lg bg-brand-blue text-white" href="/user/copy-trading-position.html?id=${p._id}">View Position</a></div>`:`<form id="copyStart" class="mt-4"><label class="text-[#555] text-[.68rem]">Investment Amount</label><input name="amount" type="number" min="${e.min_startup_capital}" ${
-      e.max_capital?`max="${e.max_capital}"`:''
-    }
-     required class="w-full mt-2 bg-[#0d0d0d] border border-[#1e1e1e] rounded-lg p-3 text-white"><div id="dailyProfit" class="text-grn text-[.78rem] mt-2">Estimated Daily Profit: ${
-      money(0)
-    }
-    </div><button class="mt-3 w-full py-3 rounded-lg bg-brand-blue text-white">Start Copying — ${
-      e.duration_days
-    }
-     Day Plan</button></form>`}</div>`;
-    const f=root.querySelector('#copyStart');
-    if(f){
-      const a=f.amount,dp=f.querySelector('#dailyProfit');
-      a.oninput=()=>dp.textContent='Estimated Daily Profit: '+money(Number(a.value||0)*Number(e.daily_roi||0)/100);
-      f.onsubmit=async ev=>{
-        ev.preventDefault();
+    root.innerHTML=`<div class="mb-[14px] flex items-center gap-3">
+      <div class="inner-back" onclick="location.href='/user/copy-trading.html'"><i class="fa-solid fa-chevron-left"></i></div>
+      <div class="inner-title">Expert Profile</div>
+    </div>
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-[14px] mb-[10px]">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-[48px] h-[48px] rounded-full bg-[#1a1a1a] flex items-center justify-center text-blue2 font-semibold overflow-hidden">${e.profile_picture?`<img src="${esc(e.profile_picture)}" class="w-full h-full object-cover">`:`${esc(initials)}`}</div>
+        <div class="flex-1"><div class="text-white font-medium">${esc(e.name)} <span class="text-[.65rem] text-blue2 ml-1">${esc(e.area_of_expertise||'')}</span></div>
+          <div class="text-[.68rem] text-[#555]">${Number(e.followers_count||0).toLocaleString()} followers · ${e.duration_days||30}-day plan · ${Number(e.win_rate||0)}% win rate</div></div>
+        <div class="text-right"><div class="text-grn font-sora font-bold">${daily.toFixed(2)}%</div><div class="text-[.62rem] text-[#555]">Daily ROI</div></div>
+      </div>
+      <div class="grid grid-cols-3 gap-2 text-center text-[.75rem]">
+        <div class="bg-[#161616] rounded-[10px] p-2"><div class="text-grn font-medium">${daily.toFixed(2)}%</div><div class="text-[#555]">Daily ROI</div></div>
+        <div class="bg-[#161616] rounded-[10px] p-2"><div class="text-white font-medium">${e.duration_days||30}d</div><div class="text-[#555]">Duration</div></div>
+        <div class="bg-[#161616] rounded-[10px] p-2"><div class="text-grn font-medium">${total.toFixed(1)}%</div><div class="text-[#555]">Total ROI</div></div>
+        <div class="bg-[#161616] rounded-[10px] p-2"><div class="text-blue2 font-medium">${money(min)}</div><div class="text-[#555]">Min Capital</div></div>
+        <div class="bg-[#161616] rounded-[10px] p-2"><div class="text-white font-medium">${max?money(max):'—'}</div><div class="text-[#555]">Max Capital</div></div>
+        <div class="bg-[#161616] rounded-[10px] p-2"><div class="text-white font-medium">${Number(e.win_rate||0)}%</div><div class="text-[#555]">Win Rate</div></div>
+      </div>
+    </div>${body}`;
+    if(p){
+      root.querySelector('#stopExpertBtn')?.addEventListener('click', async()=>{
         try{
-          const x=await post('/copy/start/'+id,{
-            amount:Number(a.value)
-          });
-          toast(x.message,true);
-          notify('Started Copying Expert',x.message);
-          location.href='/user/copy-trading.html'
-        }
-        catch(err){
-          toast(err.message,false)
-        }
-      }
+          const x=await post('/copy/stop/'+p._id,{});
+          toast(x.message||'copytrade stopped',true);
+          setTimeout(()=>location.href='/user/copy-trading.html',600);
+        }catch(err){toast(err.response?.data?.message||err.message,false);}
+      });
+    } else {
+      const amt=root.querySelector('#copyAmount');
+      const est=root.querySelector('#estDaily');
+      amt?.addEventListener('input',()=>{ const v=Number(amt.value||0); est.textContent=money(v*daily/100); });
+      root.querySelector('#startCopyBtn')?.addEventListener('click', async()=>{
+        try{
+          const x=await post('/copy/start/'+id,{amount:Number(amt.value||0)});
+          toast(x.message||`You have started copying ${e.name}!`,true);
+          setTimeout(()=>location.href='/user/copy-trading.html',700);
+        }catch(err){toast(err.response?.data?.message||err.message,false);}
+      });
     }
   }
     async function copyPosition(){
-    const root=inner(),id=new URLSearchParams(location.search).get('id'),d=await get('/copy/position/'+id),p=d.position,e=p.expert;
-    const progress=Math.min(100,Math.max(0,(Date.now()-new Date(p.started_at))/((new Date(p.expires_at)-new Date(p.started_at))||1)*100));
-    const payout=Number(p.invested_amount)+Number(p.accumulated_profit)+Number(p.admin_profit_adjustment||0);
-    root.innerHTML=shell(e?.name||'Copy Position')+`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="grid grid-cols-2 gap-[9px]">${[['Invested',money(p.invested_amount)],['Profit',money(p.accumulated_profit)],['Daily ROI',Number(p.daily_roi_snapshot||0)+'%'],['Total Payout',money(payout)],['Started',dt(p.started_at)],['Expires',dt(p.expires_at)]].map(x=>`<div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[#555] text-[.68rem]">${
-      x[0]
-    }
-    </div><div class="text-white font-bold mt-1">${
-      x[1]
-    }
-    </div></div>`).join('')}</div><div class="mt-4"><div class="flex justify-between text-[.68rem] text-[#555] mb-1"><span>Day ${Math.floor(progress*Number(e?.duration_days||30)/100)} of ${Number(e?.duration_days||30)}</span><span>${Math.max(0,daysLeft(p.expires_at))} days remaining</span></div><div class="h-[5px] bg-[#1a1a1a] rounded-full"><div style="width:${progress}%;height:100%;background:#4a6cf7"></div></div></div>${p.status==='active'?'<button id="stopCopy" class="w-full mt-4 py-3 rounded-lg bg-[rgba(255,69,96,.1)] text-red2 border border-[rgba(255,69,96,.2)]">Stop Copying</button>':''}</div>`;
-    root.querySelector('#stopCopy')?.addEventListener('click',async()=>{
-      if(!confirm('Are you sure you want to stop the active position?'))return;
+    const root=inner();
+    showDynamicMain();
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){toast('Position id required',false);return;}
+    if(root) root.innerHTML='<div class="p-8 text-center text-[#555]">Loading...</div>';
+    const d=await get('/copy/position/'+encodeURIComponent(id));
+    const p=d.position||{};
+    const e=p.expert||{};
+    const inv=Number(p.invested_amount||0);
+    const profit=Number(p.accumulated_profit||0);
+    const adj=Number(p.admin_profit_adjustment||0);
+    const payout=inv+profit+adj;
+    const daily=Number(p.daily_roi_snapshot||e.daily_roi||0);
+    const start=new Date(p.started_at||p.createdAt);
+    const endD=new Date(p.expires_at);
+    const totalDays=Math.max(1,Math.ceil((endD-start)/86400000));
+    const dayNum=Math.min(totalDays,Math.max(0,Math.floor((Date.now()-start)/86400000)));
+    const progress=Math.min(100,Math.max(0,(Date.now()-start)/(endD-start)*100));
+    const remain=Math.max(0,totalDays-dayNum);
+    const status=String(p.status||'');
+    root.innerHTML=`<div class="mb-[14px] flex items-center gap-3">
+      <div class="inner-back" onclick="location.href='/user/copy-trading.html'"><i class="fa-solid fa-chevron-left"></i></div>
+      <div class="inner-title">Position Details</div>
+    </div>
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-[14px] mb-[10px]">
+      <div class="flex justify-between items-center mb-3">
+        <div><div class="text-white font-medium">${esc(e.name||'Expert')}</div><a href="/user/copytrader-details.html?id=${e._id||p.expert_id}" class="text-[.72rem] text-blue2 no-underline">View Expert Profile</a></div>
+        <span class="text-[.72rem] px-2 py-1 rounded-full ${status==='active'?'text-grn bg-[rgba(0,212,124,.1)]':'text-ylw bg-[rgba(245,197,66,.1)]'}">${esc(status)}</span>
+      </div>
+      <div class="grid grid-cols-2 gap-[9px] mb-3">
+        <div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#444] uppercase mb-1">Invested</div><div class="font-sora font-bold text-white">${money(inv)}</div></div>
+        <div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#444] uppercase mb-1">Profit</div><div class="font-sora font-bold text-grn">${money(profit)}</div></div>
+        <div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#444] uppercase mb-1">Daily ROI</div><div class="font-sora font-bold text-grn">${daily.toFixed(2)}%</div></div>
+        <div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#444] uppercase mb-1">Total Payout</div><div class="font-sora font-bold text-blue2">${money(payout)}</div></div>
+        <div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#444] uppercase mb-1">Started</div><div class="text-white">${dt(start)}</div></div>
+        <div class="bg-[#161616] rounded-[10px] p-[10px]"><div class="text-[.68rem] text-[#444] uppercase mb-1">Expires</div><div class="text-white">${dt(endD)}</div></div>
+      </div>
+      <div class="mb-3"><div class="w-full bg-[#1a1a1a] rounded-full h-[5px] overflow-hidden"><div class="bg-brand-blue h-[5px]" style="width:${progress}%"></div></div>
+        <div class="text-[#444] text-[.72rem] mt-1">Day ${dayNum} of ${totalDays} — ${remain} days remaining</div></div>
+      ${status==='active'?`<button type="button" id="stopPosBtn" class="w-full py-[12px] rounded-[12px] bg-[rgba(255,69,96,.1)] text-red2 border border-[rgba(255,69,96,.2)] font-medium">Stop Copying</button>`:''}
+    </div>
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-[14px]">
+      <div class="text-white font-medium mb-2">Trades</div>
+      <div class="text-center py-8 text-[#444] text-[.8rem]"><i class="fa-solid fa-chart-line mb-2 block text-2xl opacity-20"></i>No trades yet. Trades are generated automatically.</div>
+    </div>`;
+    root.querySelector('#stopPosBtn')?.addEventListener('click', async()=>{
       try{
-        const x=await post('/copy/stop/'+id,{
-        });
-        toast(x.message,true);
-        location.href='/user/copy-trading.html'
-      }
-      catch(err){
-        toast(err.message,false)
-      }
-    })
+        const x=await post('/copy/stop/'+id,{});
+        toast(x.message||'copytrade stopped',true);
+        setTimeout(()=>location.href='/user/copy-trading.html',600);
+      }catch(err){toast(err.response?.data?.message||err.message,false);}
+    });
   }
+    
     async function bots(){
         const root=inner(),d=await get('/bots');
         root.innerHTML=shell('Bot Trading','Automated trading strategies')+`<div class="flex gap-2 mb-3"><button id="botsTab" class="px-3 py-2 rounded-lg bg-blue2 text-white text-[.75rem]">Bots</button><button id="subsTab" class="px-3 py-2 rounded-lg bg-[#111] text-[#777] text-[.75rem]">My Subscriptions${d.activeCount?` (${
@@ -1104,10 +1213,7 @@
     })
   }
     /* ---------------- ADMIN PAGE RENDERING ---------------- */
-    function adminMain(){
-    const main=document.querySelector('main');
-    if(!main)return null;
-    return main.querySelector(':scope > div.p-4')||main.querySelector(':scope > div[class*="p-4"]')||main
+    function adminMain(){ const main=document.querySelector('main')||document.getElementById('main-content'); if(!main)return document.body; return main.querySelector(':scope > div.p-4')||main.querySelector(':scope > div[class*="p-4"]')||main.querySelector(':scope > div')||main;
   }
     const adminShell=(title,sub)=>`<div class="flex items-center justify-between"><div><h1 class="text-xl font-semibold text-content">${esc(title)}</h1><p class="text-sm text-content-muted mt-1">${esc(sub||'')}</p></div></div>`;
     function statCards(items){
@@ -1413,554 +1519,329 @@
     };
   }
     async function adminExperts(){
-        const m=adminMain(),d=await get('/experts');
-        const stats=[['Total Experts',d.experts.length],['Active Experts',d.experts.filter(x=>x.is_active).length],['Inactive Experts',d.experts.filter(x=>!x.is_active).length],['Total Followers',d.experts.reduce((s,x)=>s+Number(x.followers_count||0),0)]];
-        m.innerHTML=adminShell('Manage Expert Traders','Create and manage copy trading experts')+statCards(stats)+`<div class="flex justify-end"><a href="/admin/admin-experts-create.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Add New Expert</a></div><div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">${d.experts.map(e=>`<div class="bg-surface-card rounded-xl border border-border p-5"><div class="flex items-center gap-3"><img src="${esc(e.profile_picture||'/temp/wallet/other.png')}" class="w-10 h-10 rounded-full object-cover"><div><div class="font-medium text-content">${
-      esc(e.name)
-    }
-    </div><div class="text-xs text-content-muted">${
-      esc(e.area_of_expertise)
-    }
-    </div></div></div><div class="grid grid-cols-3 gap-2 mt-4 text-center text-sm"><div><div class="text-success">${
-      e.daily_roi
-    }
-    %</div><div class="text-content-muted text-xs">ROI</div></div><div><div class="text-content">${
-      e.win_rate
-    }
-    %</div><div class="text-content-muted text-xs">Win</div></div><div><div class="text-content">${
-      e.duration_days
-    }
-    </div><div class="text-content-muted text-xs">Days</div></div></div><div class="flex gap-2 mt-4"><a href="/admin/admin-experts-view.html?id=${e._id}" class="text-primary text-sm px-2 py-2">View</a><a href="/admin/admin-experts-edit.html?id=${e._id}" class="flex-1 text-center text-sm px-3 py-2 rounded-lg border border-border">Edit</a><button data-expert-toggle="${e._id}" class="px-3 py-2 rounded-lg ${e.is_active?'text-danger':'text-success'}">${
-      e.is_active?'Disable':'Enable'
-    }
-    </button></div></div>`).join('')}</div>`;
-        m.querySelectorAll('[data-expert-toggle]').forEach(btn=>btn.onclick=async()=>{
-      try{
-        const x=await post('/experts/'+btn.dataset.expertToggle+'/toggle',{
-        });
-        toast(x.message,true);
-        await adminExperts()
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    });
-
+    const m=adminMain();
+    showDynamicMain();
+    if(!m)return;
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    const d=await get('/experts');
+    const experts=d.experts||[];
+    let positions=[];
+    try{const cp=await get('/copy-positions'); positions=cp.positions||[];}catch(e){}
+    const activeExperts=experts.filter(x=>x.is_active!==false).length;
+    const activeCopiers=positions.filter(x=>x.status==='active').length;
+    m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">Manage Expert Traders</h1><p class="text-sm text-content-muted mt-1">Create and manage copy trading experts</p></div><a href="/admin/admin-experts-create.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium">+ Add New Expert</a></div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">${[['TOTAL EXPERTS',experts.length,'fa-users'],['ACTIVE EXPERTS',activeExperts,'fa-circle-check'],['TOTAL ACTIVE COPIERS',activeCopiers,'fa-file-lines']].map(([l,v,ico])=>`<div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm"><div class="flex justify-between"><div class="text-xs text-slate-500 uppercase tracking-wide">${l}</div><i class="fa-solid ${ico} text-teal-300"></i></div><div class="text-2xl font-bold text-slate-900 mt-2">${v}</div></div>`).join('')}</div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto"><div class="px-4 py-3 border-b border-slate-100 font-medium text-content">Expert Traders</div>
+    <table class="w-full text-sm"><thead><tr class="text-left text-xs text-slate-500 uppercase bg-slate-50"><th class="px-4 py-3">Photo</th><th>Name</th><th>Expertise</th><th>Daily ROI</th><th>Duration</th><th>Followers</th><th>Active Copiers</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+    ${experts.map(e=>{const copiers=positions.filter(p=>String(p.expert_id?._id||p.expert_id||p.expert?._id)===String(e._id)&&p.status==='active').length;const active=e.is_active!==false;const photo=e.profile_picture?`<img src="${esc(e.profile_picture)}" class="w-9 h-9 rounded-full object-cover">`:`<div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-xs text-slate-500">${esc(String(e.name||'?')[0])}</div>`;
+    return `<tr class="border-t border-slate-100"><td class="px-4 py-3">${photo}</td><td class="font-medium text-content">${esc(e.name)}</td><td><span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">${esc(e.area_of_expertise||'Mixed')}</span></td><td class="text-emerald-600 font-medium">${Number(e.daily_roi||0).toFixed(2)}%</td><td>${Number(e.duration_days||30)} days</td><td>${Number(e.followers_count||0).toLocaleString()}</td><td>${copiers}</td><td><span class="text-xs ${active?'text-emerald-600':'text-slate-400'}">${active?'Active':'Inactive'}</span></td><td class="whitespace-nowrap"><div class="flex items-center gap-1.5">
+            <a href="/admin/admin-experts-view.html?id=${e._id}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50" title="View"><i class="fa-regular fa-eye text-sm"></i></a>
+            <a href="/admin/admin-experts-edit.html?id=${e._id}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50" title="Edit"><i class="fa-solid fa-pen text-sm"></i></a>
+            <button type="button" data-toggle-expert="${e._id}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-amber-50" title="${active?'Deactivate':'Activate'}"><i class="fa-solid fa-power-off text-sm"></i></button>
+            <button type="button" data-del-expert="${e._id}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-red-500 hover:bg-red-50" title="Delete"><i class="fa-regular fa-trash-can text-sm"></i></button>
+          </div></td></tr>`;}).join('')||'<tr><td colspan="9" class="py-10 text-center text-content-muted">No experts yet</td></tr>'}
+    </tbody></table></div>`;
+    m.querySelectorAll('[data-toggle-expert]').forEach(btn=>{btn.onclick=async()=>{try{const x=await post('/experts/'+btn.dataset.toggleExpert+'/toggle',{});toast(x.message||'Status updated',true);adminExperts();}catch(e){toast(e.message,false);}};});
+    m.querySelectorAll('[data-del-expert]').forEach(btn=>{btn.onclick=async()=>{if(!confirm('Delete this expert?'))return;try{const x=await del('/experts/'+btn.dataset.delExpert);toast(x.message||'Expert deleted successfully.',true);adminExperts();}catch(e){toast(e.message,false);}};});
   }
     async function adminExpertForm(edit){
-    const m=adminMain(),id=edit?new URLSearchParams(location.search).get('id'):null;
-    let e={
-    };
-    if(edit)e=(await get('/experts/'+id)).expert;
-    m.innerHTML=adminShell(edit?'Edit Expert':'Create New Expert','Expert trader profile')+`<form id="expertForm" class="bg-surface-card rounded-xl border border-border p-6 space-y-4"><div class="grid grid-cols-1 md:grid-cols-2 gap-4">${[['name','Name','text',e.name||''],['area_of_expertise','Area of Expertise','text',e.area_of_expertise||''],['profile_picture','Profile Picture','text',e.profile_picture||''],['daily_roi','Daily ROI','number',e.daily_roi||0],['duration_days','Duration Days','number',e.duration_days||30],['win_rate','Win Rate','number',e.win_rate||0],['min_startup_capital','Min Startup Capital','number',e.min_startup_capital||0],['max_capital','Max Capital','number',e.max_capital||0],['profit_share_percentage','Profit Share %','number',e.profit_share_percentage||0],['followers_count','Followers','number',e.followers_count||0],['total_roi','Total ROI','number',e.total_roi||0]].map(x=>`<label class="text-sm text-content-secondary">${
-      x[1]
-    }
-    <input name="${x[0]}" type="${x[2]}" value="${esc(x[3])}" class="mt-1.5 w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-content"></label>`).join('')}</div><label class="text-sm text-content-secondary">Bio<textarea name="bio" class="mt-1.5 w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-content">${esc(e.bio||'')}</textarea></label><label class="flex gap-2 text-sm text-content"><input name="is_active" type="checkbox" ${e.is_active!==false?'checked':''}> Active</label><button class="px-4 py-2 rounded-lg bg-primary text-white">${edit?'Update Expert':'Create Expert'}</button></form>`;
+    const m=adminMain(); showDynamicMain();
+    const id=edit?new URLSearchParams(location.search).get('id'):null; let e={};
+    if(edit&&id){try{e=(await get('/experts/'+id)).expert||{};}catch(err){toast(err.message,false);}}
+    m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">${edit?'Edit Expert: '+esc(e.name||''):'Create New Expert'}</h1><p class="text-sm text-content-muted mt-1">${edit?'Update expert trader details':'Add a new expert trader for copy trading'}</p></div><a href="/admin/admin-experts.html" class="px-4 py-2 rounded-lg border border-border text-sm">Cancel</a></div>
+    <form id="expertForm" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6 max-w-4xl">
+      <div class="font-medium text-content">Basic Information</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="block text-sm"><span class="font-medium">Name *</span><input name="name" required value="${esc(e.name||'')}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Area of Expertise *</span><select name="area_of_expertise" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">${['Crypto','Forex','Stocks','Mixed','Commodities'].map(x=>`<option ${String(e.area_of_expertise||'Crypto')===x?'selected':''}>${x}</option>`).join('')}</select></label>
+      </div>
+      <label class="block text-sm"><span class="font-medium">Bio</span><textarea name="bio" rows="3" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="Expert description...">${esc(e.bio||'')}</textarea></label>
+      <div><div class="text-sm font-medium mb-2">Profile Picture</div>${e.profile_picture?`<img src="${esc(e.profile_picture)}" class="w-16 h-16 rounded-full object-cover mb-2">`:''}<div class="flex items-center gap-4 mb-2"><div id="expertPhotoPreview" class="w-16 h-16 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center text-slate-400 text-xs">${e.profile_picture?`<img src="${esc(e.profile_picture)}" class="w-full h-full object-cover">`:`No photo`}</div>
+        <input type="file" name="profile_picture" id="expertPhotoInput" accept="image/jpeg,image/png,image/webp" class="block w-full text-sm text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100"></div>
+        <p class="text-xs text-content-muted mt-1">JPG, JPEG, PNG — Max 2MB${edit?' · Leave empty to keep current photo':''}</p></div>
+      <div class="font-medium text-content">Trading Configuration</div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <label class="block text-sm"><span class="font-medium">Daily ROI (%) *</span><input name="daily_roi" type="number" step="0.01" required value="${e.daily_roi??''}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Duration (days) *</span><input name="duration_days" type="number" required value="${e.duration_days??30}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Win Rate (%) *</span><input name="win_rate" type="number" step="0.01" required value="${e.win_rate??''}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Min Capital ($) *</span><input name="min_startup_capital" type="number" step="0.01" required value="${e.min_startup_capital??''}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Max Capital ($)</span><input name="max_capital" type="number" step="0.01" value="${e.max_capital??''}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="Leave empty for no limit"></label>
+        <label class="block text-sm"><span class="font-medium">Profit Share (%) *</span><input name="profit_share_percentage" type="number" step="0.01" required value="${e.profit_share_percentage??''}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+      </div>
+      <div class="font-medium text-content">Display Stats (Admin-Controlled)</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <label class="block text-sm"><span class="font-medium">Followers Count</span><input name="followers_count" type="number" value="${e.followers_count??0}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Total ROI (%)</span><input name="total_roi" type="number" step="0.01" value="${e.total_roi??0}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+      </div>
+      <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="is_active" value="1" ${e.is_active!==false?'checked':''}> Active</label>
+      <div class="flex gap-3"><button type="submit" class="px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-medium">${edit?'Update Expert':'Create Expert'}</button><a href="/admin/admin-experts.html" class="px-5 py-2.5 rounded-lg border border-border text-sm">Cancel</a></div>
+    </form>`;
+    const photoIn=m.querySelector('#expertPhotoInput');
+    if(photoIn){photoIn.addEventListener('change',()=>{const f=photoIn.files&&photoIn.files[0];const box=m.querySelector('#expertPhotoPreview');if(!box)return;if(!f){return;}const url=URL.createObjectURL(f);box.innerHTML='<img src="'+url+'" class="w-full h-full object-cover">';});}
     m.querySelector('#expertForm').onsubmit=async ev=>{
       ev.preventDefault();
-      const b=Object.fromEntries(new FormData(ev.currentTarget));
-      b.is_active=ev.currentTarget.is_active.checked;
+      const form=ev.currentTarget; const fd=new FormData(form);
+      fd.set('is_active', form.querySelector('[name=is_active]').checked?'true':'false');
       try{
-        const x=edit?await put('/experts/'+id,b):await post('/experts',b);
-        toast(x.message,true);
-        location.href='/admin/admin-experts.html'
-      }
-      catch(err){
-        toast(err.message,false)
-      }
-    }
-  }
-    async function adminBots(){
-        const m=adminMain(),d=await get('/bots');
-        const stats=[['Total Bots',d.stats.totalBots],['Active Bots',d.stats.activeBots],['Active Subscribers',d.stats.activeSubscribers],['Total Invested',money(d.stats.totalInvested)]];
-        m.innerHTML=adminShell('Manage Trading Bots','Create and manage AI trading bots')+statCards(stats)+`<div class="flex justify-end gap-2"><a href="/admin/bot-trading-subscriptions.html" class="px-4 py-2 rounded-lg border border-border text-content text-sm">Subscriptions</a><a href="/admin/admin-bot-trading-create.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Create Bot</a></div><div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">Bot</th><th>Strategy</th><th>Win Rate</th><th>Daily ROI</th><th>Range</th><th>Interval</th><th>Status</th><th>Actions</th></tr></thead><tbody>${d.bots.map(b=>`<tr class="border-t border-border"><td class="py-3 text-content">${
-      esc(b.name)
-    }
-    </td><td>${
-      esc(b.strategy_type)
-    }
-    </td><td>${
-      b.win_rate
-    }
-    %</td><td>${
-      b.expected_roi||b.daily_roi||0
-    }
-    %</td><td>${
-      money(b.min_investment)
-    }
-     - ${
-      money(b.max_investment)
-    }
-    </td><td>${
-      b.trade_interval_minutes
-    }
-    m</td><td>${
-      b.is_active?'Active':'Inactive'
-    }
-    </td><td class="flex gap-2 py-3"><a class="text-primary" href="/admin/bot-trading-edit.html?id=${b._id}">Edit</a><button data-bot-toggle="${b._id}" class="text-warning">Toggle</button><button data-bot-del="${b._id}" class="text-danger">Delete</button></td></tr>`).join('')}</tbody></table></div>`;
-        m.querySelectorAll('[data-bot-toggle]').forEach(btn=>btn.onclick=async()=>{
-      try{
-        const x=await post('/bots/'+btn.dataset.botToggle+'/toggle',{
-        });
-        toast(x.message,true);
-        adminBots()
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    });
-        m.querySelectorAll('[data-bot-del]').forEach(btn=>btn.onclick=async()=>{
-      if(!confirm('Delete this bot?'))return;
-      try{
-        const x=await del('/bots/'+btn.dataset.botDel);
-        toast(x.message,true);
-        adminBots()
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    });
-
-  }
-    async function adminBotForm(edit){
-    const m=adminMain(),id=edit?new URLSearchParams(location.search).get('id'):null;
-    let b={
+        const path=edit&&id?'/experts/'+id:'/experts';
+        // multipart via axios
+        const cfg={headers:{'Content-Type':'multipart/form-data'}};
+        let x;
+        if(edit) x=(await window.api.put('/admin/dashboard/feature'+path.replace('/experts','/experts'), fd, cfg).catch(()=>null));
+        // feature get/post helpers use relative feature paths with prefix
+        const base=(window.api.defaults&&window.api.defaults.baseURL)||'';
+        if(edit) await window.api.put('/admin/dashboard/feature/experts/'+id, fd, cfg);
+        else await window.api.post('/admin/dashboard/feature/experts', fd, cfg);
+        toast(edit?'Expert trader updated successfully.':'Expert created successfully.',true);
+        setTimeout(()=>location.href='/admin/admin-experts.html',600);
+      }catch(err){toast(err.response?.data?.message||err.message||'Save failed',false);}
     };
-    if(edit)b=(await get('/bots/'+id)).bot;
-    m.innerHTML=adminShell(edit?'Edit Trading Bot':'Create Trading Bot','Configure a trading bot')+`<form id="botForm" class="bg-surface-card rounded-xl border border-border p-6 space-y-4"><div class="grid grid-cols-1 md:grid-cols-2 gap-4">${[['name','Bot Name','text',b.name||''],['strategy_type','Strategy Type','text',b.strategy_type||'Scalping'],['win_rate','Win Rate','number',b.win_rate||0],['expected_roi','Expected ROI','number',b.expected_roi||0],['trade_interval_minutes','Trade Interval Minutes','number',b.trade_interval_minutes||60],['min_investment','Min Investment','number',b.min_investment||0],['max_investment','Max Investment','number',b.max_investment||0],['max_duration_days','Max Duration Days','number',b.max_duration_days||30],['profit_min_pct','Profit Min %','number',b.profit_min_pct||0],['profit_max_pct','Profit Max %','number',b.profit_max_pct||0],['loss_min_pct','Loss Min %','number',b.loss_min_pct||0],['loss_max_pct','Loss Max %','number',b.loss_max_pct||0]].map(x=>`<label class="text-sm text-content-secondary">${
-      x[1]
-    }
-    <input name="${x[0]}" type="${x[2]}" value="${esc(x[3])}" class="mt-1.5 w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-content"></label>`).join('')}</div><label class="text-sm text-content-secondary">Description<textarea name="description" class="mt-1.5 w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-content">${esc(b.description||'')}</textarea></label><label class="flex gap-2 text-sm text-content"><input name="is_active" type="checkbox" ${b.is_active!==false?'checked':''}> Active</label><button class="px-4 py-2 rounded-lg bg-primary text-white">${edit?'Update Bot':'Create Bot'}</button></form>`;
-    m.querySelector('#botForm').onsubmit=async e=>{
-      e.preventDefault();
-      const x=Object.fromEntries(new FormData(e.currentTarget));
-      x.is_active=e.currentTarget.is_active.checked;
-      try{
-        const r=edit?await put('/bots/'+id,x):await post('/bots',x);
-        toast(r.message,true);
-        location.href='/admin/admin-bot-trading.html'
-      }
-      catch(err){
-        toast(err.message,false)
-      }
-    }
-  }
-    async function adminBotSubs(){
-    const m=adminMain(),d=await get('/bot-subscriptions');
-    const s=d.subscriptions;
-    m.innerHTML=adminShell('Bot Trading Subscriptions','Manage user subscriptions to trading bots')+statCards([['Active Subscriptions',s.filter(x=>x.status==='active').length],['Total Invested',money(s.reduce((a,x)=>a+Number(x.invested_amount||0),0))],['Total Profit',money(s.reduce((a,x)=>a+Number(x.current_profit||0),0))],['Settled',s.filter(x=>x.status==='settled').length]])+`<div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">User</th><th>Bot</th><th>Invested</th><th>Profit</th><th>Status</th><th></th></tr></thead><tbody>${s.map(x=>`<tr class="border-t border-border"><td class="py-3">${
-      esc(x.user_id?.name)
-    }
-    </td><td>${
-      esc(x.bot_id?.name)
-    }
-    </td><td>${
-      money(x.invested_amount)
-    }
-    </td><td>${
-      money(x.current_profit)
-    }
-    </td><td>${
-      esc(x.status)
-    }
-    </td><td><a class="text-primary" href="/admin/bot-trading-subscriptions-view.html?id=${x._id}">View</a></td></tr>`).join('')}</tbody></table></div>`
-  }
-    async function adminBotSubView(){
-    const m=adminMain(),id=new URLSearchParams(location.search).get('id'),d=await get('/bot-subscriptions/'+id),s=d.subscription;
-    m.innerHTML=adminShell(`Bot Subscription #${id}`,'View subscription details and manage profit')+`<div class="bg-surface-card rounded-xl border border-border p-6"><div class="grid grid-cols-2 gap-4 text-sm">${[['User',s.user_id?.name],['Bot',s.bot_id?.name],['Invested',money(s.invested_amount)],['Profit',money(s.current_profit)],['Adjustment',money(s.admin_profit_adjustment)],['Status',s.status],['Started',dt(s.started_at)],['Expires',dt(s.expires_at)]].map(x=>`<div><div class="text-content-muted">${
-      x[0]
-    }
-    </div><div class="text-content font-medium mt-1">${
-      esc(x[1])
-    }
-    </div></div>`).join('')}</div><form id="botAdjust" class="mt-6 space-y-3"><input name="admin_profit_adjustment" type="number" value="${s.admin_profit_adjustment||0}" class="w-full bg-surface-card border border-border rounded-lg p-2 text-content" placeholder="Profit Adjustment"><textarea name="admin_notes" class="w-full bg-surface-card border border-border rounded-lg p-2 text-content" placeholder="Notes">${esc(s.admin_notes||'')}</textarea><button class="px-4 py-2 rounded-lg border border-border text-content">Save Profit Adjustment</button></form>${s.status!=='settled'?'<button id="settleBot" class="mt-3 px-4 py-2 rounded-lg bg-primary text-white">Settle Now</button>':''}</div>`;
-    m.querySelector('#botAdjust').onsubmit=async e=>{
-      e.preventDefault();
-      try{
-        const x=await put('/bot-subscriptions/'+id+'/adjust',Object.fromEntries(new FormData(e.currentTarget)));
-        toast(x.message,true);
-        adminBotSubView()
-      }
-      catch(err){
-        toast(err.message,false)
-      }
-    };
-    m.querySelector('#settleBot')?.addEventListener('click',async()=>{
-      if(!confirm('Confirm settlement?'))return;
-      try{
-        const x=await post('/bot-subscriptions/'+id+'/settle',{
-        });
-        toast(x.message,true);
-        adminBotSubView()
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    })
-  }
-    async function adminAssets(){
-    const m=adminMain(),d=await get('/assets');
-    const a=d.assets||[];
-    m.innerHTML=adminShell('Manage Trading Assets','Manage database-backed market assets')+`<div class="flex flex-wrap justify-end gap-2"><button id="refreshAllAssets" class="px-4 py-2 rounded-lg border border-border text-content text-sm">Refresh Live Prices</button><a href="/admin/create-assets.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Add Custom Asset</a></div>${statCards([['Crypto',a.filter(x=>x.asset_class==='crypto').length],['Forex',a.filter(x=>x.asset_class==='forex').length],['Stock',a.filter(x=>['stock','stocks'].includes(x.asset_class)).length],['Total',a.length]])}<div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">Name</th><th>Symbol</th><th>Class</th><th>Provider</th><th>Price</th><th>24h</th><th>Updated</th><th>Status</th><th>Actions</th></tr></thead><tbody>${a.map(x=>`<tr class="border-t border-border"><td class="py-3 text-content">${esc(x.name)}</td><td>${esc(x.symbol)}</td><td>${esc(x.asset_class)}</td><td>${esc(x.data_source||'manual')}</td><td>${money(x.price,'$')}</td><td>${Number(x.price_change_pct_24h??x.change_24h??0).toFixed(2)}%</td><td>${dt(x.updatedAt)}</td><td>${x.is_active?'Active':'Inactive'}</td><td class="flex flex-wrap gap-2 py-3"><button data-asset-refresh="${x._id}" class="text-primary">Refresh</button><a class="text-primary" href="/admin/edit-assets.html?id=${x._id}">Edit</a><button data-asset-toggle="${x._id}" class="text-warning">Toggle</button><button data-asset-del="${x._id}" class="text-danger">Delete</button></td></tr>`).join('')}</tbody></table></div>`;
-    m.querySelector('#refreshAllAssets').onclick=async()=>{
-      const button=m.querySelector('#refreshAllAssets');
-      button.disabled=true;
-      button.textContent='Refreshing...';
-      try{
-        const x=await post('/assets/refresh',{});
-        toast(x.message||`Updated ${x.updated||0} assets.`,x.success!==false);
-        await adminAssets();
-      }
-      catch(e){
-        toast(e.message,false);
-        button.disabled=false;
-        button.textContent='Refresh Live Prices';
-      }
-    };
-    m.querySelectorAll('[data-asset-refresh]').forEach(b=>b.onclick=async()=>{
-      b.disabled=true;
-      try{
-        const x=await post('/assets/'+b.dataset.assetRefresh+'/refresh',{});
-        toast(x.message,true);
-        await adminAssets();
-      }
-      catch(e){
-        toast(e.message,false);
-        b.disabled=false;
-      }
-    });
-    m.querySelectorAll('[data-asset-toggle]').forEach(b=>b.onclick=async()=>{
-      try{
-        const x=await post('/assets/'+b.dataset.assetToggle+'/toggle',{});
-        toast(x.message,true);
-        adminAssets();
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    });
-    m.querySelectorAll('[data-asset-del]').forEach(b=>b.onclick=async()=>{
-      if(!confirm('Delete this asset?'))return;
-      try{
-        const x=await del('/assets/'+b.dataset.assetDel);
-        toast(x.message,true);
-        adminAssets();
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    })
-  }
-    async function adminAssetForm(edit){
-    const m=adminMain(),id=edit?new URLSearchParams(location.search).get('id'):null;
-    let a={};
-    if(edit)a=(await get('/assets/'+id)).asset;
-    m.innerHTML=adminShell(edit?'Edit Asset':'Create Asset','Asset details, live pricing provider, and status')+`<form id="assetForm" class="bg-surface-card rounded-xl border border-border p-6 space-y-4"><div class="grid grid-cols-1 md:grid-cols-2 gap-4">${[['name','Name','text',a.name||''],['symbol','Symbol','text',a.symbol||''],['asset_class','Asset Class','text',a.asset_class||'crypto'],['price','Manual Price ($)','number',a.price||0],['change_24h','24h Change %','number',(a.price_change_pct_24h??a.change_24h)||0],['data_source','Data Source','text',a.data_source||'manual'],['coingecko_id','CoinGecko ID','text',a.coingecko_id||''],['twelvedata_symbol','Twelve Data Symbol','text',a.twelvedata_symbol||''],['external_id','Fallback Source ID','text',a.external_id||''],['logo_url','Logo URL','text',a.logo_url||'']].map(x=>`<label class="text-sm text-content-secondary">${x[1]}<input name="${x[0]}" type="${x[2]}" value="${esc(x[3])}" class="mt-1.5 w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-content"></label>`).join('')}</div><div class="rounded-lg border border-border p-4 text-sm text-content-secondary"><p><strong class="text-content">Live provider setup:</strong> use <span class="text-content">coingecko</span> with a CoinGecko ID such as <span class="text-content">bitcoin</span> for crypto, or <span class="text-content">twelvedata</span> with a Twelve Data symbol such as <span class="text-content">AAPL</span> or <span class="text-content">EUR/USD</span> for supported instruments.</p><p class="mt-2">If a provider is configured, the backend refresh service will overwrite the stored live price.</p></div><label class="flex gap-2 text-sm text-content"><input name="is_active" type="checkbox" ${a.is_active!==false?'checked':''}> Active</label><button class="px-4 py-2 rounded-lg bg-primary text-white">${edit?'Save Changes':'Create Asset'}</button></form>`;
-    m.querySelector('#assetForm').onsubmit=async e=>{
-      e.preventDefault();
-      const b=Object.fromEntries(new FormData(e.currentTarget));
-      b.is_active=e.currentTarget.is_active.checked;
-      try{
-        const x=edit?await put('/assets/'+id,b):await post('/assets',b);
-        toast(x.message,true);
-        location.href='/admin/assets.html'
-      }
-      catch(err){
-        toast(err.message,false)
-      }
-    }
-  }
-    async function adminMiningPlans(){
-    const m=adminMain(),d=await get('/mining-plans');
-    m.innerHTML=adminShell('Cloud Mining Plans','Create and manage mining plans')+statCards([['Total Plans',d.stats.totalPlans],['Active Plans',d.stats.activePlans],['Active Subscribers',d.stats.activeSubscribers],['Total Invested',money(d.stats.totalInvested)]])+`<div class="flex justify-end gap-2"><a href="/admin/mining-subscriptions.html" class="px-4 py-2 rounded-lg border border-border text-content text-sm">Subscriptions</a><a href="/admin/mining-plans-create.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">New Plan</a></div><div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">Plan</th><th>Hashrate</th><th>ROI</th><th>Duration</th><th>Range</th><th>Status</th><th>Actions</th></tr></thead><tbody>${d.plans.map(p=>`<tr class="border-t border-border"><td class="py-3 text-content">${
-      esc(p.name)
-    }
-    </td><td>${
-      esc(p.hashrate)
-    }
-    </td><td>${
-      p.daily_roi_percentage
-    }
-    %</td><td>${
-      p.duration_days
-    }
-    d</td><td>${
-      money(p.min_investment)
-    }
-     - ${
-      money(p.max_investment)
-    }
-    </td><td>${
-      p.is_active?'Active':'Inactive'
-    }
-    </td><td><a class="text-primary mr-3" href="/admin/mining-plans-edit.html?id=${p._id}">Edit</a><button data-mine-del="${p._id}" class="text-danger">Delete</button></td></tr>`).join('')}</tbody></table></div>`;
-    m.querySelectorAll('[data-mine-del]').forEach(b=>b.onclick=async()=>{
-      if(!confirm('Delete this plan?'))return;
-      try{
-        const x=await del('/mining-plans/'+b.dataset.mineDel);
-        toast(x.message,true);
-        adminMiningPlans()
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    })
-  }
-    async function adminMiningForm(edit){
-    const m=adminMain(),id=edit?new URLSearchParams(location.search).get('id'):null;
-    let p={
-    };
-    if(edit)p=(await get('/mining-plans/'+id)).plan;
-    m.innerHTML=adminShell(edit?'Edit Mining Plan':'Create Mining Plan','Cloud mining plan configuration')+`<form id="mineForm" class="bg-surface-card rounded-xl border border-border p-6 space-y-4"><div class="grid grid-cols-1 md:grid-cols-2 gap-4">${[['name','Plan Name','text',p.name||''],['hashrate','Hashrate','text',p.hashrate||''],['daily_roi_percentage','Daily ROI %','number',p.daily_roi_percentage||0],['duration_days','Duration Days','number',p.duration_days||30],['sort_order','Sort Order','number',p.sort_order||0],['min_investment','Min Investment','number',p.min_investment||0],['max_investment','Max Investment','number',p.max_investment||0],['icon_color','Icon Color','text',p.icon_color||'']].map(x=>`<label class="text-sm text-content-secondary">${
-      x[1]
-    }
-    <input name="${x[0]}" type="${x[2]}" value="${esc(x[3])}" class="mt-1.5 w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-content"></label>`).join('')}</div><textarea name="description" class="w-full bg-surface-card border border-border rounded-lg p-3 text-content" placeholder="Description">${esc(p.description||'')}</textarea><label class="flex gap-2 text-sm text-content"><input name="is_active" type="checkbox" ${p.is_active!==false?'checked':''}> Active</label><button class="px-4 py-2 rounded-lg bg-primary text-white">${edit?'Update Plan':'Create Plan'}</button></form>`;
-    m.querySelector('#mineForm').onsubmit=async e=>{
-      e.preventDefault();
-      const b=Object.fromEntries(new FormData(e.currentTarget));
-      b.is_active=e.currentTarget.is_active.checked;
-      try{
-        const x=edit?await put('/mining-plans/'+id,b):await post('/mining-plans',b);
-        toast(x.message,true);
-        location.href='/admin/mining-plans.html'
-      }
-      catch(err){
-        toast(err.message,false)
-      }
-    }
-  }
-    async function adminMiningSubs(){
-    const m=adminMain(),d=await get('/mining-subscriptions'),s=d.subscriptions;
-    m.innerHTML=adminShell('Mining Subscriptions','Manage user cloud mining subscriptions')+statCards([['Active Subscriptions',d.stats.active],['Total Invested',money(d.stats.totalInvested)],['Total Profit',money(d.stats.totalProfit)],['Settled',s.filter(x=>x.status==='settled').length]])+`<div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">User</th><th>Plan</th><th>Invested</th><th>Earned</th><th>Status</th><th>Action</th></tr></thead><tbody>${s.map(x=>`<tr class="border-t border-border"><td class="py-3">${
-      esc(x.user_id?.name)
-    }
-    </td><td>${
-      esc(x.mining_plan_id?.name)
-    }
-    </td><td>${
-      money(x.invested_amount)
-    }
-    </td><td>${
-      money(x.accumulated_profit)
-    }
-    </td><td>${
-      esc(x.status)
-    }
-    </td><td>${
-      x.status!=='settled'?`<button data-settle-mine="${x._id}" class="text-primary">Settle</button>`:''
-    }
-    </td></tr>`).join('')}</tbody></table></div>`;
-    m.querySelectorAll('[data-settle-mine]').forEach(b=>b.onclick=async()=>{
-      if(!confirm('Confirm settlement?'))return;
-      try{
-        const x=await post('/mining-subscriptions/'+b.dataset.settleMine+'/settle',{
-        });
-        toast(x.message,true);
-        adminMiningSubs()
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    })
-  }
-    async function adminWallets(){
-    const m=adminMain(),d=await get('/wallet-connections');
-    m.innerHTML=adminShell('Managers Connect Wallets','View and manage user wallet connections')+`<div class="flex justify-end"><a href="/admin/mwalletsettings.html" class="px-4 py-2 rounded-lg border border-border text-content text-sm">Settings</a></div><div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">Client</th><th>Email</th><th>Wallet</th><th>Status</th><th></th></tr></thead><tbody>${d.wallets.map(w=>`<tr class="border-t border-border"><td class="py-3">${
-      esc(w.user_id?.name)
-    }
-    </td><td>${
-      esc(w.user_id?.email)
-    }
-    </td><td>${
-      esc(w.walletName)
-    }
-    </td><td>${
-      esc(w.status)
-    }
-    </td><td><button data-wallet-del="${w._id}" class="text-danger">Delete</button></td></tr>`).join('')}</tbody></table></div>`;
-    m.querySelectorAll('[data-wallet-del]').forEach(b=>b.onclick=async()=>{
-      if(!confirm('Delete wallet?\nThis action cannot be undone.'))return;
-      try{
-        const x=await del('/wallet-connections/'+b.dataset.walletDel);
-        toast(x.message,true);
-        adminWallets()
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    })
-  }
-    async function adminWalletSettings(){
-    const m=adminMain(),d=await get('/wallet-settings'),s=d.settings;
-    m.innerHTML=adminShell('Wallet Connect Settings','Configure wallet connection parameters')+`<form id="walletSettingsForm" class="bg-surface-card rounded-xl border border-border p-6 space-y-4"><label class="text-sm text-content-secondary">Min Balance<input name="min_balance" type="number" value="${s.min_balance||0}" class="mt-1.5 w-full bg-surface-card border border-border rounded-lg p-2 text-content"></label><label class="text-sm text-content-secondary">Return (Profit)<input name="min_return" type="number" value="${s.daily_reward||0}" class="mt-1.5 w-full bg-surface-card border border-border rounded-lg p-2 text-content"></label><label class="text-sm text-content-secondary">Turn On/Off<select name="wallet_status" class="mt-1.5 w-full bg-surface-card border border-border rounded-lg p-2 text-content"><option value="on" ${s.wallet_status==='on'?'selected':''}>On</option><option value="off" ${s.wallet_status==='off'?'selected':''}>Off</option></select></label><button class="px-4 py-2 rounded-lg bg-primary text-white">Save Settings</button></form>`;
-    m.querySelector('#walletSettingsForm').onsubmit=async e=>{
-      e.preventDefault();
-      try{
-        const x=await put('/wallet-settings',Object.fromEntries(new FormData(e.currentTarget)));
-        toast(x.message,true)
-      }
-      catch(err){
-        toast(err.message,false)
-      }
-    }
-  }
-    async function adminTrades(){
-    const m=adminMain(),d=await get('/trades'),t=d.trades;
-    m.innerHTML=adminShell('Manage Client Trades','View, create, edit and settle client trades')+`<div class="flex justify-end"><a href="/admin/create-trade.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Create Trade</a></div><div class="flex gap-2 mb-4">${['All','Binary','Spot','Open','Closed','Demo'].map(x=>`<button data-trade-filter="${x}" class="px-3 py-1.5 rounded-full border border-border text-xs text-content-secondary">${
-      x
-    }
-    </button>`).join('')}</div><div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">User</th><th>Type</th><th>Asset</th><th>Action</th><th>Amount</th><th>Leverage</th><th>Entry Price</th><th>Status</th><th>Result</th><th>P/L</th><th>Opened</th><th>Actions</th></tr></thead><tbody id="tradeRows"></tbody></table></div>`;
-    const rows=m.querySelector('#tradeRows'),render=xs=>rows.innerHTML=xs.map(x=>`<tr class="border-t border-border"><td class="py-3">${esc(x.user_id?.name)}</td><td>${esc(x.asset_type)}</td><td>${esc(x.asset_name||x.trading_asset_id?.symbol)}</td><td>${esc(x.action)}</td><td>${money(x.amount)}</td><td>${x.leverage}x</td><td>${money(x.entry_price,'$')}</td><td>${esc(x.status)}</td><td>${esc(x.result||'—')}</td><td class="${Number(x.profit_loss)>=0?'text-success':'text-danger'}">${Number(x.profit_loss)>=0?'+':''}${money(x.profit_loss)}</td><td>${dt(x.opened)}</td><td><a class="text-primary mr-2" href="/admin/view-trade.html?id=${x._id}">View</a><a class="text-primary" href="/admin/edit-trade.html?id=${x._id}">Edit</a></td></tr>`).join('');
-    render(t);
-    m.querySelectorAll('[data-trade-filter]').forEach(b=>b.onclick=()=>{
-      const f=b.dataset.tradeFilter;
-      render(t.filter(x=>f==='All'||x.asset_type===f||x.status===f.toLowerCase()))
-    })
-  }
-    async function adminTradeForm(edit){
-    const m=adminMain(),id=edit?new URLSearchParams(location.search).get('id'):null,d=await get('/trades'+(edit?'/'+id:'')),t=edit?d.trade:{
-    };
-    const users=edit?[]:d.users||[],assets=edit?[]:d.assets||[];
-    m.innerHTML=adminShell(edit?'Edit Trade':'Create Trade','Trade configuration')+`<form id="tradeForm" class="bg-surface-card rounded-xl border border-border p-6 space-y-4"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><label class="text-sm text-content-secondary">User<select name="user_id" class="mt-1.5 w-full border border-border rounded-lg p-2 bg-surface-card text-content">${edit?`<option value="${t.user_id?._id||t.user_id}" selected>${
-      esc(t.user_id?.name||'Current User')
-    }
-    </option>`:users.map(u=>`<option value="${u._id}">${
-      esc(u.name)
-    }
-     (${
-      esc(u.email)
-    })</option>`).join('')}</select></label><label class="text-sm text-content-secondary">Asset<select name="trading_asset_id" class="mt-1.5 w-full border border-border rounded-lg p-2 bg-surface-card text-content">${edit?`<option value="${t.trading_asset_id?._id||t.trading_asset_id}" selected>${
-      esc(t.trading_asset_id?.symbol||t.asset_name)
-    }
-    </option>`:assets.map(a=>`<option value="${a._id}">${
-      esc(a.name)
-    }
-     (${
-      esc(a.symbol)
-    })</option>`).join('')}</select></label>${[['asset_type','Type','text',t.asset_type||'Binary'],['asset_name','Asset Name','text',t.asset_name||''],['action','Action','text',t.action||'BUY'],['amount','Amount','number',t.amount||0],['leverage','Leverage','number',t.leverage||1],['duration','Duration','number',t.duration||0],['entry_price','Entry Price','number',t.entry_price||0],['profit_loss','P/L','number',t.profit_loss||0]].map(x=>`<label class="text-sm text-content-secondary">${
-      x[1]
-    }
-    <input name="${x[0]}" type="${x[2]}" value="${esc(x[3])}" class="mt-1.5 w-full border border-border rounded-lg p-2 bg-surface-card text-content"></label>`).join('')}</div><label class="text-sm text-content-secondary">Status<select name="status" class="mt-1.5 w-full border border-border rounded-lg p-2 bg-surface-card text-content"><option value="open" ${t.status==='open'?'selected':''}>Open</option><option value="closed" ${t.status==='closed'?'selected':''}>Closed</option></select></label><button class="px-4 py-2 rounded-lg bg-primary text-white">${edit?'Update Trade':'Create Trade'}</button></form>`;
-    m.querySelector('#tradeForm').onsubmit=async e=>{
-      e.preventDefault();
-      try{
-        const x=edit?await put('/trades/'+id,Object.fromEntries(new FormData(e.currentTarget))):await post('/trades',Object.fromEntries(new FormData(e.currentTarget)));
-        toast(x.message,true);
-        location.href='/admin/managetrades.html'
-      }
-      catch(err){
-        toast(err.message,false)
-      }
-    }
-  }
-    async function adminTradeView(){
-        const m=adminMain(),id=new URLSearchParams(location.search).get('id'),d=await get('/trades/'+id),t=d.trade;
-        let action='';
-        if(t.status!=='closed') action=`<form id="settleTrade" class="mt-6 space-y-3"><input name="profit_loss" type="number" step="0.01" value="${t.profit_loss||0}" class="w-full border border-border rounded-lg p-2 bg-surface-card text-content"><select name="result" class="w-full border border-border rounded-lg p-2 bg-surface-card text-content"><option value="WIN">WIN</option><option value="LOSS">LOSS</option></select><button class="px-4 py-2 rounded-lg bg-primary text-white">Settle Trade</button></form>`;
-        else action=`<div class="mt-6 bg-surface-card border border-border rounded-xl p-5"><h3 class="font-semibold text-content mb-3">Settlement Info</h3><p class="text-content">Result: ${esc(t.result)}</p><p class="text-content mt-2">P/L: ${money(t.profit_loss)}</p><p class="text-content mt-2">Settled By: ${esc(t.settled_by||'Admin')}</p><p class="text-content mt-2">Settled At: ${dt(t.settled_at)}</p></div>`;
-        const fields=[['User',t.user_id?.name],['Type',t.asset_type],['Asset',t.asset_name||t.trading_asset_id?.symbol],['Action',t.action],['Amount',money(t.amount)],['Leverage',(t.leverage||1)+'x'],['Entry Price',money(t.entry_price,'$')],['Status',t.status],['Result',t.result||'—'],['P/L',money(t.profit_loss)],['Opened',dt(t.opened)],['Settled At',dt(t.settled_at)]];
-        m.innerHTML=adminShell(`Trade #${id}`,'Trade details')+`<div class="bg-surface-card rounded-xl border border-border p-6"><div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">${fields.map(x=>`<div><span class="text-content-muted">${
-      x[0]
-    }
-    </span><div class="text-content font-medium mt-1">${
-      esc(x[1])
-    }
-    </div></div>`).join('')}</div>${action}</div>`;
-        m.querySelector('#settleTrade')?.addEventListener('submit',async e=>{
-      e.preventDefault();
-      try{
-        const x=await post('/trades/'+id+'/settle',Object.fromEntries(new FormData(e.currentTarget)));
-        toast(x.message,true);
-        adminTradeView()
-      }
-      catch(err){
-        toast(err.message,false)
-      }
-    });
-
-  }
-    async function adminInvestmentList(){
-    const m=adminMain(),d=await get('/active-investments'),rows=d.investments||[];
-    m.innerHTML=adminShell('Active Investments','Monitor currently active investment plans')+`<div class="bg-surface-card rounded-xl border border-border p-5 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-content-muted text-left"><th class="py-2">Client name</th><th>Investment Plan</th><th>Amount Invested</th><th>Duration</th><th>ROI</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(i=>`<tr class="border-t border-border"><td class="py-3">${
-      esc(i.user?.name||'—')
-    }
-    </td><td>${
-      esc(i.plan?.name||'—')
-    }
-    </td><td>${
-      money(i.amount)
-    }
-    </td><td>${
-      esc(i.inv_duration||'—')
-    }
-    </td><td>${
-      money(i.profit_earned)
-    }
-    </td><td>${
-      esc(i.active)
-    }
-    </td><td><a class="text-primary" href="/admin/active-investments-view.html?id=${i._id}">View</a></td></tr>`).join('')}</tbody></table></div>`
-  }
-    async function adminInvestmentView(){
-    const m=adminMain(),id=new URLSearchParams(location.search).get('id'),d=await get('/investments/'+id),i=d.investment;
-    m.innerHTML=adminShell(`${i.plan?.name||'Investment'} Investment`,'Investment details')+`<div class="bg-surface-card rounded-xl border border-border p-6"><div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">${[['Client',i.user?.name],['Email',i.user?.email],['Plan',i.plan?.name],['Amount',money(i.amount)],['Status',i.active],['Duration',i.inv_duration],['Profit',money(i.profit_earned)],['Created',dt(i.createdAt)],['Expire At',dt(i.expire_date)]].map(x=>`<div><div class="text-content-muted">${
-      x[0]
-    }
-    </div><div class="text-content font-medium mt-1">${
-      esc(x[1])
-    }
-    </div></div>`).join('')}</div>${i.active==='yes'?'<button id="settleInvestment" class="mt-6 px-4 py-2 rounded-lg bg-primary text-white">Settle Investment</button>':''}</div>`;
-    m.querySelector('#settleInvestment')?.addEventListener('click',async()=>{
-      if(!confirm('Confirm investment settlement?'))return;
-      try{
-        const x=await post('/investments/'+id+'/settle',{
-        });
-        toast(x.message,true);
-        adminInvestmentView()
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    })
   }
     async function adminExpertView(){
-    const m=adminMain(),id=new URLSearchParams(location.search).get('id'),d=await get('/experts/'+id),e=d.expert,positions=d.positions||[];
-    m.innerHTML=adminShell(e.name,'Expert trader profile and active copy positions')+`<div class="bg-surface-card rounded-xl border border-border p-6"><div class="flex items-center gap-4"><img src="${esc(e.profile_picture||'/temp/wallet/other.png')}" class="w-16 h-16 rounded-full object-cover"><div><h2 class="text-lg font-semibold text-content">${esc(e.name)}</h2><p class="text-sm text-content-muted">${esc(e.area_of_expertise)}</p></div></div><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">${[['Daily ROI',e.daily_roi+'%'],['Total ROI',e.total_roi+'%'],['Win Rate',e.win_rate+'%'],['Followers',e.followers_count]].map(x=>`<div class="bg-surface-alt rounded-lg p-3"><div class="text-xs text-content-muted">${
-      x[0]
-    }
-    </div><div class="text-content font-bold mt-1">${
-      esc(x[1])
-    }
-    </div></div>`).join('')}</div></div><div class="bg-surface-card rounded-xl border border-border p-6 mt-4"><h3 class="font-semibold text-content mb-4">Active Copy Positions</h3><div class="space-y-2">${positions.length?positions.map(p=>`<div class="border-b border-border pb-3"><div class="flex justify-between"><span class="text-content">${
-      esc(p.user_id?.name)
-    }
-    </span><span class="text-success">${
-      esc(p.status)
-    }
-    </span></div><div class="text-sm text-content-muted mt-1">Invested ${
-      money(p.invested_amount)
-    }
-     · Profit ${
-      money(p.accumulated_profit)
-    }
-    </div></div>`).join(''):'<div class="text-content-muted">No copy positions.</div>'}</div></div>`
+    const m=adminMain(); showDynamicMain();
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){toast('Expert id required',false);return;}
+    m.innerHTML='<div class="p-8 text-center text-content-muted">Loading...</div>';
+    const d=await get('/experts/'+id); const e=d.expert||{}; const positions=d.positions||[];
+    m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">${esc(e.name||'Expert')}</h1><p class="text-sm text-content-muted mt-1">Expert trader profile and active copy positions</p></div><div class="flex gap-2"><a href="/admin/admin-experts-edit.html?id=${e._id}" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Edit Expert</a><a href="/admin/admin-experts.html" class="px-4 py-2 rounded-lg border border-border text-sm">Back to List</a></div></div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-4 flex items-center gap-4">${e.profile_picture?`<img src="${esc(e.profile_picture)}" class="w-14 h-14 rounded-full object-cover">`:`<div class="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center font-semibold">${esc(String(e.name||'?')[0])}</div>`}<div><div class="font-semibold text-lg">${esc(e.name)}</div><div class="text-sm text-content-muted"><span class="mr-2">${esc(e.area_of_expertise||'')}</span><span class="${e.is_active!==false?'text-emerald-600':'text-slate-400'}">${e.is_active!==false?'Active':'Inactive'}</span></div></div></div>
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">${[['DAILY ROI',Number(e.daily_roi||0).toFixed(2)+'%'],['DURATION',(e.duration_days||30)+' days'],['FOLLOWERS',Number(e.followers_count||0).toLocaleString()],['TOTAL ROI',Number(e.total_roi||0).toFixed(2)+'%'],['MIN CAPITAL',money(e.min_startup_capital)],['WIN RATE',Number(e.win_rate||0).toFixed(2)+'%']].map(([l,v])=>`<div class="bg-white rounded-xl border border-slate-200 p-4"><div class="text-xs text-slate-500 uppercase">${l}</div><div class="text-lg font-bold mt-1">${esc(v)}</div></div>`).join('')}</div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto"><div class="px-4 py-3 border-b border-slate-100 font-medium">Copy Positions</div>
+    <table class="w-full text-sm"><thead><tr class="text-left text-xs text-slate-500 uppercase bg-slate-50"><th class="px-4 py-3">User</th><th>Invested</th><th>Profit</th><th>Started</th><th>Expires</th><th>Status</th><th></th></tr></thead>
+    <tbody>${positions.length?positions.map(p=>`<tr class="border-t border-slate-100"><td class="px-4 py-3">${esc(p.user_id?.name||'—')}</td><td>${money(p.invested_amount)}</td><td class="text-emerald-600">${money(p.accumulated_profit)}</td><td>${dt(p.started_at||p.createdAt)}</td><td>${dt(p.expires_at)}</td><td><span class="text-xs">${esc(p.status)}</span></td><td><a href="/admin/viewUser-copy-trades.html?id=${p._id}" class="text-primary text-sm">View</a></td></tr>`).join(''):'<tr><td colspan="7" class="py-8 text-center text-content-muted">No copy positions</td></tr>'}</tbody></table></div>`;
   }
-    async function adminCardEditUser(){
-    const m=adminMain(),id=new URLSearchParams(location.search).get('id'),d=await get('/cards/'+id),c=d.card;
-    m.innerHTML=adminShell('Edit Card Details','Update issued card information')+`<form id="cardEditUser" class="bg-surface-card rounded-xl border border-border p-6 space-y-4"><div class="grid grid-cols-1 md:grid-cols-2 gap-4">${[['card_holder','Card Holder','text',c.card_holder||''],['card_number','Card Number','text',c.card_number||''],['expiry_month','Expiry Month','number',c.expiry_month||''],['expiry_year','Expiry Year','number',c.expiry_year||''],['cvv','CVV','text',c.cvv||''],['balance','Balance','number',c.balance||0]].map(x=>`<label class="text-sm text-content-secondary">${
-      x[1]
+    async function adminCopyTrades(){
+    const m=adminMain(); showDynamicMain();
+    if(!m){ console.error('adminMain not found'); return; }
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d={positions:[],stats:{}};
+    try{ d=await get('/copy-positions'); }catch(err){ toast(err.response?.data?.message||err.message||'Failed to load copy positions',false); }
+    const positions=d.positions||[]; const stats=d.stats||{};
+    const active=positions.filter(x=>x.status==='active');
+    const stopped=positions.filter(x=>x.status==='stopped');
+    const completed=positions.filter(x=>x.status==='completed');
+    const settled=positions.filter(x=>x.status==='settled');
+    function rows(list){if(!list.length)return '<tr><td colspan="10" class="py-8 text-center text-content-muted">No records</td></tr>';
+      return list.map(p=>{const inv=Number(p.invested_amount||0);const profit=Number(p.accumulated_profit||0);const adj=Number(p.admin_adjustment||0);const payout=inv+profit+adj;
+        return `<tr class="border-t border-slate-100"><td class="px-4 py-3"><input type="checkbox" data-sel="${p._id}" class="rounded"></td><td>${esc(p.user_id?.name||'—')}<div class="text-xs text-content-muted">${esc(p.user_id?.email||'')}</div></td><td>${esc(p.expert_id?.name||p.expert?.name||'—')}</td><td>${money(inv)}</td><td class="text-emerald-600">${money(profit)}</td><td>${adj?money(adj):'—'}</td><td class="font-medium">${money(payout)}</td><td><span class="text-xs">${esc(p.status)}</span></td><td>${dt(p.started_at||p.createdAt)}</td><td><a href="/admin/viewUser-copy-trades.html?id=${p._id}" class="text-primary text-sm">View</a></td></tr>`;}).join('');}
+    m.innerHTML=`<div class="mb-6"><h1 class="text-xl font-semibold text-content">Manage Copy Trades</h1><p class="text-sm text-content-muted mt-1">View and manage all user copy trading positions</p></div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">${[['ACTIVE COPIES',stats.activeCopies??active.length],['TOTAL INVESTED',money(stats.totalInvested??positions.reduce((s,p)=>s+Number(p.invested_amount||0),0))],['TOTAL PROFIT',money(stats.totalProfit??positions.reduce((s,p)=>s+Number(p.accumulated_profit||0),0))],['SETTLED POSITIONS',stats.settledPositions??(settled.length+completed.length+stopped.length)]].map(([l,v])=>`<div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm"><div class="text-xs text-slate-500 uppercase">${l}</div><div class="text-2xl font-bold mt-2">${v}</div></div>`).join('')}</div>
+    <div class="flex flex-wrap gap-2 mb-4 items-center" id="copyFilters">${[['all','All'],['active','Active'],['stopped','Stopped'],['completed','Completed'],['settled','Settled']].map(([k,l],i)=>`<button type="button" data-filter="${k}" class="px-3 py-1.5 rounded-full text-sm ${i===0?'bg-primary text-white':'bg-slate-100 text-slate-600'}">${l}</button>`).join('')}<input id="copySearch" type="search" placeholder="Search user or expert..." class="ml-auto rounded-lg border border-slate-200 px-3 py-1.5 text-sm"></div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto"><div class="px-4 py-3 border-b border-slate-100 font-medium">Copy Positions</div>
+    <table class="w-full text-sm"><thead><tr class="text-left text-xs text-slate-500 uppercase bg-slate-50"><th class="px-4 py-3"></th><th>User</th><th>Expert</th><th>Invested</th><th>Profit</th><th>Adjustment</th><th>Total Payout</th><th>Status</th><th>Started</th><th></th></tr></thead>
+    <tbody id="copyRows">${rows(positions)}</tbody></table></div>`;
+    const tbody=m.querySelector('#copyRows');
+    function applyFilter(){const f=m.querySelector('#copyFilters [data-filter].bg-primary')?.dataset.filter||'all';const q=(m.querySelector('#copySearch').value||'').toLowerCase();let list=positions;if(f!=='all')list=list.filter(p=>p.status===f);if(q)list=list.filter(p=>String(p.user_id?.name||'').toLowerCase().includes(q)||String(p.expert_id?.name||p.expert?.name||'').toLowerCase().includes(q));tbody.innerHTML=rows(list);}
+    m.querySelectorAll('#copyFilters [data-filter]').forEach(btn=>{btn.onclick=()=>{m.querySelectorAll('#copyFilters [data-filter]').forEach(b=>{b.className='px-3 py-1.5 rounded-full text-sm bg-slate-100 text-slate-600';});btn.className='px-3 py-1.5 rounded-full text-sm bg-primary text-white';applyFilter();};});
+    m.querySelector('#copySearch').oninput=applyFilter;
+  }
+    async function adminCopyTradeView(){
+    showDynamicMain();
+    const id=new URLSearchParams(location.search).get('id');
+    let root=document.getElementById('adminDynamicRoot');
+    if(!root){
+      const main=document.querySelector('main');
+      if(main){
+        root=main.querySelector('.p-4.lg\:p-6')||main.querySelector('[class*="p-4"]')||main;
+      }
     }
-    <input name="${x[0]}" type="${x[2]}" value="${esc(x[3])}" class="mt-1.5 w-full border border-border rounded-lg p-2 bg-surface-card text-content"></label>`).join('')}</div><button class="px-4 py-2 rounded-lg bg-primary text-white">Save Card</button></form>`;
-    m.querySelector('#cardEditUser').onsubmit=async e=>{
-      e.preventDefault();
-      try{
-        const x=await put('/cards/'+id,Object.fromEntries(new FormData(e.currentTarget)));
-        toast(x.message,true);
-        location.href='/admin/cards-view.html?id='+id
+    if(!root) root=adminMain();
+    if(!root){console.error('viewUser root missing');return;}
+    if(!id){
+      root.innerHTML='<div class="p-8 text-center text-content-muted">Open a position from <a class="text-primary" href="/admin/user-copy-trades.html">Copy Trades</a> (missing id).</div>';
+      return;
+    }
+    root.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading position...</div>';
+    let d;
+    try{ d=await get('/copy-positions/'+encodeURIComponent(id)); }
+    catch(err){
+      root.innerHTML='<div class="p-8 text-center text-danger">'+(err.response?.data?.message||err.message||'Failed to load position')+'</div>';
+      return;
+    }
+    const p=d.position||{};
+    const e=p.expert_id||p.expert||{};
+    const u=p.user_id||{};
+    const inv=Number(p.invested_amount||0);
+    const profit=Number(p.accumulated_profit||0);
+    const adj=Number(p.admin_profit_adjustment!=null?p.admin_profit_adjustment:(p.admin_adjustment||0));
+    const payout=inv+profit+adj;
+    const daily=Number(p.daily_roi||e.daily_roi||0);
+    const totalDays=Number(p.duration_days||e.duration_days||30);
+    const started=p.started_at||p.createdAt;
+    const expires=p.expires_at;
+    const dayNum=started?Math.min(totalDays,Math.max(0,Math.floor((Date.now()-new Date(started))/86400000))):0;
+    const remain=Math.max(0,totalDays-dayNum);
+    const status=String(p.status||'active').toLowerCase();
+    const statusCls=status==='active'?'bg-success-light text-success':status==='settled'?'bg-warning-light text-warning':status==='stopped'?'bg-danger-light text-danger':status==='completed'?'bg-info-light text-info':'bg-surface-alt text-content-secondary';
+    const fmtDT=(v)=>{if(!v)return '—';try{const d=new Date(v);return d.toLocaleString(undefined,{month:'short',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return '—';}};
+    const trades=p.simulated_trades||p.trades||d.trades||[];
+    const cur=u.currency_code||'$';
+
+    let actionsHtml='';
+    if(status==='settled'){
+      actionsHtml='<p class="text-sm text-content-muted">This position is settled. No further actions available.</p>';
+    } else {
+      actionsHtml=`<button type="button" id="settleBtn" class="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2.5 text-sm font-medium">Settle &amp; Credit User — ${money(payout)}</button>`;
+      if(status==='active'){
+        actionsHtml+=`<button type="button" id="forceStopBtn" class="w-full bg-danger text-white hover:bg-danger/90 rounded-lg px-4 py-2.5 text-sm font-medium">Force Stop</button>`;
       }
-      catch(err){
-        toast(err.message,false)
-      }
+    }
+
+    root.innerHTML=`
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-semibold text-content tracking-tight">Copy Position</h1>
+    <p class="mt-1 text-sm text-content-secondary">Manage copy trading position details</p>
+  </div>
+  <div class="flex items-center gap-3">
+    <a href="/admin/user-copy-trades.html" class="bg-surface-alt text-content border border-border hover:bg-surface-alt/80 rounded-lg px-4 py-2 text-sm font-medium inline-flex items-center gap-1">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+      Back to Copy Trades
+    </a>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+  <div class="bg-surface-card rounded-xl border border-border shadow-card p-6">
+    <h3 class="text-base font-semibold text-content mb-4">Position Details</h3>
+    <div class="space-y-3">
+      <div class="flex justify-between text-sm">
+        <span class="text-content-secondary">User</span>
+        <div class="text-right">
+          <div class="font-medium text-content">${esc(u.name||'—')}</div>
+          <div class="text-xs text-content-muted">${esc(u.email||'')}</div>
+        </div>
+      </div>
+      <div class="flex justify-between text-sm">
+        <span class="text-content-secondary">Expert</span>
+        <div class="flex items-center gap-2">
+          ${e.profile_picture?`<img src="${esc(e.profile_picture)}" class="w-6 h-6 rounded-full object-cover" alt="">`:''}
+          <span class="font-medium text-content">${esc(e.name||'—')}</span>
+        </div>
+      </div>
+      <div class="flex justify-between text-sm">
+        <span class="text-content-secondary">Expertise</span>
+        <span class="inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded-full bg-surface-alt text-content-secondary">${esc(e.area_of_expertise||'—')}</span>
+      </div>
+      <div class="flex justify-between text-sm">
+        <span class="text-content-secondary">Status</span>
+        <span class="inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded-full ${statusCls}">${esc(status.charAt(0).toUpperCase()+status.slice(1))}</span>
+      </div>
+      <div class="flex justify-between text-sm"><span class="text-content-secondary">Started</span><span class="text-content">${esc(fmtDT(started))}</span></div>
+      <div class="flex justify-between text-sm"><span class="text-content-secondary">Expires</span><span class="text-content">${esc(fmtDT(expires))}</span></div>
+      <div class="flex justify-between text-sm"><span class="text-content-secondary">Days Remaining</span><span class="text-content font-medium">${remain} of ${totalDays} days</span></div>
+    </div>
+  </div>
+
+  <div class="bg-surface-card rounded-xl border border-border shadow-card p-6">
+    <h3 class="text-base font-semibold text-content mb-4">Financial Summary</h3>
+    <div class="space-y-3">
+      <div class="flex justify-between text-sm"><span class="text-content-secondary">Invested Amount</span><span class="font-medium text-content">${money(inv)}</span></div>
+      <div class="flex justify-between text-sm"><span class="text-content-secondary">Daily ROI</span><span class="text-success font-medium">${daily.toFixed(2)}%</span></div>
+      <div class="flex justify-between text-sm"><span class="text-content-secondary">Accumulated Profit</span><span class="text-success font-medium">${money(profit)}</span></div>
+      <div class="flex justify-between text-sm"><span class="text-content-secondary">Admin Adjustment</span><span class="${adj?'font-medium text-content':'text-content-muted'}">${adj?money(adj):'—'}</span></div>
+      <hr class="border-border">
+      <div class="flex justify-between"><span class="text-content font-medium">Total Payout</span><span class="text-2xl text-content font-bold">${money(payout)}</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+  <div class="bg-surface-card rounded-xl border border-border shadow-card p-6">
+    <h3 class="text-base font-semibold text-content mb-4">Adjust Profit</h3>
+    <form id="adjForm">
+      <label for="admin_profit_adjustment" class="block text-sm font-medium text-content mb-1.5">Profit Adjustment ($)</label>
+      <input type="number" name="admin_profit_adjustment" id="admin_profit_adjustment" value="${adj}" step="0.01" class="w-full bg-surface-card border border-border rounded-lg px-3.5 py-2.5 text-sm text-content focus:ring-2 focus:ring-primary/30 focus:border-primary">
+      <p class="text-xs text-content-muted mt-1">Positive to add, negative to deduct</p>
+      <div class="mt-4">
+        <label for="admin_notes" class="block text-sm font-medium text-content mb-1.5">Admin Notes</label>
+        <textarea name="admin_notes" id="admin_notes" rows="3" class="w-full bg-surface-card border border-border rounded-lg px-3.5 py-2.5 text-sm text-content placeholder:text-content-muted focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y">${esc(p.admin_notes||'')}</textarea>
+      </div>
+      <button type="submit" class="mt-4 bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2 text-sm font-medium">Save Adjustment</button>
+    </form>
+  </div>
+
+  <div class="bg-surface-card rounded-xl border border-border shadow-card p-6" id="posActions">
+    <h3 class="text-base font-semibold text-content mb-4">Position Actions</h3>
+    ${actionsHtml}
+  </div>
+</div>
+
+<div class="mt-6">
+  <div class="bg-surface-card rounded-xl border border-border shadow-card">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-border">
+      <h3 class="text-base font-medium text-content">Simulated Trades</h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-surface-alt">
+            <th class="text-left text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">Asset</th>
+            <th class="text-left text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">Class</th>
+            <th class="text-left text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">Direction</th>
+            <th class="text-left text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">Entry</th>
+            <th class="text-left text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">Exit</th>
+            <th class="text-left text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">Amount</th>
+            <th class="text-left text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">P/L</th>
+            <th class="text-left text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">Result</th>
+            <th class="text-left text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${trades.length?trades.map(tr=>`<tr class="border-t border-border">
+            <td class="px-5 py-3">${esc(tr.asset||tr.symbol||'—')}</td>
+            <td class="px-5 py-3">${esc(tr.class||tr.asset_class||'—')}</td>
+            <td class="px-5 py-3">${esc(tr.direction||tr.side||'—')}</td>
+            <td class="px-5 py-3">${esc(tr.entry||tr.entry_price||'—')}</td>
+            <td class="px-5 py-3">${esc(tr.exit||tr.exit_price||'—')}</td>
+            <td class="px-5 py-3">${money(tr.amount)}</td>
+            <td class="px-5 py-3 ${Number(tr.pl||tr.profit_loss||0)>=0?'text-success':'text-danger'}">${money(tr.pl||tr.profit_loss)}</td>
+            <td class="px-5 py-3">${esc(tr.result||'—')}</td>
+            <td class="px-5 py-3">${esc(fmtDT(tr.time||tr.createdAt))}</td>
+          </tr>`).join(''):'<tr><td colspan="9" class="px-5 py-8 text-center text-content-muted">No simulated trades yet.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`;
+
+    const adjForm=root.querySelector('#adjForm');
+    if(adjForm){
+      adjForm.onsubmit=async ev=>{
+        ev.preventDefault();
+        const fd=new FormData(ev.currentTarget);
+        const body={
+          admin_profit_adjustment: fd.get('admin_profit_adjustment'),
+          admin_notes: fd.get('admin_notes')||''
+        };
+        try{
+          const x=await post('/copy-positions/'+id+'/adjust', body);
+          toast(x.message||'Profit adjustment saved',true);
+          await adminCopyTradeView();
+        }catch(e){toast(e.response?.data?.message||e.message||'Adjustment failed',false);}
+      };
+    }
+    const settleBtn=root.querySelector('#settleBtn');
+    if(settleBtn){
+      settleBtn.onclick=async()=>{
+        if(!confirm('Settle this position? '+money(payout)+' will be credited to the user.'))return;
+        try{
+          const x=await post('/copy-positions/'+id+'/settle',{});
+          toast(x.message||('Position settled. '+money(payout)+' credited to user.'),true);
+          await adminCopyTradeView();
+        }catch(e){toast(e.response?.data?.message||e.message||'Settle failed',false);}
+      };
+    }
+    const forceBtn=root.querySelector('#forceStopBtn');
+    if(forceBtn){
+      forceBtn.onclick=async()=>{
+        if(!confirm('Force stop this active position?'))return;
+        try{
+          const x=await post('/copy-positions/'+id+'/force-stop',{});
+          toast(x.message||'Position force-stopped.',true);
+          await adminCopyTradeView();
+        }catch(e){toast(e.response?.data?.message||e.message||'Force stop failed',false);}
+      };
     }
   }
     async function routeAdmin(){
@@ -1977,6 +1858,8 @@
       if(page==='admin-experts-create.html')return adminExpertForm(false);
       if(page==='admin-experts-edit.html')return adminExpertForm(true);
       if(page==='admin-experts-view.html')return adminExpertView();
+      if(page==='user-copy-trades.html'||page==='copy-trades.html')return adminCopyTrades();
+      if(page==='viewuser-copy-trades.html')return adminCopyTradeView();
       if(page==='admin-bot-trading.html')return adminBots();
       if(page==='admin-bot-trading-create.html')return adminBotForm(Boolean(new URLSearchParams(location.search).get('id')));
       if(page==='bot-trading-edit.html')return adminBotForm(true);
