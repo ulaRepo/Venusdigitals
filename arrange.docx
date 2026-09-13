@@ -569,7 +569,7 @@ markets.html: on visit it displays all dynamic content has expected, while keepi
 -in the section of that displays Total Assets,Top Gainer,Top Loser these numbers should be dynamic
 -in the asset category filter section of All 84,Crypto 41, Forex 12, Stocks 13, ETFs 10, Indices 8 let the number count of assets listed under every category dynamic and all assets are fetched from the db
 then below the each asset is image name, symbol and price be displayed using the template of the static data by dynamic data
--when any of the asset is clicked upon it redirects to trade.html url(/frontend/user/trade.html)
+-when any of the asset is clicked upon it redirects to trade.html url(/user/trade.html)
 
 //digital-grownt\frontend\user\mining.html
 

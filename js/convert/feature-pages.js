@@ -1033,106 +1033,214 @@
   }
     
     async function bots(){
-        const root=inner(),d=await get('/bots');
-        root.innerHTML=shell('Bot Trading','Automated trading strategies')+`<div class="flex gap-2 mb-3"><button id="botsTab" class="px-3 py-2 rounded-lg bg-blue2 text-white text-[.75rem]">Bots</button><button id="subsTab" class="px-3 py-2 rounded-lg bg-[#111] text-[#777] text-[.75rem]">My Subscriptions${d.activeCount?` (${
-      d.activeCount
-    })`:''}</button></div><div id="botContent"></div>`;
-        const c=root.querySelector('#botContent');
-        function renderBots(){
-            if(!d.bots.length){
-        c.innerHTML='<div class="text-center py-12 text-[#555]">No bots available.</div>';
+    const root=inner();
+    showDynamicMain();
+    if(root) root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    const d=await get('/bots');
+    const bots=d.bots||[];
+    const subs=d.subscriptions||[];
+    const activeCount=Number(d.activeCount||subs.filter(x=>x.status==='active').length);
+    root.innerHTML=`<div class="mb-[14px]"><div class="inner-title">Bot Trading</div><p class="text-[.72rem] text-[#444] mt-0.5">Subscribe to automated trading bots and earn passive profits</p></div>
+    <div class="flex gap-4 border-b border-[#1a1a1a] mb-[14px] text-[.85rem]">
+      <button type="button" id="botsTab" class="pb-2 border-b-2 border-blue2 text-white">Available Bots</button>
+      <button type="button" id="subsTab" class="pb-2 border-b-2 border-transparent text-[#555]">My Subscriptions${activeCount?` (${activeCount})`:''}</button>
+    </div>
+    <div id="botContent"></div>`;
+    const c=root.querySelector('#botContent');
+    function renderBots(){
+      if(!bots.length){c.innerHTML='<div class="text-center py-12 text-[#555]">No bots available.</div>';return;}
+      c.innerHTML=`<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-[12px]">`+bots.map(b=>{
+        const daily=Number(b.expected_roi||b.daily_roi||0);
+        const win=Number(b.win_rate||0);
+        const min=Number(b.min_investment||0);
+        const interval=Number(b.trade_interval_minutes||5);
+        const maxD=Number(b.max_duration_days||30);
+        const strategy=esc(b.strategy_type||'Scalping');
+        return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-[16px] flex flex-col">
+          <div class="flex items-start justify-between gap-2 mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-9 h-9 rounded-full bg-[rgba(74,108,247,.12)] flex items-center justify-center text-blue2"><i class="fa-solid fa-microchip"></i></div>
+              <div>
+                <div class="text-white font-medium text-[.9rem]">${esc(b.name)}</div>
+                <span class="text-[.65rem] px-2 py-0.5 rounded-full bg-[rgba(74,108,247,.12)] text-blue2">${strategy}</span>
+              </div>
+            </div>
+            <div class="text-right"><div class="text-grn font-semibold text-[.95rem]">${daily.toFixed(2)}%</div><div class="text-[.65rem] text-[#555]">daily ROI</div></div>
+          </div>
+          <div class="grid grid-cols-4 gap-2 text-center text-[.72rem] mb-4 py-2 border-t border-b border-[#1a1a1a]">
+            <div><div class="text-[#555]">Max Duration</div><div class="text-white mt-0.5">${maxD}d</div></div>
+            <div><div class="text-[#555]">Win Rate</div><div class="text-white mt-0.5">${win}%</div></div>
+            <div><div class="text-[#555]">Min Invest</div><div class="text-white mt-0.5">${money(min)}</div></div>
+            <div><div class="text-[#555]">Interval</div><div class="text-white mt-0.5">${interval}m</div></div>
+          </div>
+          <a href="/user/bot-trading-details.html?id=${b._id}" class="mt-auto block text-center py-[10px] rounded-[10px] bg-[rgba(74,108,247,.12)] text-blue2 text-[.82rem] no-underline hover:bg-brand-blue hover:text-white transition-colors">View Bot →</a>
+        </div>`;
+      }).join('')+`</div>`;
+    }
+    function renderSubs(){
+      if(!subs.length){
+        c.innerHTML=`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-8 text-center">
+          <i class="fa-solid fa-microchip" style="font-size:2.5rem;color:#333;display:block;margin-bottom:12px;"></i>
+          <p class="text-[#aaa]" style="font-size:.88rem;margin-bottom:8px;">You haven't subscribed to any bots yet.</p>
+          <button type="button" id="browseBotsBtn" class="text-blue2" style="font-size:.82rem;font-weight:500;background:none;border:none;cursor:pointer;">Browse Available Bots →</button>
+        </div>`;
+        c.querySelector('#browseBotsBtn')?.addEventListener('click',()=>{root.querySelector('#botsTab').click();});
         return;
       }
-            c.innerHTML=`<div class="grid grid-cols-1 md:grid-cols-2 gap-[9px]">${d.bots.map(b=>`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-white font-medium">${
-        esc(b.name)
-      }
-      </div><div class="text-[#555] text-[.72rem] mt-1">${
-        esc(b.strategy_type)
-      }
-      </div><div class="grid grid-cols-3 gap-2 mt-4 text-center"><div><div class="text-grn">${
-        b.expected_roi||b.daily_roi||0
-      }
-      %</div><div class="text-[#555] text-[.62rem]">Daily ROI</div></div><div><div class="text-white">${
-        b.win_rate||0
-      }
-      %</div><div class="text-[#555] text-[.62rem]">Win Rate</div></div><div><div class="text-white">${
-        b.max_duration_days||30
-      }
-      </div><div class="text-[#555] text-[.62rem]">Days</div></div></div><a href="/user/bot-trading-details.html?id=${b._id}" class="block mt-4 text-center py-2 rounded-lg bg-brand-blue text-white text-[.78rem]">View Bot</a></div>`).join('')}</div>`;
-
+      c.innerHTML=`<div class="space-y-4">`+subs.map(s=>{
+        const b=s.bot_id||s.bot||{};
+        const status=String(s.status||'active');
+        const stCls=status==='active'?'bg-[rgba(0,212,124,.1)] text-grn':status==='settled'?'bg-[rgba(245,197,66,.1)] text-ylw':'bg-[rgba(255,69,96,.1)] text-red2';
+        return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+          <div class="flex items-center gap-3 mb-4">
+            <div style="width:40px;height:40px;border-radius:50%;background:rgba(74,108,247,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-microchip" style="font-size:.9rem;color:#6e8efb;"></i></div>
+            <div><h5 style="font-size:.88rem;font-weight:500;color:#fff;">${esc(b.name||'Bot')}</h5>
+              <span class="bg-[rgba(74,108,247,.1)] text-blue2 px-2 py-0.5 rounded-full" style="font-size:.72rem;">${esc(b.strategy_type||'')}</span></div>
+            <div class="ml-auto"><span class="${stCls} px-2.5 py-1 rounded-full" style="font-size:.72rem;font-weight:500;">${esc(status.charAt(0).toUpperCase()+status.slice(1))}</span></div>
+          </div>
+          <div class="grid grid-cols-4 gap-4 py-3 border-t border-[#1e1e1e]">
+            <div><p style="font-size:.68rem;color:#555;">Invested</p><p style="font-size:.82rem;font-weight:600;color:#fff;">${money(s.invested_amount)}</p></div>
+            <div><p style="font-size:.68rem;color:#555;">Profit</p><p style="font-size:.82rem;font-weight:600;" class="text-grn">${money(s.current_profit||s.accumulated_profit)}</p></div>
+            <div><p style="font-size:.68rem;color:#555;">Daily ROI</p><p class="text-grn" style="font-size:.82rem;font-weight:600;">${Number(s.daily_roi_snapshot||b.expected_roi||0).toFixed(2)}%</p></div>
+            <div><p style="font-size:.68rem;color:#555;">Expires</p><p style="font-size:.82rem;color:#fff;">${dt(s.expires_at)}</p></div>
+          </div>
+          <div class="flex items-center gap-3 mt-4"><a href="#" onclick="return false" class="text-blue2" style="font-size:.78rem;font-weight:500;text-decoration:none;">View Details →</a></div>
+        </div>`;
+      }).join('')+`</div>`;
     }
-        function renderSubs(){
-            if(!d.subscriptions.length){
-        c.innerHTML='<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-8 text-center"><i class="fa-solid fa-microchip text-[2.5rem] text-[#333]"></i><p class="text-[#aaa] mt-3">You have not subscribed to any bots yet.</p></div>';
-        return;
-      }
-            c.innerHTML=`<div class="space-y-[9px]">${d.subscriptions.map(s=>`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="flex justify-between"><div class="text-white font-medium">${
-        esc(s.bot_id?.name||'Bot')
-      }
-      </div><span class="text-grn text-[.68rem]">${
-        esc(s.status)
-      }
-      </span></div><div class="grid grid-cols-3 gap-2 mt-3 text-[.76rem]"><div><span class="text-[#555]">Invested</span><div class="text-white">${
-        money(s.invested_amount)
-      }
-      </div></div><div><span class="text-[#555]">Profit</span><div class="text-grn">${
-        money(s.current_profit)
-      }
-      </div></div><div><span class="text-[#555]">Payout</span><div class="text-white">${
-        money(Number(s.invested_amount)+Number(s.current_profit)+Number(s.admin_profit_adjustment||0))
-      }
-      </div></div></div></div>`).join('')}</div>`;
-
-    }
-        renderBots();
-    root.querySelector('#botsTab').onclick=renderBots;
-    root.querySelector('#subsTab').onclick=renderSubs;
-
+    renderBots();
+    root.querySelector('#botsTab').onclick=()=>{
+      root.querySelector('#botsTab').className='pb-2 border-b-2 border-blue2 text-white';
+      root.querySelector('#subsTab').className='pb-2 border-b-2 border-transparent text-[#555]';
+      renderBots();
+    };
+    root.querySelector('#subsTab').onclick=()=>{
+      root.querySelector('#subsTab').className='pb-2 border-b-2 border-blue2 text-white';
+      root.querySelector('#botsTab').className='pb-2 border-b-2 border-transparent text-[#555]';
+      renderSubs();
+    };
   }
     async function botDetails(){
-    const root=inner(),id=new URLSearchParams(location.search).get('id'),d=await get('/bots/'+id),b=d.bot,s=d.subscription;
-    root.innerHTML=shell(b.name,b.strategy_type)+`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-[#aaa] text-[.78rem] leading-6">${esc(b.description||'')}</div><div class="grid grid-cols-2 gap-3 mt-4">${[['Daily ROI',b.expected_roi||b.daily_roi||0+'%'],['Win Rate',(b.win_rate||0)+'%'],['Min Investment',money(b.min_investment)],['Max Investment',money(b.max_investment)],['Duration',(b.max_duration_days||30)+' days'],['Interval',(b.trade_interval_minutes||60)+' min']].map(x=>`<div class="bg-[#161616] rounded-lg p-3"><div class="text-[#555] text-[.68rem]">${
-      x[0]
+    const root=inner();
+    showDynamicMain();
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){toast('Bot id required',false);return;}
+    if(root) root.innerHTML='<div class="p-8 text-center text-[#555]">Loading...</div>';
+    const d=await get('/bots/'+encodeURIComponent(id));
+    const b=d.bot||{};
+    const s=d.subscription;
+    const daily=Number(b.expected_roi||b.daily_roi||0);
+    const min=Number(b.min_investment||0);
+    const max=Number(b.max_investment||0);
+    const maxD=Number(b.max_duration_days||30);
+    const interval=Number(b.trade_interval_minutes||5);
+    const win=Number(b.win_rate||0);
+
+    let rightPanel='';
+    if(s && s.status==='active'){
+      rightPanel=`<div class="bg-[#111] rounded-[13px] p-[15px]" style="border:1px solid rgba(74,108,247,.3);">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="bg-[rgba(0,212,124,.1)] text-grn px-2.5 py-1 rounded-full" style="font-size:.72rem;font-weight:500;">Active</span>
+          <span class="text-[#555]" style="font-size:.72rem;">Subscription</span>
+        </div>
+        <div class="space-y-3">
+          <div><p class="text-[#555]" style="font-size:.72rem;">Invested</p><p class="font-sora font-bold text-white" style="font-size:1.2rem;">${money(s.invested_amount)}</p></div>
+          <div><p class="text-[#555]" style="font-size:.72rem;">Profit Earned</p><p class="font-sora font-bold text-grn" style="font-size:1.2rem;">${money(s.current_profit||s.accumulated_profit)}</p></div>
+          <div><p class="text-[#555]" style="font-size:.72rem;">Expires</p><p class="text-white" style="font-size:.82rem;">${dt(s.expires_at)}</p></div>
+        </div>
+        <div class="mt-4 flex gap-2">
+          <a href="#" onclick="return false" class="flex-1 text-center rounded-[10px] py-2.5" style="background:rgba(74,108,247,.1);color:#6e8efb;font-size:.82rem;font-weight:500;text-decoration:none;">View Details</a>
+          <button type="button" id="stopBotBtn" class="flex-1 rounded-[10px] py-2.5" style="background:rgba(255,69,96,.1);color:#ff4560;font-size:.82rem;font-weight:500;border:none;cursor:pointer;">Stop</button>
+        </div>
+      </div>`;
+    } else {
+      rightPanel=`<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-[16px]">
+        <div class="text-white font-medium mb-3">Subscribe to this Bot</div>
+        <form id="botSubForm" class="space-y-3">
+          <div><label class="text-[.72rem] text-[#555]">Investment Amount (USD)</label>
+            <input name="amount" type="number" step="0.01" min="${min}" value="${min}" required class="w-full mt-1 bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] px-3 py-2.5 text-white outline-none">
+            <p class="text-[.65rem] text-[#555] mt-1">Min ${money(min)}${max?` · Max ${money(max)}`:''}</p>
+          </div>
+          <div><label class="text-[.72rem] text-[#555]">Duration (Days)</label>
+            <input name="duration" type="number" min="1" max="${maxD}" value="${Math.min(30,maxD)}" required class="w-full mt-1 bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] px-3 py-2.5 text-white outline-none">
+            <p class="text-[.65rem] text-[#555] mt-1">Max ${maxD} days</p>
+          </div>
+          <div class="bg-[#0d0d0d] rounded-[10px] p-3 text-[.78rem]">
+            <div class="text-[#555] mb-2">Estimated Earnings</div>
+            <div class="flex justify-between"><span class="text-[#666]">Daily Profit</span><span id="estDaily" class="text-grn">${money(min*daily/100)}</span></div>
+            <div class="flex justify-between mt-1"><span class="text-[#666]">Total Estimated</span><span id="estTotal" class="text-grn">${money(min*daily/100*Math.min(30,maxD))}</span></div>
+          </div>
+          <button type="submit" class="w-full py-[12px] rounded-[12px] bg-brand-blue text-white font-medium">Subscribe Now</button>
+          <p class="text-[.65rem] text-[#555] text-center">Amount will be deducted from your account balance</p>
+        </form>
+      </div>`;
     }
-    </div><div class="text-white font-bold mt-1">${
-      x[1]
+
+    root.innerHTML=`<div class="mb-[14px] flex items-center gap-3">
+      <div class="inner-back" onclick="location.href='/user/bot-trading.html'"><i class="fa-solid fa-chevron-left"></i></div>
+      <div class="inner-title">${esc(b.name||'Bot')}</div>
+    </div>
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-[16px] mb-[14px]">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-[rgba(74,108,247,.12)] flex items-center justify-center text-blue2"><i class="fa-solid fa-microchip"></i></div>
+          <div>
+            <div class="text-white font-medium">${esc(b.name)} <span class="text-[.65rem] px-2 py-0.5 rounded-full bg-[rgba(74,108,247,.12)] text-blue2 ml-1">${esc(b.strategy_type||'')}</span></div>
+            <p class="text-[.78rem] text-[#666] mt-1 max-w-xl">${esc(b.description||'')}</p>
+          </div>
+        </div>
+        <div class="text-right"><div class="text-grn font-semibold">${daily.toFixed(2)}%</div><div class="text-[.65rem] text-[#555]">daily ROI</div></div>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-[.75rem] border-t border-[#1a1a1a] pt-3">
+        <div><div class="text-[#555]">Win Rate</div><div class="text-grn mt-0.5 font-medium">${win}%</div></div>
+        <div><div class="text-[#555]">Trade Interval</div><div class="text-white mt-0.5">${interval}m</div></div>
+        <div><div class="text-[#555]">Min Investment</div><div class="text-white mt-0.5">${money(min)}</div></div>
+        <div><div class="text-[#555]">Max Investment</div><div class="text-white mt-0.5">${max?money(max):'—'}</div></div>
+        <div><div class="text-[#555]">Max Duration</div><div class="text-white mt-0.5">${maxD} days</div></div>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-[14px]">
+      <div class="lg:col-span-2 bg-[#111] border border-[#1e1e1e] rounded-[14px] p-[16px]">
+        <div class="text-white font-medium mb-3">Recent Bot Trades</div>
+        <div class="text-center py-10 text-[#555] text-[.82rem]">No trades recorded yet.</div>
+      </div>
+      <div>${rightPanel}</div>
+    </div>`;
+
+    const form=root.querySelector('#botSubForm');
+    if(form){
+      const amt=form.querySelector('[name=amount]');
+      const dur=form.querySelector('[name=duration]');
+      const upd=()=>{
+        const a=Number(amt.value||0), days=Number(dur.value||0);
+        const dayP=a*daily/100;
+        root.querySelector('#estDaily').textContent=money(dayP);
+        root.querySelector('#estTotal').textContent=money(dayP*days);
+      };
+      amt.addEventListener('input',upd); dur.addEventListener('input',upd);
+      form.onsubmit=async e=>{
+        e.preventDefault();
+        const body={amount:Number(amt.value),duration:Number(dur.value)};
+        try{
+          const x=await post('/bots/subscribe/'+id, body);
+          toast(x.message||(`You have subscribed to ${b.name}!`),true);
+          setTimeout(()=>location.href='/user/bot-trading.html',700);
+        }catch(ex){toast(ex.response?.data?.message||ex.message,false);}
+      };
     }
-    </div></div>`).join('')}</div>${s?`<div class="mt-4 bg-[rgba(0,212,124,.05)] border border-[rgba(0,212,124,.2)] rounded-lg p-3"><div class="text-grn">Active Subscription</div><div class="text-[#aaa] text-[.76rem] mt-2">${
-      money(s.invested_amount)
+    const stopBtn=root.querySelector('#stopBotBtn');
+    if(stopBtn && s){
+      stopBtn.onclick=async()=>{
+        if(!confirm('Stop this subscription? Your balance will be returned.'))return;
+        try{
+          const x=await post('/bots/stop/'+s._id,{});
+          toast(x.message||(`Subscription stopped. ${money(s.invested_amount)} credited to your balance.`),true);
+          setTimeout(()=>location.href='/user/bot-trading.html',700);
+        }catch(ex){toast(ex.response?.data?.message||ex.message,false);}
+      };
     }
-     invested · ${
-      money(s.current_profit)
-    }
-     profit</div><button id="stopBot" class="mt-3 w-full py-2 rounded-lg bg-[rgba(255,69,96,.1)] text-red2">Stop Subscription</button></div>`:`<form id="botStart" class="mt-4"><input name="amount" type="number" min="${b.min_investment}" ${
-      b.max_investment?`max="${b.max_investment}"`:''
-    }
-     required class="w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-lg p-3 text-white" placeholder="Investment amount"><button class="mt-3 w-full py-3 rounded-lg bg-brand-blue text-white">Start Subscription</button></form>`}</div>`;
-    root.querySelector('#botStart')?.addEventListener('submit',async e=>{
-      e.preventDefault();
-      try{
-        const x=await post('/bots/subscribe/'+id,{
-          amount:Number(e.currentTarget.amount.value)
-        });
-        toast(x.message,true);
-        location.href='/user/bot-trading.html'
-      }
-      catch(err){
-        toast(err.message,false)
-      }
-    });
-    root.querySelector('#stopBot')?.addEventListener('click',async()=>{
-      if(!confirm('Stop this bot subscription?'))return;
-      try{
-        const x=await post('/bots/stop/'+s._id,{
-        });
-        toast(x.message,true);
-        location.href='/user/bot-trading.html'
-      }
-      catch(err){
-        toast(err.message,false)
-      }
-    })
   }
+    
     async function mining(){
     const root=inner(),d=await get('/mining');
     const active=d.subscriptions.filter(x=>x.status==='active');
@@ -1843,6 +1951,216 @@
         }catch(e){toast(e.response?.data?.message||e.message||'Force stop failed',false);}
       };
     }
+  }
+    
+    async function adminBots(){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    const d=await get('/bots');
+    const bots=d.bots||[];
+    const subs=d.subscriptions||[];
+    const stats=d.stats||{};
+    m.innerHTML=`<div class="flex items-center justify-between mb-6 flex-wrap gap-3"><div><h1 class="text-xl font-semibold text-content">Manage Trading Bots</h1><p class="text-sm text-content-muted mt-1">Create and manage AI trading bots</p></div>
+      <div class="flex gap-2"><a href="/admin/bot-trading-subscriptions.html" class="px-4 py-2 rounded-lg border border-border text-sm">Subscriptions</a>
+      <a href="/admin/admin-bot-trading-create.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium">+ Create Bot</a></div></div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      ${[['TOTAL BOTS',stats.totalBots??bots.length],['ACTIVE BOTS',stats.activeBots??bots.filter(x=>x.is_active).length],['ACTIVE SUBSCRIBERS',stats.activeSubscribers??subs.filter(x=>x.status==='active').length],['TOTAL INVESTED',money(stats.totalInvested??subs.reduce((s,x)=>s+Number(x.invested_amount||0),0))]].map(([l,v])=>`<div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm"><div class="text-xs text-slate-500 uppercase">${l}</div><div class="text-2xl font-bold mt-2">${v}</div></div>`).join('')}
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+      <div class="px-4 py-3 border-b border-slate-100 font-medium">Trading Bots</div>
+      <table class="w-full text-sm"><thead><tr class="text-left text-xs text-slate-500 uppercase bg-slate-50">
+        <th class="px-4 py-3">Bot</th><th>Strategy</th><th>Win Rate</th><th>Daily ROI</th><th>Investment Range</th><th>Interval</th><th>Subscribers</th><th>Status</th><th>Actions</th>
+      </tr></thead><tbody>
+      ${bots.map(b=>{
+        const subCount=subs.filter(s=>String(s.bot_id?._id||s.bot_id)===String(b._id)).length;
+        const active=b.is_active!==false;
+        return `<tr class="border-t border-slate-100">
+          <td class="px-4 py-3"><div class="font-medium text-content">${esc(b.name)}</div><div class="text-xs text-content-muted">Max ${b.max_duration_days||30} days</div></td>
+          <td><span class="text-xs px-2 py-0.5 rounded-full bg-slate-100">${esc(b.strategy_type||'')}</span></td>
+          <td>${Number(b.win_rate||0).toFixed(1)}%</td>
+          <td class="text-emerald-600 font-medium">${Number(b.expected_roi||0).toFixed(2)}%</td>
+          <td>${money(b.min_investment)} – ${money(b.max_investment)}</td>
+          <td>${b.trade_interval_minutes||5}m</td>
+          <td>${subCount}</td>
+          <td><span class="text-xs ${active?'text-emerald-600':'text-slate-400'}">${active?'Active':'Inactive'}</span></td>
+          <td class="whitespace-nowrap"><div class="flex gap-1">
+            <a href="/admin/bot-trading-edit.html?id=${b._id}" class="inline-flex w-8 h-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600" title="Edit"><i class="fa-solid fa-pen text-sm"></i></a>
+            <button type="button" data-toggle-bot="${b._id}" class="inline-flex w-8 h-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600" title="Toggle"><i class="fa-solid fa-power-off text-sm"></i></button>
+            <button type="button" data-del-bot="${b._id}" class="inline-flex w-8 h-8 items-center justify-center rounded-lg border border-slate-200 text-red-500" title="Delete"><i class="fa-regular fa-trash-can text-sm"></i></button>
+          </div></td>
+        </tr>`;
+      }).join('')||'<tr><td colspan="9" class="py-10 text-center text-content-muted">No bots yet</td></tr>'}
+      </tbody></table>
+    </div>`;
+    m.querySelectorAll('[data-toggle-bot]').forEach(btn=>{
+      btn.onclick=async()=>{try{const x=await post('/bots/'+btn.dataset.toggleBot+'/toggle',{});toast(x.message||'Status updated',true);adminBots();}catch(e){toast(e.message,false);}};
+    });
+    m.querySelectorAll('[data-del-bot]').forEach(btn=>{
+      btn.onclick=async()=>{if(!confirm('Delete this trading bot?'))return;try{const x=await del('/bots/'+btn.dataset.delBot);toast(x.message||'Bot deleted successfully.',true);adminBots();}catch(e){toast(e.message,false);}};
+    });
+  }
+    async function adminBotForm(edit){
+    const m=adminMain(); showDynamicMain();
+    const id=edit?new URLSearchParams(location.search).get('id'):null;
+    let b={};
+    if(edit&&id){try{b=(await get('/bots/'+id)).bot||{};}catch(e){toast(e.message,false);}}
+    const strategies=['Scalping','Day Trading','Swing Trading','Arbitrage','Market Making'];
+    m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">${edit?'Edit Bot: '+esc(b.name||''):'Create Trading Bot'}</h1><p class="text-sm text-content-muted mt-1">${edit?'Update trading bot configuration':'Configure a new AI trading bot'}</p></div><a href="/admin/admin-bot-trading.html" class="px-4 py-2 rounded-lg border border-border text-sm">Cancel</a></div>
+    <form id="botForm" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6 max-w-4xl">
+      <div class="font-medium">Basic Information</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="block text-sm"><span class="font-medium">Bot Name *</span><input name="name" required value="${esc(b.name||'')}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="e.g. Quantum Trader AI"></label>
+        <label class="block text-sm"><span class="font-medium">Strategy Type *</span><select name="strategy_type" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">${strategies.map(s=>`<option ${String(b.strategy_type||'Day Trading')===s?'selected':''}>${s}</option>`).join('')}</select></label>
+      </div>
+      <label class="block text-sm"><span class="font-medium">Description</span><textarea name="description" rows="3" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="Describe the bot's trading strategy...">${esc(b.description||'')}</textarea></label>
+      <div class="font-medium">Performance Configuration</div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <label class="block text-sm"><span class="font-medium">Win Rate (%) *</span><input name="win_rate" type="number" step="0.01" required value="${b.win_rate??70}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Expected Daily ROI (%) *</span><input name="expected_roi" type="number" step="0.01" required value="${b.expected_roi??2.5}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Trade Interval (minutes) *</span><input name="trade_interval_minutes" type="number" required value="${b.trade_interval_minutes??5}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+      </div>
+      <div class="font-medium">Investment Limits</div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <label class="block text-sm"><span class="font-medium">Min Investment ($) *</span><input name="min_investment" type="number" step="0.01" required value="${b.min_investment??100}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Max Investment ($) *</span><input name="max_investment" type="number" step="0.01" required value="${b.max_investment??50000}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Max Duration (days) *</span><input name="max_duration_days" type="number" required value="${b.max_duration_days??90}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+      </div>
+      <div class="font-medium">Profit/Loss Ranges (per-trade %)</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4 grid grid-cols-2 gap-3">
+          <label class="block text-sm"><span class="font-medium">Min Profit (%) *</span><input name="profit_min_pct" type="number" step="0.01" required value="${b.profit_min_pct??0.5}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+          <label class="block text-sm"><span class="font-medium">Max Profit (%) *</span><input name="profit_max_pct" type="number" step="0.01" required value="${b.profit_max_pct??3}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        </div>
+        <div class="rounded-xl border border-red-100 bg-red-50/40 p-4 grid grid-cols-2 gap-3">
+          <label class="block text-sm"><span class="font-medium">Min Loss (%) *</span><input name="loss_min_pct" type="number" step="0.01" required value="${b.loss_min_pct??0.2}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+          <label class="block text-sm"><span class="font-medium">Max Loss (%) *</span><input name="loss_max_pct" type="number" step="0.01" required value="${b.loss_max_pct??1.5}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        </div>
+      </div>
+      <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="is_active" value="1" ${b.is_active!==false?'checked':''}> Active (visible to users)</label>
+      <div class="flex gap-3"><button type="submit" class="px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-medium">${edit?'Update Bot':'Create Bot'}</button><a href="/admin/admin-bot-trading.html" class="px-5 py-2.5 rounded-lg border border-border text-sm">Cancel</a></div>
+    </form>`;
+    m.querySelector('#botForm').onsubmit=async e=>{
+      e.preventDefault();
+      const fd=new FormData(e.currentTarget);
+      const body=Object.fromEntries(fd.entries());
+      body.is_active=fd.get('is_active')==='1';
+      try{
+        if(edit&&id){const x=await put('/bots/'+id,body);toast(x.message||'Trading bot updated successfully.',true);}
+        else{const x=await post('/bots',body);toast(x.message||'Trading bot created successfully.',true);}
+        setTimeout(()=>location.href='/admin/admin-bot-trading.html',600);
+      }catch(err){toast(err.response?.data?.message||err.message,false);}
+    };
+  }
+    async function adminBotSubs(){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d={};
+    try{d=await get('/bot-subscriptions');}catch(e){try{d=await get('/bots');}catch(e2){toast(e2.message,false);}}
+    const subs=d.subscriptions||[];
+    const stats=d.stats||{};
+    const active=subs.filter(x=>x.status==='active');
+    function rows(list){
+      if(!list.length)return '<tr><td colspan="9" class="py-8 text-center text-content-muted">No subscriptions</td></tr>';
+      return list.map((s,i)=>{
+        const inv=Number(s.invested_amount||0);
+        const profit=Number(s.current_profit||s.accumulated_profit||0);
+        const adj=Number(s.admin_adjustment||s.admin_profit_adjustment||0);
+        const payout=inv+profit+adj;
+        return `<tr class="border-t border-slate-100"><td class="px-4 py-3">#${i+1}</td><td>${esc(s.user_id?.name||'—')}<div class="text-xs text-content-muted">${esc(s.user_id?.email||'')}</div></td><td>${esc(s.bot_id?.name||'—')}</td><td>${money(inv)}</td><td class="text-emerald-600">${money(profit)}</td><td>${money(payout)}</td><td>${dt(s.expires_at)}</td><td><span class="text-xs">${esc(s.status)}</span></td><td><a href="/admin/bot-trading-subscriptions-view.html?id=${s._id}" class="text-primary text-sm">View</a></td></tr>`;
+      }).join('');
+    }
+    m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">Bot Trading Subscriptions</h1><p class="text-sm text-content-muted mt-1">Manage user subscriptions to trading bots</p></div><a href="/admin/admin-bot-trading.html" class="px-4 py-2 rounded-lg border border-border text-sm">← Back to Bots</a></div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      ${[['ACTIVE SUBSCRIPTIONS',stats.activeSubscribers??active.length],['TOTAL INVESTED',money(stats.totalInvested??subs.reduce((s,x)=>s+Number(x.invested_amount||0),0))],['TOTAL PROFIT',money(stats.totalProfit??subs.reduce((s,x)=>s+Number(x.current_profit||x.accumulated_profit||0),0))],['SETTLED',stats.settled??subs.filter(x=>['settled','completed','stopped'].includes(x.status)).length]].map(([l,v])=>`<div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm"><div class="text-xs text-slate-500 uppercase">${l}</div><div class="text-2xl font-bold mt-2">${v}</div></div>`).join('')}
+    </div>
+    <div class="flex flex-wrap gap-2 mb-4 items-center" id="botSubFilters">
+      ${[['all','All Status'],['active','Active'],['stopped','Stopped'],['completed','Completed'],['settled','Settled']].map(([k,l],i)=>`<button type="button" data-filter="${k}" class="px-3 py-1.5 rounded-full text-sm ${i===0?'bg-primary text-white':'bg-slate-100 text-slate-600'}">${l}</button>`).join('')}
+      <input id="botSubSearch" type="search" placeholder="Search user or bot..." class="ml-auto rounded-lg border border-slate-200 px-3 py-1.5 text-sm">
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+      <div class="px-4 py-3 border-b border-slate-100 font-medium">Subscriptions</div>
+      <table class="w-full text-sm"><thead><tr class="text-left text-xs text-slate-500 uppercase bg-slate-50"><th class="px-4 py-3">ID</th><th>User</th><th>Bot</th><th>Invested</th><th>Profit</th><th>Payout</th><th>Expires</th><th>Status</th><th></th></tr></thead>
+      <tbody id="botSubRows">${rows(subs)}</tbody></table>
+    </div>`;
+    const tbody=m.querySelector('#botSubRows');
+    function apply(){
+      const f=m.querySelector('#botSubFilters [data-filter].bg-primary')?.dataset.filter||'all';
+      const q=(m.querySelector('#botSubSearch').value||'').toLowerCase();
+      let list=subs;
+      if(f!=='all') list=list.filter(s=>s.status===f);
+      if(q) list=list.filter(s=>String(s.user_id?.name||'').toLowerCase().includes(q)||String(s.bot_id?.name||'').toLowerCase().includes(q));
+      tbody.innerHTML=rows(list);
+    }
+    m.querySelectorAll('#botSubFilters [data-filter]').forEach(btn=>{
+      btn.onclick=()=>{m.querySelectorAll('#botSubFilters [data-filter]').forEach(b=>{b.className='px-3 py-1.5 rounded-full text-sm bg-slate-100 text-slate-600';});btn.className='px-3 py-1.5 rounded-full text-sm bg-primary text-white';apply();};
+    });
+    m.querySelector('#botSubSearch').oninput=apply;
+  }
+    async function adminBotSubView(){
+    const m=adminMain(); showDynamicMain();
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){toast('Subscription id required',false);return;}
+    m.innerHTML='<div class="p-8 text-center text-content-muted">Loading...</div>';
+    let d;
+    try{d=await get('/bot-subscriptions/'+id);}catch(e){toast(e.message,false);return;}
+    const s=d.subscription||d.sub||{};
+    const b=s.bot_id||{};
+    const u=s.user_id||{};
+    const inv=Number(s.invested_amount||0);
+    const profit=Number(s.current_profit||s.accumulated_profit||0);
+    const adjAmt=Number(s.admin_adjustment||s.admin_profit_adjustment||0);
+    const payout=inv+profit+adjAmt;
+    const status=String(s.status||'active').toLowerCase();
+    m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">Bot Subscription</h1><p class="text-sm text-content-muted mt-1">View subscription details and manage profit</p></div><a href="/admin/bot-trading-subscriptions.html" class="px-4 py-2 rounded-lg border border-border text-sm">← Back</a></div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-4">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <div class="font-medium mb-3">Subscription Details</div>
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div><div class="text-content-muted text-xs">User</div><div class="font-medium">${esc(u.name||'—')}</div><div class="text-xs text-content-muted">${esc(u.email||'')}</div></div>
+            <div><div class="text-content-muted text-xs">Invested Amount</div><div class="font-medium">${money(inv)}</div></div>
+            <div><div class="text-content-muted text-xs">Bot</div><div class="font-medium">${esc(b.name||'—')}</div></div>
+            <div><div class="text-content-muted text-xs">Accumulated Profit</div><div class="font-medium text-emerald-600">${money(profit)}</div></div>
+            <div><div class="text-content-muted text-xs">Status</div><div class="font-medium">${esc(status)}</div></div>
+            <div><div class="text-content-muted text-xs">Admin Adjustment</div><div class="font-medium">${adjAmt?money(adjAmt):money(0)}</div></div>
+            <div><div class="text-content-muted text-xs">Daily ROI Snapshot</div><div class="font-medium">${Number(s.daily_roi_snapshot||b.expected_roi||0).toFixed(2)}%</div></div>
+            <div><div class="text-content-muted text-xs">Total Payout</div><div class="font-medium text-primary">${money(payout)}</div></div>
+            <div><div class="text-content-muted text-xs">Started</div><div>${dt(s.started_at||s.createdAt)}</div></div>
+            <div><div class="text-content-muted text-xs">Expires</div><div>${dt(s.expires_at)}</div></div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <div class="font-medium mb-2">Simulated Trades (0)</div>
+          <p class="text-sm text-content-muted text-center py-6">No trades yet.</p>
+        </div>
+      </div>
+      <div class="space-y-4">
+        ${status!=='settled'?`<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <div class="font-medium mb-2">Settle Subscription</div>
+          <p class="text-sm text-content-muted mb-3">Credit ${money(payout)} to user's balance and mark as settled.</p>
+          <button type="button" id="settleBotSub" class="w-full py-2.5 rounded-lg bg-emerald-500 text-white text-sm font-medium">Settle Now</button>
+        </div>`:'<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 text-sm text-content-muted">Subscription is settled.</div>'}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <div class="font-medium mb-3">Profit Adjustment</div>
+          <form id="botAdjForm" class="space-y-3">
+            <label class="block text-sm"><span class="text-content-muted">Adjustment Amount ($)</span><input name="admin_profit_adjustment" type="number" step="0.01" value="${adjAmt}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+            <label class="block text-sm"><span class="text-content-muted">Notes</span><textarea name="admin_notes" rows="2" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">${esc(s.admin_notes||'')}</textarea></label>
+            <button type="submit" class="w-full py-2.5 rounded-lg bg-primary text-white text-sm font-medium">Save Adjustment</button>
+          </form>
+        </div>
+      </div>
+    </div>`;
+    const adjForm=m.querySelector('#botAdjForm');
+    if(adjForm) adjForm.onsubmit=async e=>{
+      e.preventDefault();
+      const body=Object.fromEntries(new FormData(e.currentTarget).entries());
+      try{const x=await put('/bot-subscriptions/'+id+'/adjust',body);toast(x.message||'Profit adjustment saved.',true);adminBotSubView();}catch(err){toast(err.response?.data?.message||err.message,false);}
+    };
+    const settle=m.querySelector('#settleBotSub');
+    if(settle) settle.onclick=async()=>{
+      if(!confirm('Confirm settlement?'))return;
+      try{const x=await post('/bot-subscriptions/'+id+'/settle',{});toast(x.message||(`Subscription settled. ${money(payout)} credited to user.`),true);adminBotSubView();}catch(err){toast(err.response?.data?.message||err.message,false);}
+    };
   }
     async function routeAdmin(){
     try{
