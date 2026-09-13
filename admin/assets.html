@@ -228,7 +228,8 @@
                 }
             }
         </style>
-    </head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
     <body class="bg-surface font-sans text-content-secondary antialiased min-h-screen" x-data="{
           sidebarOpen: window.innerWidth >= 1024,
           mobileSidebar: false,
@@ -4859,32 +4860,8 @@
                 });
             });
         </script>
-        <script src="/livewire/livewire.js?id=90730a3b0e7144480175" data-turbo-eval="false" data-turbolinks-eval="false"></script>
-        <script data-turbo-eval="false" data-turbolinks-eval="false">
-            window.livewire = new Livewire();
-            window.Livewire = window.livewire;
-            window.livewire_app_url = '';
-            window.livewire_token = 'gZd56iJrlqHDen4eWD4Xclkl2JUU8zoLSMhr4MLK';
-            window.deferLoadingAlpine = function(callback) {
-                window.addEventListener('livewire:load', function() {
-                    callback();
-                });
-            }
-            ;
-            let started = false;
-            window.addEventListener('alpine:initializing', function() {
-                if (!started) {
-                    window.livewire.start();
-                    started = true;
-                }
-            });
-            document.addEventListener("DOMContentLoaded", function() {
-                if (!started) {
-                    window.livewire.start();
-                    started = true;
-                }
-            });
-        </script>
+
+        <!-- livewire removed -->
         <!-- <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v3d52b47920f24c319d37e2661827c42b1787588026925" integrity="sha512-d9sL6GJLXn6fInD1+TVXhTcQOsmxeHfmHAvwGDIxp5TO+uo1fiWW7mHomMj4MLRlCsJDTqXzWLHJFFlPCEIj/A==" data-cf-beacon='{"version":"2024.11.0","token":"ed5ef364dca24be9bbc003a455c0b41a","r":1}' crossorigin="anonymous"></script> -->
     <script src="https://cdn.jsdelivr.net/npm/axios@1.7.9/dist/axios.min.js"></script>
 <script src="../js/convert/config.js"></script>

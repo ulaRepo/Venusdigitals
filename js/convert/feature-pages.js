@@ -778,25 +778,308 @@
   }
     
     async function markets(){
-    const root=inner(),d=await get('/assets?asset_class=all'),a=d.assets||[];
-    const cats=['all','crypto','forex','stock','etf','index'];
-    root.innerHTML=shell('Markets')+`<div class="grid grid-cols-3 gap-[9px] mb-[12px]">${[['Total Assets',a.length],['Top Gainer',a.slice().sort((x,y)=>Number(y.price_change_pct_24h||y.change_24h)-Number(x.price_change_pct_24h||x.change_24h))[0]?.symbol||'—'],['Top Loser',a.slice().sort((x,y)=>Number(x.price_change_pct_24h||x.change_24h)-Number(y.price_change_pct_24h||y.change_24h))[0]?.symbol||'—']].map(x=>`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[12px]"><div class="text-[#555] text-[.65rem] uppercase">${
-      x[0]
+    const root=inner();
+    showDynamicMain();
+    if(root) root.innerHTML='<div class="p-8 text-center text-[#555]">Loading markets...</div>';
+    const d=await get('/assets?asset_class=all');
+    const a=d.assets||[];
+    const active=a.filter(x=>x.is_active!==false);
+    const sortedGain=active.slice().sort((x,y)=>Number(y.price_change_pct_24h||y.change_24h||0)-Number(x.price_change_pct_24h||x.change_24h||0));
+    const topG=sortedGain[0];
+    const topL=sortedGain[sortedGain.length-1];
+    const cats=[{k:'all',l:'All'},{k:'crypto',l:'Crypto'},{k:'forex',l:'Forex'},{k:'stock',l:'Stocks'},{k:'etf',l:'ETFs'},{k:'index',l:'Indices'}];
+    root.innerHTML=`<div class="mb-[12px] flex items-center gap-3"><div class="inner-back" onclick="history.back()"><i class="fa-solid fa-chevron-left"></i></div><div class="inner-title">Markets</div></div>
+    <div class="grid grid-cols-3 gap-[9px] mb-[12px]">
+      <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[12px]"><div class="text-[#555] text-[.65rem] uppercase">Total Assets</div><div class="text-white font-bold mt-1 text-blue2">${active.length}</div></div>
+      <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[12px]"><div class="text-[#555] text-[.65rem] uppercase">Top Gainer</div><div class="text-grn font-bold mt-1">${esc(topG?.symbol||'—')} <span class="text-[.7rem]">${topG?('+'+Number(topG.price_change_pct_24h||topG.change_24h||0).toFixed(2)+'%'):''}</span></div></div>
+      <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[12px]"><div class="text-[#555] text-[.65rem] uppercase">Top Loser</div><div class="text-red2 font-bold mt-1">${esc(topL?.symbol||'—')} <span class="text-[.7rem]">${topL?(Number(topL.price_change_pct_24h||topL.change_24h||0).toFixed(2)+'%'):''}</span></div></div>
+    </div>
+    <div class="mb-[10px]"><input id="mktSearch" type="search" placeholder="Search by name or symbol..." class="w-full bg-[#111] border border-[#1e1e1e] rounded-[10px] px-3 py-2.5 text-white text-[.85rem] outline-none"></div>
+    <div class="flex gap-2 overflow-x-auto mb-[12px]" id="mktCats">${cats.map((c,i)=>`<button type="button" data-cat="${c.k}" class="px-3 py-1.5 rounded-full text-[.75rem] whitespace-nowrap ${i===0?'bg-brand-blue text-white':'bg-[#111] border border-[#1e1e1e] text-[#555]'}">${c.l} ${c.k==='all'?active.length:active.filter(x=>String(x.asset_class||'').toLowerCase()===c.k).length}</button>`).join('')}</div>
+    <div id="mktList" class="space-y-0"></div>`;
+    const list=root.querySelector('#mktList');
+    function render(){
+      const cat=root.querySelector('#mktCats [data-cat].bg-brand-blue')?.dataset.cat||'all';
+      const q=(root.querySelector('#mktSearch').value||'').toLowerCase();
+      let items=active;
+      if(cat!=='all') items=items.filter(x=>String(x.asset_class||'').toLowerCase()===cat);
+      if(q) items=items.filter(x=>String(x.name||'').toLowerCase().includes(q)||String(x.symbol||'').toLowerCase().includes(q));
+      if(!items.length){list.innerHTML='<div class="text-center py-12 text-[#555]">No assets found</div>';return;}
+      list.innerHTML=items.map(x=>{
+        const chg=Number(x.price_change_pct_24h||x.change_24h||0);
+        const logo=x.logo_url||x.image||'';
+        return `<a href="/user/trade.html?asset=${encodeURIComponent(x._id||x.symbol)}" class="flex items-center gap-3 py-3 border-b border-[#0d0d0d] no-underline">
+          <div class="w-9 h-9 rounded-full bg-[#1a1a1a] overflow-hidden flex items-center justify-center shrink-0">${logo?`<img src="${esc(logo)}" class="w-full h-full object-cover" onerror="this.remove()">`:`<span class="text-[.7rem] text-[#666]">${esc(String(x.symbol||'?')[0])}</span>`}</div>
+          <div class="flex-1 min-w-0"><div class="text-white text-[.9rem] font-medium truncate">${esc(x.name||x.symbol)}</div><div class="text-[#555] text-[.72rem]">${esc(x.symbol)} · ${esc(x.asset_class||'')}</div></div>
+          <div class="text-right"><div class="text-white text-[.9rem] font-medium">${money(x.price||x.current_price)}</div><div class="text-[.72rem] ${chg>=0?'text-grn':'text-red2'}">${chg>=0?'+':''}${chg.toFixed(2)}%</div></div>
+        </a>`;
+      }).join('');
     }
-    </div><div class="text-white font-bold mt-1">${
-      x[1]
-    }
-    </div></div>`).join('')}</div><div class="flex gap-2 overflow-x-auto mb-3">${cats.map(c=>`<button data-cat="${c}" class="px-3 py-1.5 rounded-full border border-[#1e1e1e] text-[#777] text-[.72rem]">${
-      c[0].toUpperCase()+c.slice(1)
-    }
-    </button>`).join('')}</div><div id="marketAssets" class="space-y-[7px]"></div>`;
-    const render=xs=>document.getElementById('marketAssets').innerHTML=xs.length?xs.map(x=>`<div onclick="location.href='/user/trade.html'" class="bg-[#111] border border-[#1e1e1e] rounded-[11px] p-[12px] flex items-center gap-3 cursor-pointer"><div class="w-9 h-9 rounded-full bg-[#1a1a1a] flex items-center justify-center overflow-hidden">${x.logo_url?`<img src="${esc(x.logo_url)}" class="w-full h-full object-cover">`:esc(String(x.symbol||'?').slice(0,1))}</div><div class="flex-1"><div class="text-white text-[.84rem]">${esc(x.name)}</div><div class="text-[#555] text-[.68rem]">${esc(x.symbol)}</div></div><div class="text-right"><div class="text-white text-[.82rem]">${money(x.price,'$')}</div><div class="text-[.68rem] ${Number(x.price_change_pct_24h||x.change_24h)>=0?'text-grn':'text-red2'}">${Number(x.price_change_pct_24h||x.change_24h)>=0?'+':''}${Number(x.price_change_pct_24h||x.change_24h).toFixed(2)}%</div></div></div>`).join(''):'<div class="text-center py-12 text-[#555]">No assets in this class</div>';
-    render(a);
-    root.querySelectorAll('[data-cat]').forEach(b=>b.onclick=async()=>{
-      const x=await get('/assets?asset_class='+b.dataset.cat);
-      render(x.assets||[])
-    })
+    render();
+    root.querySelectorAll('#mktCats [data-cat]').forEach(btn=>{
+      btn.onclick=()=>{root.querySelectorAll('#mktCats [data-cat]').forEach(b=>{b.className='px-3 py-1.5 rounded-full text-[.75rem] whitespace-nowrap bg-[#111] border border-[#1e1e1e] text-[#555]';});btn.className='px-3 py-1.5 rounded-full text-[.75rem] whitespace-nowrap bg-brand-blue text-white';render();};
+    });
+    root.querySelector('#mktSearch').oninput=render;
   }
+    async function tradePage(){
+    const root=inner();
+    showDynamicMain();
+    if(root) root.innerHTML='<div class="p-8 text-center text-[#555]">Loading trade desk...</div>';
+    const params=new URLSearchParams(location.search);
+    let preAsset=params.get('asset')||params.get('id')||'';
+    let assets=[], trades=[], balance=0, demoBalance=0;
+    try{
+      const d=await get('/assets?asset_class=all');
+      assets=(d.assets||[]).filter(x=>x.is_active!==false);
+    }catch(e){console.warn(e);}
+    try{
+      const td=await get('/trades');
+      trades=Array.isArray(td.trades)?td.trades:(Array.isArray(td)?td:[]);
+      balance=Number(td.balance||0);
+      demoBalance=Number(td.demo_balance||0);
+    }catch(e){
+      // fallback balance from profile
+      try{const p=await get('/profile');balance=Number(p.user?.account_bal||p.account_bal||0);}catch(_){}
+    }
+    if(!balance && window.__FEATURE_PROFILE__) balance=Number(window.__FEATURE_PROFILE__.account_bal||0);
+
+    const state={
+      mode:'live', // live | demo
+      tradeType:'Binary', // Binary | Spot
+      assetClass:'crypto',
+      assetId:preAsset|| (assets[0]&&assets[0]._id) || '',
+      leverage:5,
+      duration:5,
+      amount:0
+    };
+
+    function byClass(c){
+      return assets.filter(a=>String(a.asset_class||'').toLowerCase()===String(c).toLowerCase()
+        || (c==='stocks'&&['stock','stocks'].includes(String(a.asset_class||'').toLowerCase()))
+        || (c==='indices'&&['index','indices'].includes(String(a.asset_class||'').toLowerCase()))
+        || (c==='etfs'&&['etf','etfs'].includes(String(a.asset_class||'').toLowerCase())));
+    }
+    function currentAsset(){
+      return assets.find(a=>String(a._id)===String(state.assetId)||String(a.symbol)===String(state.assetId))||byClass(state.assetClass)[0]||assets[0]||{};
+    }
+    function tvSymbol(a){
+      const sym=String(a.symbol||'BTC').toUpperCase();
+      const cls=String(a.asset_class||'crypto').toLowerCase();
+      if(cls==='forex') return 'FX:'+sym.replace('/','');
+      if(['stock','stocks'].includes(cls)) return sym;
+      if(['index','indices'].includes(cls)) return sym;
+      // crypto
+      return 'BINANCE:'+sym+'USDT';
+    }
+    function fmtPct(n){const v=Number(n||0);return (v>=0?'+':'')+v.toFixed(2)+'%';}
+    function tradeRow(t){
+      const a=t.trading_asset_id||{};
+      const name=t.asset_name||(`${a.symbol||''} — ${a.name||''}`);
+      const res=String(t.result||'').toUpperCase();
+      const pl=Number(t.profit_loss||0);
+      const act=String(t.action||'BUY').toLowerCase();
+      const demo=t.is_demo?'<span class="px-[6px] py-[2px] rounded-[5px] text-[.62rem] font-medium bg-[rgba(245,197,66,.08)] text-ylw">DEMO</span>':'';
+      const resBadge=res==='WIN'?`<span class="px-[6px] py-[2px] rounded-[5px] text-[.62rem] font-medium bg-[rgba(0,212,124,.1)] text-grn">WIN</span>`
+        :res==='LOSS'?`<span class="px-[6px] py-[2px] rounded-[5px] text-[.62rem] font-medium bg-[rgba(255,69,96,.1)] text-red2">LOSS</span>`
+        :`<span class="px-[6px] py-[2px] rounded-[5px] text-[.62rem] font-medium bg-[rgba(245,197,66,.08)] text-ylw">PENDING</span>`;
+      const plCls=pl>=0?'text-grn':'text-red2';
+      const plTxt=(pl>=0?'+':'')+money(pl);
+      return `<div class="px-[14px] py-[12px] border-b border-[#1a1a1a] last:border-b-0">
+        <div class="flex items-center justify-between mb-[7px]">
+          <div class="flex items-center gap-[6px] flex-wrap">
+            <span class="font-medium text-[.86rem]">${esc(name)}</span>
+            ${String(t.status)==='closed'?resBadge:''}
+            ${demo}
+          </div>
+          <span class="font-sora font-bold text-[.86rem] flex-shrink-0 ${String(t.status)==='closed'?plCls:'text-[#555]'}">${String(t.status)==='closed'?plTxt:'—'}</span>
+        </div>
+        <div class="grid grid-cols-3 gap-[6px]">
+          <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-[8px] p-[8px]">
+            <div class="text-[#444] text-[.6rem] uppercase tracking-[.05em] mb-[2px]">Amount</div>
+            <div class="font-sora font-medium text-[.78rem]">${money(t.amount)}</div>
+          </div>
+          <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-[8px] p-[8px]">
+            <div class="text-[#444] text-[.6rem] uppercase tracking-[.05em] mb-[2px]">Action</div>
+            <div class="text-[.78rem] font-bold uppercase ${act==='buy'||act==='long'?'text-grn':'text-red2'}">${esc(act)}</div>
+          </div>
+          <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-[8px] p-[8px]">
+            <div class="text-[#444] text-[.6rem] uppercase tracking-[.05em] mb-[2px]">Settled</div>
+            <div class="text-[.72rem] text-[#555]">${esc(t.settled_by||(t.status==='open'?'—':'System'))}</div>
+          </div>
+        </div>
+        <div class="mt-[6px] text-[.68rem] text-[#333] flex gap-[10px]">
+          <span>Entry <span class="text-[#555] font-sora">${money(t.entry_price)}</span></span>
+          ${t.exit_price!=null?`<span>Exit <span class="text-[#555] font-sora">${money(t.exit_price)}</span></span>`:''}
+        </div>
+      </div>`;
+    }
+
+    function render(){
+      const a=currentAsset();
+      if(a&&a._id) state.assetId=a._id;
+      const classList=byClass(state.assetClass);
+      const open=trades.filter(t=>String(t.status||'').toLowerCase()==='open');
+      const closed=trades.filter(t=>String(t.status||'').toLowerCase()!=='open');
+      const ticker=assets.slice(0,8).map(x=>{
+        const ch=Number(x.price_change_pct_24h||x.change_24h||0);
+        return `<div class="flex items-center gap-2 px-3 py-1.5 whitespace-nowrap text-[.75rem]">
+          ${x.logo_url?`<img src="${esc(x.logo_url)}" class="w-4 h-4 rounded-full">`:''}
+          <span class="text-white font-medium">${esc(x.symbol)}</span>
+          <span class="text-[#aaa]">${money(x.price)}</span>
+          <span class="${ch>=0?'text-grn':'text-red2'}">${fmtPct(ch)}</span>
+        </div>`;
+      }).join('');
+      const pills=classList.slice(0,12).map(x=>`<button type="button" data-pick-asset="${x._id}" class="px-3 py-1 rounded-full text-[.72rem] border ${String(state.assetId)===String(x._id)?'border-blue2 text-blue2 bg-[rgba(74,108,247,.12)]':'border-[#1e1e1e] text-[#666]'}">${esc(x.symbol)}</button>`).join('');
+      const balShow=state.mode==='demo'?demoBalance:balance;
+
+      root.innerHTML=`
+<div class="mb-[10px] flex items-center justify-between gap-3">
+  <div class="flex items-center gap-3">
+    <div class="inner-back" onclick="location.href='/user/markets.html'"><i class="fa-solid fa-chevron-left"></i></div>
+    <div class="inner-title">Trade</div>
+  </div>
+  <a href="/user/trade.html" class="text-[.75rem] text-[#555]"><i class="fa-regular fa-clock mr-1"></i>History</a>
+</div>
+
+<div class="overflow-x-auto mb-3 -mx-1">
+  <div class="flex items-center gap-1 min-w-max">${ticker||'<span class="text-[#555] text-sm px-2">No market data</span>'}</div>
+</div>
+
+<div class="flex gap-2 overflow-x-auto mb-3 pb-1">${pills}</div>
+
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] overflow-hidden mb-3">
+  <div class="px-3 py-2 border-b border-[#1a1a1a] flex items-center justify-between">
+    <div class="text-[.82rem] text-white font-medium">Live Chart</div>
+    <div class="text-[.7rem] text-[#555]">${esc(a.symbol||'')} · ${money(a.price)}</div>
+  </div>
+  <div id="tvChart" class="w-full" style="height:320px;background:#0a0a0a">
+    <iframe id="tvFrame" title="chart" class="w-full h-full border-0"
+      src="https://s.tradingview.com/widgetembed/?frameElementId=tvFrame&symbol=${encodeURIComponent(tvSymbol(a))}&interval=15&hidesidetoolbar=1&symboledit=1&saveimage=0&toolbarbg=0d0d0d&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&hideideas=1&hide_top_toolbar=0&allow_symbol_change=1"></iframe>
+  </div>
+</div>
+
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-[14px] mb-3">
+  <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+    <div class="flex items-center gap-2">
+      <button type="button" data-mode="live" class="px-3 py-1.5 rounded-lg text-[.75rem] font-medium ${state.mode==='live'?'bg-grn text-black':'bg-[#0d0d0d] text-[#666] border border-[#1e1e1e]'}">Live</button>
+      <button type="button" data-mode="demo" class="px-3 py-1.5 rounded-lg text-[.75rem] font-medium ${state.mode==='demo'?'bg-ylw text-black':'bg-[#0d0d0d] text-[#666] border border-[#1e1e1e]'}">Demo</button>
+      <span class="text-[.75rem] text-[#555] ml-1">Live Bal <span class="text-grn font-medium">${money(balShow)}</span></span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button type="button" data-ttype="Binary" class="px-3 py-1.5 rounded-lg text-[.75rem] ${state.tradeType==='Binary'?'bg-blue2 text-white':'bg-[#0d0d0d] text-[#666] border border-[#1e1e1e]'}">Binary</button>
+      <button type="button" data-ttype="Spot" class="px-3 py-1.5 rounded-lg text-[.75rem] ${state.tradeType==='Spot'?'bg-blue2 text-white':'bg-[#0d0d0d] text-[#666] border border-[#1e1e1e]'}">Spot</button>
+    </div>
+  </div>
+
+  <div class="text-[.65rem] text-[#555] uppercase tracking-wide mb-1.5">Asset Class</div>
+  <div class="flex flex-wrap gap-2 mb-3">
+    ${[['crypto','Crypto'],['forex','Forex'],['stock','Stocks'],['etf','ETFs'],['index','Indices']].map(([k,l])=>`
+      <button type="button" data-aclass="${k}" class="px-3 py-1.5 rounded-full text-[.72rem] border ${state.assetClass===k?'border-blue2 text-blue2 bg-[rgba(74,108,247,.12)]':'border-[#1e1e1e] text-[#666]'}">${l}</button>`).join('')}
+  </div>
+
+  <div class="text-[.65rem] text-[#555] uppercase tracking-wide mb-1.5">Select Asset</div>
+  <select id="assetSelect" class="w-full mb-3 bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] px-3 py-2.5 text-white text-[.85rem] outline-none">
+    <option value="">— Choose an asset —</option>
+    ${classList.map(x=>`<option value="${x._id}" ${String(state.assetId)===String(x._id)?'selected':''}>${esc(x.symbol)} — ${esc(x.name)} (${money(x.price)})</option>`).join('')}
+  </select>
+
+  <div class="text-[.65rem] text-[#555] uppercase tracking-wide mb-1.5">Leverage</div>
+  <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-3">
+    ${[2,5,10,25,50,100].map(x=>`<button type="button" data-lev="${x}" class="py-2 rounded-[10px] text-[.8rem] border ${state.leverage===x?'border-blue2 bg-[rgba(74,108,247,.15)] text-blue2':'border-[#1e1e1e] text-[#666]'}">${x}x</button>`).join('')}
+  </div>
+
+  <div class="text-[.65rem] text-[#555] uppercase tracking-wide mb-1.5">Duration</div>
+  <div class="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-3">
+    ${[[1,'1m'],[5,'5m'],[15,'15m'],[30,'30m'],[60,'1h'],[240,'4h'],[1440,'1d']].map(([v,l])=>`<button type="button" data-dur="${v}" class="py-2 rounded-[10px] text-[.8rem] border ${state.duration===v?'border-blue2 bg-[rgba(74,108,247,.15)] text-blue2':'border-[#1e1e1e] text-[#666]'}">${l}</button>`).join('')}
+  </div>
+
+  <div class="text-[.65rem] text-[#555] uppercase tracking-wide mb-1.5">Amount (USD)</div>
+  <input id="tradeAmount" type="number" min="0" step="0.01" value="${state.amount||0}" class="w-full mb-3 bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] px-3 py-2.5 text-white outline-none" placeholder="0">
+
+  <div class="grid grid-cols-2 gap-2">
+    <button type="button" id="buyBtn" class="py-3 rounded-[12px] font-medium text-[.9rem] bg-grn text-black">↑ BUY / LONG</button>
+    <button type="button" id="sellBtn" class="py-3 rounded-[12px] font-medium text-[.9rem] bg-red2 text-white">↓ SELL / SHORT</button>
+  </div>
+</div>
+
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] overflow-hidden mb-6">
+  <div class="px-[14px] py-[12px] border-b border-[#1a1a1a] flex items-center justify-between">
+    <div class="text-white font-medium text-[.9rem]">My Trades</div>
+    <div class="flex gap-2">
+      <button type="button" data-tab="open" class="px-3 py-1 rounded-lg text-[.72rem] ${true?'bg-[rgba(74,108,247,.15)] text-blue2 border border-blue2':''}" id="tabOpen">Open (${open.length})</button>
+      <button type="button" data-tab="closed" class="px-3 py-1 rounded-lg text-[.72rem] border border-[#1e1e1e] text-[#666]" id="tabClosed">Closed (${closed.length})</button>
+    </div>
+  </div>
+  <div id="tradeList">
+    ${open.length?open.map(tradeRow).join(''):`<div class="py-[40px] text-center"><i class="fa-solid fa-chart-line text-[#1e1e1e] text-[2rem] block mb-[10px]"></i><div class="text-[#333] text-[.8rem]">No open trades</div></div>`}
+  </div>
+</div>`;
+
+      // bind
+      root.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{state.mode=b.dataset.mode;render();});
+      root.querySelectorAll('[data-ttype]').forEach(b=>b.onclick=()=>{state.tradeType=b.dataset.ttype;render();});
+      root.querySelectorAll('[data-aclass]').forEach(b=>b.onclick=()=>{
+        state.assetClass=b.dataset.aclass;
+        const first=byClass(state.assetClass)[0];
+        state.assetId=first?first._id:'';
+        render();
+      });
+      root.querySelectorAll('[data-pick-asset]').forEach(b=>b.onclick=()=>{state.assetId=b.dataset.pickAsset;render();});
+      root.querySelectorAll('[data-lev]').forEach(b=>b.onclick=()=>{state.leverage=Number(b.dataset.lev);render();});
+      root.querySelectorAll('[data-dur]').forEach(b=>b.onclick=()=>{state.duration=Number(b.dataset.dur);render();});
+      const sel=root.querySelector('#assetSelect');
+      if(sel) sel.onchange=()=>{state.assetId=sel.value;render();};
+      const amt=root.querySelector('#tradeAmount');
+      if(amt) amt.oninput=()=>{state.amount=Number(amt.value||0);};
+
+      async function place(action){
+        const asset=currentAsset();
+        if(!asset||!asset._id){toast('Choose an asset',false);return;}
+        const amount=Number(root.querySelector('#tradeAmount')?.value||state.amount||0);
+        if(amount<=0){toast('Enter a valid amount',false);return;}
+        try{
+          const x=await post('/trades',{
+            trading_asset_id:asset._id,
+            action,
+            amount,
+            leverage:state.leverage,
+            duration:state.duration,
+            duration_minutes:state.duration,
+            trade_type:state.tradeType,
+            is_demo:state.mode==='demo',
+            mode:state.mode,
+            entry_price:asset.price
+          });
+          toast(x.message||'Trade placed successfully.',true);
+          // reload trades
+          try{
+            const td=await get('/trades');
+            trades=Array.isArray(td.trades)?td.trades:[];
+            balance=Number(td.balance||balance);
+            demoBalance=Number(td.demo_balance||demoBalance);
+          }catch(_){}
+          state.amount=0;
+          render();
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      }
+      root.querySelector('#buyBtn').onclick=()=>place('BUY');
+      root.querySelector('#sellBtn').onclick=()=>place('SELL');
+
+      const list=root.querySelector('#tradeList');
+      root.querySelector('#tabOpen').onclick=()=>{
+        root.querySelector('#tabOpen').className='px-3 py-1 rounded-lg text-[.72rem] bg-[rgba(74,108,247,.15)] text-blue2 border border-blue2';
+        root.querySelector('#tabClosed').className='px-3 py-1 rounded-lg text-[.72rem] border border-[#1e1e1e] text-[#666]';
+        list.innerHTML=open.length?open.map(tradeRow).join(''):`<div class="py-[40px] text-center"><i class="fa-solid fa-chart-line text-[#1e1e1e] text-[2rem] block mb-[10px]"></i><div class="text-[#333] text-[.8rem]">No open trades</div></div>`;
+      };
+      root.querySelector('#tabClosed').onclick=()=>{
+        root.querySelector('#tabClosed').className='px-3 py-1 rounded-lg text-[.72rem] bg-[rgba(74,108,247,.15)] text-blue2 border border-blue2';
+        root.querySelector('#tabOpen').className='px-3 py-1 rounded-lg text-[.72rem] border border-[#1e1e1e] text-[#666]';
+        list.innerHTML=closed.length?closed.map(tradeRow).join(''):`<div class="py-[40px] text-center"><div class="text-[#333] text-[.8rem]">No closed trades</div></div>`;
+      };
+    }
+    render();
+  }
+    
     async function copyTrading(){
     const root=inner();
     showDynamicMain();
@@ -2162,6 +2445,266 @@
       try{const x=await post('/bot-subscriptions/'+id+'/settle',{});toast(x.message||(`Subscription settled. ${money(payout)} credited to user.`),true);adminBotSubView();}catch(err){toast(err.response?.data?.message||err.message,false);}
     };
   }
+    
+    async function adminAssets(){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading assets...</div>';
+    const d=await get('/assets');
+    const assets=d.assets||[];
+    const classes=['crypto','forex','stock','etf','index'];
+    function count(c){return assets.filter(a=>String(a.asset_class||'').toLowerCase()===c).length;}
+    function rows(list){
+      return list.map(a=>{
+        const chg=Number(a.price_change_pct_24h||a.change_24h||0);
+        const active=a.is_active!==false;
+        const logo=a.logo_url||a.image||'';
+        return `<tr class="border-t border-slate-100">
+          <td class="px-4 py-3"><div class="flex items-center gap-2">${logo?`<img src="${esc(logo)}" class="w-7 h-7 rounded-full object-cover" onerror="this.style.display='none'">`:''}<span class="font-medium">${esc(a.name)}</span></div></td>
+          <td class="font-medium">${esc(a.symbol)}</td>
+          <td>${money(a.price||a.current_price)}</td>
+          <td class="${chg>=0?'text-emerald-600':'text-red-500'}">${chg>=0?'+':''}${chg.toFixed(2)}%</td>
+          <td><span class="text-xs px-2 py-0.5 rounded-full bg-slate-100">${esc(a.data_source||a.source||'—')}</span></td>
+          <td><button type="button" data-toggle-asset="${a._id}" class="relative w-10 h-5 rounded-full ${active?'bg-primary':'bg-slate-300'}"><span class="absolute top-0.5 ${active?'right-0.5':'left-0.5'} w-4 h-4 bg-white rounded-full shadow"></span></button></td>
+          <td class="text-xs text-content-muted">${dt(a.price_updated_at||a.updatedAt)}</td>
+          <td class="whitespace-nowrap"><a href="/admin/edit-assets.html?id=${a._id}" class="text-primary text-sm mr-2">Edit</a><button type="button" data-del-asset="${a._id}" data-name="${esc(a.symbol||a.name)}" class="text-red-500 text-sm">Delete</button></td>
+        </tr>`;
+      }).join('')||'<tr><td colspan="8" class="py-10 text-center text-content-muted">No assets</td></tr>';
+    }
+    m.innerHTML=`<div class="flex items-center justify-between mb-6 flex-wrap gap-3"><div><h1 class="text-xl font-semibold text-content">Manage Trading Assets</h1></div>
+      <div class="flex gap-2"><a href="/admin/create-assets.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium">+ Add Custom Asset</a>
+      <button type="button" id="refreshPrices" class="px-4 py-2 rounded-lg border border-border text-sm">↻ Refresh Prices</button></div></div>
+    <div class="flex gap-4 border-b border-slate-200 mb-4 text-sm" id="assetTabs">
+      ${[{k:'crypto',l:'Crypto'},{k:'forex',l:'Forex'},{k:'stock',l:'Stock'},{k:'etf',l:'Etf'},{k:'index',l:'Index'}].map((c,i)=>`<button type="button" data-class="${c.k}" class="pb-2 border-b-2 ${i===0?'border-primary text-primary':'border-transparent text-content-muted'}">${c.l} ${count(c.k)}</button>`).join('')}
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+      <div class="flex justify-end p-3"><input id="assetSearch" type="search" placeholder="Search:" class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm"></div>
+      <table class="w-full text-sm"><thead><tr class="text-left text-xs text-slate-500 uppercase bg-slate-50"><th class="px-4 py-3">Name</th><th>Symbol</th><th>Price</th><th>24h Change</th><th>Source</th><th>Active</th><th>Last Updated</th><th>Actions</th></tr></thead>
+      <tbody id="assetRows">${rows(assets.filter(a=>String(a.asset_class||'').toLowerCase()==='crypto'))}</tbody></table>
+    </div>`;
+    const tbody=m.querySelector('#assetRows');
+    function apply(){
+      const cls=m.querySelector('#assetTabs [data-class].text-primary')?.dataset.class||'crypto';
+      const q=(m.querySelector('#assetSearch').value||'').toLowerCase();
+      let list=assets.filter(a=>String(a.asset_class||'').toLowerCase()===cls);
+      if(q) list=list.filter(a=>String(a.name||'').toLowerCase().includes(q)||String(a.symbol||'').toLowerCase().includes(q));
+      tbody.innerHTML=rows(list);
+      bindRow();
+    }
+    function bindRow(){
+      m.querySelectorAll('[data-toggle-asset]').forEach(btn=>{btn.onclick=async()=>{try{await post('/assets/'+btn.dataset.toggleAsset+'/toggle',{});adminAssets();}catch(e){toast(e.message,false);}};});
+      m.querySelectorAll('[data-del-asset]').forEach(btn=>{btn.onclick=async()=>{if(!confirm('Delete this asset?\nThis action cannot be undone. Assets with open trades cannot be deleted.'))return;try{const x=await del('/assets/'+btn.dataset.delAsset);toast(x.message||(btn.dataset.name+' deleted successfully.'),true);adminAssets();}catch(e){toast(e.response?.data?.message||e.message,false);}};});
+    }
+    bindRow();
+    m.querySelectorAll('#assetTabs [data-class]').forEach(btn=>{btn.onclick=()=>{m.querySelectorAll('#assetTabs [data-class]').forEach(b=>{b.className='pb-2 border-b-2 border-transparent text-content-muted';});btn.className='pb-2 border-b-2 border-primary text-primary';apply();};});
+    m.querySelector('#assetSearch').oninput=apply;
+    m.querySelector('#refreshPrices').onclick=async()=>{
+      const cls=m.querySelector('#assetTabs [data-class].text-primary')?.dataset.class||'crypto';
+      const btn=m.querySelector('#refreshPrices');
+      const prev=btn.textContent;
+      btn.disabled=true; btn.textContent='Refreshing…';
+      try{
+        const x=await post('/assets/refresh',{activeOnly:true, asset_class: cls});
+        const failed=(x.failedAssets||(x.results||[]).filter(r=>r.asset&&r.success===false).map(r=>r.asset)||[]);
+        if(failed.length){
+          console.warn('[assets refresh] Category:', cls);
+          console.warn('[assets refresh] Failed assets:', failed);
+          (x.results||[]).filter(r=>r.asset&&r.success===false).forEach(r=>{
+            console.warn(`  - ${r.asset} (${r.provider||'none'}): ${r.error||'unknown error'}`);
+          });
+        }
+        if((x.results||[]).some(r=>r.success)){
+          console.log('[assets refresh] Updated:', (x.results||[]).filter(r=>r.success).map(r=>r.asset));
+        }
+        toast(x.message||(x.updated?`Updated ${x.updated} ${cls} assets.`:`No ${cls} prices updated`), Boolean(x.success||x.updated));
+        adminAssets();
+      }catch(e){
+        console.error('[assets refresh] error', e.response?.data||e);
+        toast(e.response?.data?.message||e.message||'Price refresh failed',false);
+      }finally{
+        btn.disabled=false; btn.textContent=prev;
+      }
+    };
+  }
+    async function adminAssetForm(edit){
+    const m=adminMain(); showDynamicMain();
+    const id=edit?new URLSearchParams(location.search).get('id'):null;
+    let a={};
+    if(edit&&id){try{a=(await get('/assets/'+id)).asset||{};}catch(e){toast(e.message,false);}}
+    m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">${edit?('Edit: '+esc(a.name||'')):'Create: Assets'}</h1><p class="text-sm text-content-muted mt-1">${edit?'Update asset details, pricing, and status':'Create asset details, pricing, and status'}</p></div><a href="/admin/assets.html" class="px-4 py-2 rounded-lg border border-border text-sm">← Back to Assets</a></div>
+    <form id="assetForm" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-4">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="block text-sm"><span class="font-medium">Name *</span><input name="name" required value="${esc(a.name||'')}" placeholder="Avalanche" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+          <label class="block text-sm"><span class="font-medium">Symbol *</span><input name="symbol" required value="${esc(a.symbol||'')}" placeholder="AVAX" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+          <label class="block text-sm"><span class="font-medium">Asset Class *</span><select name="asset_class" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">${['Crypto','Forex','Stock','Etf','Index'].map(c=>`<option value="${c.toLowerCase()}" ${String(a.asset_class||'').toLowerCase()===c.toLowerCase()?'selected':''}>${c}</option>`).join('')}</select></label>
+          <label class="block text-sm"><span class="font-medium">Data Source</span><select name="data_source" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"><option value="coingecko" ${a.data_source==='coingecko'?'selected':''}>coingecko</option><option value="twelvedata" ${a.data_source==='twelvedata'?'selected':''}>twelvedata</option></select></label>
+          <label class="block text-sm"><span class="font-medium">Price ($)</span><input name="price" type="number" step="any" value="${a.price??a.current_price??''}" placeholder="Optional — auto-fill from source" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+          <label class="block text-sm"><span class="font-medium">24h Change ($)</span><input name="change_24h" type="number" step="any" value="${a.change_24h??''}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+          <label class="block text-sm"><span class="font-medium">24h Change (%)</span><input name="price_change_pct_24h" type="number" step="any" value="${a.price_change_pct_24h??''}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+          <label class="block text-sm"><span class="font-medium">24h High ($)</span><input name="high_24h" type="number" step="any" value="${a.high_24h??''}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+          <label class="block text-sm md:col-span-2"><span class="font-medium">24h Low ($)</span><input name="low_24h" type="number" step="any" value="${a.low_24h??''}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        </div>
+      </div>
+      <div class="space-y-4">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <label class="block text-sm"><span class="font-medium">Logo URL</span><input name="logo_url" id="logoUrl" value="${esc(a.logo_url||'')}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="https://..."></label>
+          <div class="mt-3 h-24 rounded-lg bg-slate-50 flex items-center justify-center overflow-hidden" id="logoPreview">${a.logo_url?`<img src="${esc(a.logo_url)}" class="max-h-full object-contain">`:'Logo preview'}</div>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="is_active" value="1" ${a.is_active!==false?'checked':''}> Active</label>
+          <p class="text-xs text-content-muted mt-2">Inactive assets won't appear in user trading screens.</p>
+          <button type="submit" class="mt-4 w-full py-2.5 rounded-lg bg-primary text-white text-sm font-medium">${edit?'✓ Save Changes':'Create Asset'}</button>
+          <a href="/admin/assets.html" class="mt-2 block text-center py-2.5 rounded-lg border border-border text-sm">Cancel</a>
+        </div>
+      </div>
+    </form>`;
+    const logoIn=m.querySelector('#logoUrl');
+    const prev=m.querySelector('#logoPreview');
+    logoIn.addEventListener('input',()=>{const u=logoIn.value.trim();prev.innerHTML=u?`<img src="${u.replace(/"/g,'')}" class="max-h-full object-contain" onerror="this.parentNode.textContent='Invalid image'">`:'Logo preview';});
+    m.querySelector('#assetForm').onsubmit=async e=>{
+      e.preventDefault();
+      const fd=new FormData(e.currentTarget);
+      const body=Object.fromEntries(fd.entries());
+      body.is_active=fd.get('is_active')==='1';
+      try{
+        if(edit&&id){const x=await put('/assets/'+id,body);toast(x.message||((body.symbol||'Asset')+' updated successfully.'),true);}
+        else{const x=await post('/assets',body);toast(x.message||((body.symbol||'Asset')+' created successfully.'),true);setTimeout(()=>location.href='/admin/assets.html',600);return;}
+        setTimeout(()=>location.reload(),600);
+      }catch(err){toast(err.response?.data?.message||err.message,false);}
+    };
+  }
+    async function adminTrades(){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading trades...</div>';
+    const d=await get('/trades');
+    const trades=d.trades||[];
+    function rows(list){
+      return list.map((t,i)=>{
+        const pl=Number(t.profit_loss||t.pl||0);
+        const act=String(t.action||'buy').toUpperCase();
+        const st=String(t.status||'open');
+        const res=String(t.result||'').toUpperCase();
+        return `<tr class="border-t border-slate-100">
+          <td class="px-3 py-3">${i+1}</td>
+          <td>${esc(t.user_id?.name||'—')}</td>
+          <td><span class="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">${esc(t.trade_type||t.asset_type||'Binary')}</span>${t.is_demo?' <span class="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">DEMO</span>':''}</td>
+          <td>${esc(t.asset_symbol||t.trading_asset_id?.symbol||'')} — ${esc(t.asset_name||t.trading_asset_id?.name||'')}</td>
+          <td class="${act==='BUY'?'text-emerald-600':'text-red-500'} font-medium">${act}</td>
+          <td>${money(t.amount)}</td>
+          <td>${t.leverage||1}x</td>
+          <td>${money(t.entry_price)}</td>
+          <td><span class="text-xs px-2 py-0.5 rounded-full ${st==='open'?'bg-amber-50 text-amber-600':'bg-slate-100'}">${esc(st)}</span></td>
+          <td class="${res==='WIN'?'text-emerald-600':res==='LOSS'?'text-red-500':''}">${esc(res||'—')}</td>
+          <td class="${pl>=0?'text-emerald-600':'text-red-500'}">${pl?((pl>=0?'+':'')+money(pl)):'—'}</td>
+          <td>${esc(t.settled_by||'—')}</td>
+          <td class="text-xs">${dt(t.opened_at||t.createdAt)}</td>
+          <td class="whitespace-nowrap"><a href="/admin/view-trade.html?id=${t._id}" class="text-primary text-sm mr-2">View</a><a href="/admin/edit-trade.html?id=${t._id}" class="text-primary text-sm">Edit</a></td>
+        </tr>`;
+      }).join('')||'<tr><td colspan="14" class="py-10 text-center text-content-muted">No trades</td></tr>';
+    }
+    m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">Manage Client Trades</h1></div>
+      <a href="/admin/create-trade.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium">+ Create Trade</a></div>
+    <div class="flex gap-3 border-b border-slate-200 mb-4 text-sm overflow-x-auto" id="tradeFilters">
+      ${[['all','All'],['binary','Binary'],['spot','Spot'],['open','Open'],['closed','Closed'],['demo','Demo']].map(([k,l],i)=>`<button type="button" data-f="${k}" class="pb-2 border-b-2 whitespace-nowrap ${i===0?'border-primary text-primary':'border-transparent text-content-muted'}">${l}</button>`).join('')}
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+      <table class="w-full text-sm"><thead><tr class="text-left text-xs text-slate-500 uppercase bg-slate-50"><th class="px-3 py-3">#</th><th>User</th><th>Type</th><th>Asset</th><th>Action</th><th>Amount</th><th>Leverage</th><th>Entry Price</th><th>Status</th><th>Result</th><th>P/L</th><th>Settled By</th><th>Opened</th><th>Actions</th></tr></thead>
+      <tbody id="tradeRows">${rows(trades)}</tbody></table>
+    </div>`;
+    const tbody=m.querySelector('#tradeRows');
+    function apply(){
+      const f=m.querySelector('#tradeFilters [data-f].text-primary')?.dataset.f||'all';
+      let list=trades;
+      if(f==='binary'||f==='spot') list=list.filter(t=>String(t.trade_type||t.asset_type||'').toLowerCase()===f);
+      else if(f==='open'||f==='closed') list=list.filter(t=>String(t.status||'').toLowerCase()===f);
+      else if(f==='demo') list=list.filter(t=>t.is_demo);
+      tbody.innerHTML=rows(list);
+    }
+    m.querySelectorAll('#tradeFilters [data-f]').forEach(btn=>{btn.onclick=()=>{m.querySelectorAll('#tradeFilters [data-f]').forEach(b=>{b.className='pb-2 border-b-2 whitespace-nowrap border-transparent text-content-muted';});btn.className='pb-2 border-b-2 whitespace-nowrap border-primary text-primary';apply();};});
+  }
+    async function adminTradeForm(edit){
+    const m=adminMain(); showDynamicMain();
+    const id=edit?new URLSearchParams(location.search).get('id'):null;
+    let t0={}, users=[], assets=[];
+    try{const d=await get('/trades');users=d.users||[];assets=d.assets||[];}catch(e){}
+    if(edit&&id){try{t0=(await get('/trades/'+id)).trade||{};}catch(e){toast(e.message,false);}}
+    m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">${edit?('Edit Trade #'+(t0._id||'').toString().slice(-4)):'Create Trade for User'}</h1></div><a href="/admin/managetrades.html" class="px-4 py-2 rounded-lg border border-border text-sm">← Back to Trades</a></div>
+    <form id="tradeAdminForm" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 max-w-2xl space-y-4">
+      <label class="block text-sm"><span class="font-medium">Select User *</span><select name="user_id" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">${users.map(u=>`<option value="${u._id}" ${String(t0.user_id?._id||t0.user_id)===String(u._id)?'selected':''}>${esc(u.name)} (${esc(u.email)})</option>`).join('')}</select></label>
+      <div class="grid grid-cols-2 gap-4">
+        <label class="block text-sm"><span class="font-medium">Trade Type *</span><select name="trade_type" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"><option ${t0.trade_type==='Binary'||!t0.trade_type?'selected':''}>Binary</option><option ${t0.trade_type==='Spot'?'selected':''}>Spot</option></select></label>
+        <label class="inline-flex items-center gap-2 text-sm mt-6"><input type="checkbox" name="is_demo" value="1" ${t0.is_demo?'checked':''}> Demo Trade (uses demo balance)</label>
+      </div>
+      <label class="block text-sm"><span class="font-medium">Asset *</span><select name="trading_asset_id" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"><option value="">— Select Asset —</option>${assets.map(a=>`<option value="${a._id}" ${String(t0.trading_asset_id?._id||t0.trading_asset_id)===String(a._id)?'selected':''}>${esc(a.symbol)} — ${esc(a.name)}</option>`).join('')}</select></label>
+      <div class="grid grid-cols-2 gap-4">
+        <label class="block text-sm"><span class="font-medium">Action *</span><select name="action" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"><option value="buy" ${String(t0.action||'').toLowerCase()!=='sell'?'selected':''}>Buy</option><option value="sell" ${String(t0.action||'').toLowerCase()==='sell'?'selected':''}>Sell</option></select></label>
+        <label class="block text-sm"><span class="font-medium">Leverage *</span><select name="leverage" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">${[1,2,5,10,20,50,100].map(x=>`<option value="${x}" ${Number(t0.leverage||5)===x?'selected':''}>${x}x</option>`).join('')}</select></label>
+      </div>
+      <label class="block text-sm"><span class="font-medium">Duration (Binary only)</span><select name="duration_minutes" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">${[1,5,15,30,60].map(x=>`<option value="${x}" ${Number(t0.duration_minutes||15)===x?'selected':''}>${x} Minutes</option>`).join('')}</select></label>
+      <label class="block text-sm"><span class="font-medium">Amount ($) *</span><input name="amount" type="number" step="0.01" required value="${t0.amount??''}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+      ${edit?`<div class="grid grid-cols-3 gap-4">
+        <label class="block text-sm"><span class="font-medium">Status</span><select name="status" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"><option ${t0.status==='open'?'selected':''}>open</option><option ${t0.status==='closed'?'selected':''}>closed</option></select></label>
+        <label class="block text-sm"><span class="font-medium">Result</span><select name="result" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"><option value="">—</option><option ${String(t0.result||'').toUpperCase()==='WIN'?'selected':''}>WIN</option><option ${String(t0.result||'').toUpperCase()==='LOSS'?'selected':''}>LOSS</option></select></label>
+        <label class="block text-sm"><span class="font-medium">Profit/Loss (USD)</span><input name="profit_loss" type="number" step="0.01" value="${t0.profit_loss??''}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+      </div>`:''}
+      <div class="flex gap-3"><button type="submit" class="px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-medium">${edit?'Update Trade':'Create Trade'}</button><a href="/admin/managetrades.html" class="px-5 py-2.5 rounded-lg border border-border text-sm">Cancel</a></div>
+    </form>`;
+    m.querySelector('#tradeAdminForm').onsubmit=async e=>{
+      e.preventDefault();
+      const fd=new FormData(e.currentTarget);
+      const body=Object.fromEntries(fd.entries());
+      body.is_demo=fd.get('is_demo')==='1';
+      try{
+        if(edit&&id){const x=await put('/trades/'+id,body);toast(x.message||'Trade updated successfully.',true);}
+        else{const x=await post('/trades',body);toast(x.message||'Trade created successfully.',true);}
+        setTimeout(()=>location.href='/admin/managetrades.html',600);
+      }catch(err){toast(err.response?.data?.message||err.message,false);}
+    };
+  }
+    async function adminTradeView(){
+    const m=adminMain(); showDynamicMain();
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){toast('Trade id required',false);return;}
+    m.innerHTML='<div class="p-8 text-center text-content-muted">Loading...</div>';
+    let d; try{d=await get('/trades/'+id);}catch(e){toast(e.message,false);return;}
+    const t0=d.trade||{};
+    const closed=String(t0.status||'').toLowerCase()==='closed';
+    const pl=Number(t0.profit_loss||0);
+    const res=String(t0.result||'').toUpperCase();
+    m.innerHTML=`<div class="flex items-center justify-between mb-6"><div><h1 class="text-xl font-semibold text-content">Trade Details</h1></div><a href="/admin/managetrades.html" class="px-4 py-2 rounded-lg border border-border text-sm">← Back</a></div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-2 text-sm">
+        <div class="font-medium mb-2">Trade Info</div>
+        <div class="flex justify-between"><span class="text-content-muted">User</span><span>${esc(t0.user_id?.name||'—')}</span></div>
+        <div class="flex justify-between"><span class="text-content-muted">Asset</span><span>${esc(t0.asset_symbol||t0.trading_asset_id?.symbol||'')} — ${esc(t0.asset_name||t0.trading_asset_id?.name||'')}</span></div>
+        <div class="flex justify-between"><span class="text-content-muted">Action</span><span>${esc(t0.action)}</span></div>
+        <div class="flex justify-between"><span class="text-content-muted">Amount</span><span>${money(t0.amount)}</span></div>
+        <div class="flex justify-between"><span class="text-content-muted">Leverage</span><span>${t0.leverage||1}x</span></div>
+        <div class="flex justify-between"><span class="text-content-muted">Entry</span><span>${money(t0.entry_price)}</span></div>
+        <div class="flex justify-between"><span class="text-content-muted">Status</span><span>${esc(t0.status)}</span></div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5" id="settleBox">
+        ${closed?`<h3 class="text-base font-semibold text-content mb-4">Settlement Info</h3>
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between"><span class="text-content-muted">Result</span><span class="font-semibold ${res==='WIN'?'text-success':'text-danger'}">${esc(res||'—')}</span></div>
+            <div class="flex justify-between"><span class="text-content-muted">P/L</span><span class="font-semibold ${pl>=0?'text-success':'text-danger'}">${pl>=0?'+':''}${money(pl)}</span></div>
+            <div class="flex justify-between"><span class="text-content-muted">Settled By</span><span>${esc(t0.settled_by||'Admin')}</span></div>
+            <div class="flex justify-between"><span class="text-content-muted">Settled At</span><span>${dt(t0.settled_at||t0.closed_at)}</span></div>
+          </div>`:`<h3 class="text-base font-semibold text-content mb-4">Settle Trade</h3>
+          <form id="settleTradeForm" class="space-y-3">
+            <label class="block text-sm"><span class="font-medium">Result</span><select name="result" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"><option value="WIN">WIN</option><option value="LOSS">LOSS</option></select></label>
+            <label class="block text-sm"><span class="font-medium">Profit/Loss (USD)</span><input name="profit_loss" type="number" step="0.01" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+            <button type="submit" class="w-full py-2.5 rounded-lg bg-primary text-white text-sm font-medium">Settle Trade</button>
+          </form>`}
+      </div>
+    </div>`;
+    const form=m.querySelector('#settleTradeForm');
+    if(form) form.onsubmit=async e=>{
+      e.preventDefault();
+      const body=Object.fromEntries(new FormData(form).entries());
+      try{const x=await post('/trades/'+id+'/settle',body);toast(x.message||'Profit adjusted successfully.',true);adminTradeView();}catch(err){toast(err.response?.data?.message||err.message,false);}
+    };
+  }
     async function routeAdmin(){
     try{
       if(page==='plans.html')return adminPlans();
@@ -2215,7 +2758,8 @@
       else if(page==='plan-details.html')await planDetails();
       else if(page==='cards.html')await cards();
       else if(page==='apply-card.html')await applyCard();
-      else if(page==='markets.html')await markets();
+      else if(page==='trade.html')await tradePage();
+      if(page==='markets.html')await markets();
       else if(page==='copy-trading.html')await copyTrading();
       else if(page==='copytrader-details.html')await copyDetails();
       else if(page==='copy-trading-position.html')await copyPosition();
