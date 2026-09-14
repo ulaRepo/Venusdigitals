@@ -1525,68 +1525,272 @@
   }
     
     async function mining(){
-    const root=inner(),d=await get('/mining');
-    const active=d.subscriptions.filter(x=>x.status==='active');
-    root.innerHTML=shell('Cloud Mining','Mine digital assets with managed rigs')+`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] mb-[9px]"><div class="text-[#444] text-[.68rem] uppercase">Total Mining Earnings</div><div class="text-grn text-xl font-bold mt-1">${money(d.totalEarnings)}</div><div class="grid grid-cols-2 gap-2 mt-3"><div class="bg-[#161616] p-3 rounded-lg"><div class="text-[#555] text-[.68rem]">Active Investment</div><div class="text-white font-bold">${money(active.reduce((s,x)=>s+Number(x.invested_amount||0),0))}</div></div><div class="bg-[#161616] p-3 rounded-lg"><div class="text-[#555] text-[.68rem]">Active Rigs</div><div class="text-white font-bold">${active.length}</div></div></div></div><div class="space-y-[9px]">${d.plans.length?d.plans.map(p=>`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="flex justify-between"><div><div class="text-white font-medium">${
-      esc(p.name)
+    const root=inner();
+    showDynamicMain();
+    if(root) root.innerHTML='<div class="p-8 text-center text-[#555]">Loading mining...</div>';
+    let d;
+    try{d=await get('/mining');}catch(e){toast(e.message,false);return;}
+    const plans=d.plans||[];
+    const subs=d.subscriptions||[];
+    const active=subs.filter(x=>String(x.status)==='active');
+    const totalEarn=Number(d.totalEarnings||active.reduce((s,x)=>s+Number(x.accumulated_profit||0),0));
+    const activeInvest=active.reduce((s,x)=>s+Number(x.invested_amount||0),0);
+
+    function daysLeft(exp){
+      if(!exp) return 0;
+      const ms=new Date(exp)-Date.now();
+      return Math.max(0, Math.ceil(ms/86400000));
     }
-    </div><div class="text-[#555] text-[.72rem]">${
-      esc(p.hashrate)
+    function progress(s){
+      const start=new Date(s.started_at).getTime();
+      const end=new Date(s.expires_at).getTime();
+      if(!start||!end||end<=start) return 0;
+      return Math.min(100, Math.max(0, ((Date.now()-start)/(end-start))*100));
     }
-    </div></div><div class="text-grn font-bold">${
-      p.daily_roi_percentage
+    function color(p){return p.icon_color||'#4a6cf7';}
+
+    function planCard(p){
+      const c=color(p);
+      const monthly=(Number(p.daily_roi_percentage||0)*30).toFixed(1);
+      return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] mb-[9px]" data-plan-card="${p._id}">
+        <div class="flex items-start justify-between gap-3 mb-2">
+          <div class="flex items-center gap-3">
+            <div class="w-[40px] h-[40px] rounded-[10px] flex items-center justify-center" style="background:${c}22;border:1px solid ${c}44">
+              <i class="fa-solid fa-microchip" style="color:${c}"></i>
+            </div>
+            <div>
+              <div class="text-white font-medium text-[.95rem]">${esc(p.name)}</div>
+              <div class="text-[#555] text-[.72rem]">${esc(p.hashrate||'')}</div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-grn font-bold text-[.95rem]">${Number(p.daily_roi_percentage||0).toFixed(2)}%</div>
+            <div class="text-[#555] text-[.62rem]">Daily ROI</div>
+          </div>
+        </div>
+        <p class="text-[#666] text-[.76rem] mb-3">${esc(p.description||'')}</p>
+        <div class="grid grid-cols-3 gap-2 mb-3">
+          <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-[10px] p-[10px] text-center">
+            <div class="text-[#555] text-[.6rem] uppercase mb-1">Min</div>
+            <div class="text-blue2 font-sora font-medium text-[.85rem]">${money(p.min_investment)}</div>
+          </div>
+          <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-[10px] p-[10px] text-center">
+            <div class="text-[#555] text-[.6rem] uppercase mb-1">Duration</div>
+            <div class="text-white font-sora font-medium text-[.85rem]">${Number(p.duration_days||0)}d</div>
+          </div>
+          <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-[10px] p-[10px] text-center">
+            <div class="text-[#555] text-[.6rem] uppercase mb-1">Monthly</div>
+            <div class="text-grn font-sora font-medium text-[.85rem]">${monthly}%</div>
+          </div>
+        </div>
+        <button type="button" data-start-mine="${p._id}" class="w-full py-[12px] rounded-[10px] bg-blue2 text-white text-[.88rem] font-medium">Start Mining</button>
+        <div class="hidden mt-3 pt-3 border-t border-[#1a1a1a]" data-mine-form="${p._id}">
+          <div class="text-[.8rem] text-[#888] mb-2">Subscribe to <span class="text-white font-medium">${esc(p.name)}</span></div>
+          <div class="text-[.7rem] text-[#555] mb-1">Amount (${money(p.min_investment)} – ${p.max_investment?money(p.max_investment):'∞'})</div>
+          <input type="number" min="${Number(p.min_investment||0)}" step="0.01" data-mine-amount="${p._id}" class="w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] px-3 py-2.5 text-white mb-2 outline-none" placeholder="${Number(p.min_investment||0)}">
+          <div class="text-[.7rem] text-[#555] mb-3">Est. daily: <span class="text-grn" data-est-daily="${p._id}">$0.00</span> · Duration: ${Number(p.duration_days||0)} days</div>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" data-cancel-mine="${p._id}" class="py-2.5 rounded-[10px] border border-[#1e1e1e] text-[#888] text-[.8rem]">Cancel</button>
+            <button type="button" data-confirm-mine="${p._id}" class="py-2.5 rounded-[10px] bg-blue2 text-white text-[.8rem] font-medium">Confirm</button>
+          </div>
+        </div>
+      </div>`;
     }
-    %</div></div><p class="text-[#666] text-[.76rem] mt-3">${
-      esc(p.description||'')
+
+    function activeCard(s){
+      const p=s.mining_plan_id||{};
+      const c=color(p);
+      const pct=progress(s);
+      const left=daysLeft(s.expires_at);
+      return `<div class="mx-[18px] mb-[9px] bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+        <div class="flex items-center justify-between mb-[10px]">
+          <div class="flex items-center gap-[10px]">
+            <div class="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center" style="background:${c}22;border:1px solid ${c}44">
+              <i class="fa-solid fa-microchip" style="color:${c}"></i>
+            </div>
+            <div>
+              <div class="text-[.9rem] font-medium text-white">${esc(p.name||'Rig')}</div>
+              <div class="text-[.75rem] text-[#444]">${esc(p.hashrate||'')}</div>
+            </div>
+          </div>
+          <span class="text-[.65rem] font-bold px-[8px] py-[4px] rounded-[6px]" style="background:rgba(0,212,124,.1);color:#00d47c">ACTIVE</span>
+        </div>
+        <div class="grid grid-cols-3 gap-[9px] mb-[12px]">
+          <div>
+            <div class="text-[.65rem] uppercase tracking-[.07em] text-[#444] mb-[2px]">Invested</div>
+            <div class="font-sora text-[.88rem] font-bold text-blue2">${money(s.invested_amount)}</div>
+          </div>
+          <div>
+            <div class="text-[.65rem] uppercase tracking-[.07em] text-[#444] mb-[2px]">Earned</div>
+            <div class="font-sora text-[.88rem] font-bold text-grn">${money(s.accumulated_profit)}</div>
+          </div>
+          <div>
+            <div class="text-[.65rem] uppercase tracking-[.07em] text-[#444] mb-[2px]">Days Left</div>
+            <div class="font-sora text-[.88rem] font-bold text-white">${left}</div>
+          </div>
+        </div>
+        <div class="mb-[10px]">
+          <div class="flex justify-between mb-[4px]">
+            <div class="text-[.65rem] text-[#444]">Progress</div>
+            <div class="text-[.65rem] text-[#444]">${pct.toFixed(0)}%</div>
+          </div>
+          <div class="h-[4px] bg-[#1a1a1a] rounded-full overflow-hidden">
+            <div class="h-full rounded-full" style="width:${pct}%;background:linear-gradient(90deg,#4a6cf7,#6e8efb)"></div>
+          </div>
+        </div>
+        <div class="flex gap-[9px]">
+          <a href="/user/subscription-mining.html?id=${s._id}" class="flex-1 text-center py-[10px] rounded-[10px] text-[.8rem] font-medium text-[#6e8efb] bg-[rgba(74,108,247,.08)] border border-[rgba(74,108,247,.15)]">View Details</a>
+          <button type="button" data-stop-rig="${s._id}" class="flex-1 py-[10px] rounded-[10px] text-[.8rem] font-medium text-[#ff4560] bg-[rgba(255,69,96,.08)] border border-[rgba(255,69,96,.15)]">Stop Rig</button>
+        </div>
+      </div>`;
     }
-    </p><div class="grid grid-cols-3 gap-2 mt-3 text-center"><div class="bg-[#161616] p-2 rounded"><div class="text-[#555] text-[.62rem]">Min</div><div class="text-white">${
-      money(p.min_investment)
-    }
-    </div></div><div class="bg-[#161616] p-2 rounded"><div class="text-[#555] text-[.62rem]">Max</div><div class="text-white">${
-      p.max_investment?money(p.max_investment):'Unlimited'
-    }
-    </div></div><div class="bg-[#161616] p-2 rounded"><div class="text-[#555] text-[.62rem]">Duration</div><div class="text-white">${
-      p.duration_days
-    }
-     days</div></div></div><button data-mine="${p._id}" class="w-full mt-3 py-2 rounded-lg bg-brand-blue text-white">Start Mining</button></div>`).join(''):'<div class="text-center py-12 text-[#555]">No mining plans available.</div>'}</div>${active.length?`<div class="mt-5"><div class="text-[#444] text-[.68rem] uppercase mb-2">Active Rigs</div><div class="space-y-2">${
-      active.map(s=>`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-3"><div class="flex justify-between"><div class="text-white">${esc(s.mining_plan_id?.name||'Mining Plan')}</div><span class="text-grn text-[.68rem]">active</span></div><div class="text-[#666] text-[.72rem] mt-2">Invested ${money(s.invested_amount)} · Earned ${money(s.accumulated_profit)} · ${daysLeft(s.expires_at)} days left</div><div class="h-[5px] bg-[#1a1a1a] rounded-full mt-2"><div style="width:${Math.min(100,Math.max(0,(Date.now()-new Date(s.started_at))/((new Date(s.expires_at)-new Date(s.started_at))||1)*100))}%;height:100%;background:#4a6cf7"></div></div><div class="flex gap-2 mt-3"><a class="flex-1 text-center py-2 rounded-lg bg-brand-blue text-white text-[.75rem]" href="/user/subscription-mining.html?id=${s._id}">View Details</a><button data-stopmine="${s._id}" class="flex-1 py-2 rounded-lg bg-[rgba(255,69,96,.1)] text-red2 text-[.75rem]">Stop Rig</button></div></div>`).join('')
-    }
-    </div></div>`:''}`;
-    root.querySelectorAll('[data-mine]').forEach(b=>b.onclick=()=>mineForm(d.plans.find(p=>String(p._id)===b.dataset.mine)));
-    root.querySelectorAll('[data-stopmine]').forEach(b=>b.onclick=async()=>{
-      if(!confirm('Do you want to close this rig?'))return;
-      try{
-        const x=await post('/mining/stop/'+b.dataset.stopmine,{
-        });
-        toast(x.message,true);
-        await mining()
-      }
-      catch(e){
-        toast(e.message,false)
-      }
-    })
+
+    root.innerHTML=`
+<div class="mb-[10px] flex items-center gap-3">
+  <div class="inner-back" onclick="history.back()"><i class="fa-solid fa-chevron-left"></i></div>
+  <div class="inner-title">Cloud Mining</div>
+</div>
+
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] mb-[9px]">
+  <div class="flex items-center gap-2 mb-1">
+    <div class="w-7 h-7 rounded-lg bg-orange-500/20 flex items-center justify-center"><i class="fa-solid fa-coins text-orange-400 text-xs"></i></div>
+    <div class="text-[#555] text-[.68rem] uppercase tracking-wide">Total Mining Earnings</div>
+  </div>
+  <div class="text-grn text-[1.4rem] font-sora font-bold">${money(totalEarn)}</div>
+  <div class="grid grid-cols-2 gap-2 mt-3">
+    <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-[10px] p-3">
+      <div class="text-[#555] text-[.62rem] uppercase">Active Investment</div>
+      <div class="text-white font-sora font-bold mt-1">${money(activeInvest)}</div>
+    </div>
+    <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-[10px] p-3">
+      <div class="text-[#555] text-[.62rem] uppercase">Active Rigs</div>
+      <div class="text-white font-sora font-bold mt-1">${active.length}</div>
+    </div>
+  </div>
+</div>
+
+${active.length?`<div class="h-2 bg-[#0a0a0a] border-t border-b border-[#111] my-[0]"></div>
+<div class="px-[18px] pt-[16px] pb-[6px]"><div class="text-[.68rem] uppercase tracking-[.07em] text-[#444]">Your Active Rigs</div></div>
+${active.map(activeCard).join('')}
+<div class="h-2 bg-[#0a0a0a] border-t border-b border-[#111]"></div>`:''}
+
+<div class="px-[0] pt-[12px] pb-[6px]"><div class="text-[.68rem] uppercase tracking-[.07em] text-[#444] mb-2">Available Plans</div></div>
+${plans.length?plans.map(planCard).join(''):'<div class="text-center py-12 text-[#555]">No mining plans available.</div>'}
+`;
+
+    // bind start forms
+    root.querySelectorAll('[data-start-mine]').forEach(btn=>{
+      btn.onclick=()=>{
+        const id=btn.dataset.startMine;
+        const form=root.querySelector(`[data-mine-form="${id}"]`);
+        root.querySelectorAll('[data-mine-form]').forEach(f=>f.classList.add('hidden'));
+        form?.classList.remove('hidden');
+      };
+    });
+    root.querySelectorAll('[data-cancel-mine]').forEach(btn=>{
+      btn.onclick=()=>root.querySelector(`[data-mine-form="${btn.dataset.cancelMine}"]`)?.classList.add('hidden');
+    });
+    root.querySelectorAll('[data-mine-amount]').forEach(inp=>{
+      const id=inp.dataset.mineAmount;
+      const p=plans.find(x=>String(x._id)===String(id));
+      const upd=()=>{
+        const amt=Number(inp.value||0);
+        const daily=amt*(Number(p?.daily_roi_percentage||0)/100);
+        const el=root.querySelector(`[data-est-daily="${id}"]`);
+        if(el) el.textContent=money(daily);
+      };
+      inp.oninput=upd;
+    });
+    root.querySelectorAll('[data-confirm-mine]').forEach(btn=>{
+      btn.onclick=async()=>{
+        const id=btn.dataset.confirmMine;
+        const amount=Number(root.querySelector(`[data-mine-amount="${id}"]`)?.value||0);
+        if(amount<=0){toast('Enter investment amount',false);return;}
+        try{
+          const x=await post('/mining/start',{mining_plan_id:id,amount});
+          toast(x.message||'Mining subscription started! Your rig is now active.',true);
+          setTimeout(()=>mining(),400);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
+    root.querySelectorAll('[data-stop-rig]').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Stop this mining subscription?')) return;
+        try{
+          const x=await post('/mining/stop/'+btn.dataset.stopRig,{});
+          toast(x.message||'mining rig stopped successfully',true);
+          setTimeout(()=>mining(),400);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
   }
-    function mineForm(p){
-    const a=prompt(`Enter amount for ${p.name} (${money(p.min_investment)} minimum):`);
-    if(a===null)return;
-    post('/mining/start',{
-      mining_plan_id:p._id,amount:Number(a)
-    }).then(x=>{
-      toast(x.message,true);
-      notify('Mining Subscription Started',x.message);
-      mining()
-    }).catch(e=>toast(e.message,false))
-  }
-    async function miningSubscription(){
-    const root=inner(),id=new URLSearchParams(location.search).get('id'),d=await get('/mining/subscription/'+id),s=d.subscription,p=s.mining_plan_id,progress=Math.min(100,Math.max(0,(Date.now()-new Date(s.started_at))/((new Date(s.expires_at)-new Date(s.started_at))||1)*100));
-    root.innerHTML=shell(p?.name||'Mining Subscription')+`<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="grid grid-cols-2 gap-3">${[['Invested',money(s.invested_amount)],['Earned',money(s.accumulated_profit)],['Daily ROI',s.daily_roi_snapshot+'%'],['Days Left',daysLeft(s.expires_at)]].map(x=>`<div class="bg-[#161616] rounded-lg p-3"><div class="text-[#555] text-[.68rem]">${
-      x[0]
+
+async function miningSubscription(){
+    const root=inner();
+    showDynamicMain();
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){toast('Subscription id required',false);return;}
+    if(root) root.innerHTML='<div class="p-8 text-center text-[#555]">Loading...</div>';
+    let d;
+    try{d=await get('/mining/subscription/'+id);}catch(e){toast(e.message,false);return;}
+    const s=d.subscription||{};
+    const p=s.mining_plan_id||{};
+    const start=new Date(s.started_at).getTime();
+    const end=new Date(s.expires_at).getTime();
+    const progress=(!start||!end||end<=start)?0:Math.min(100,Math.max(0,((Date.now()-start)/(end-start))*100));
+    const left=Math.max(0, Math.ceil((end-Date.now())/86400000));
+    const c=p.icon_color||'#4a6cf7';
+    const active=String(s.status)==='active';
+    const payout=Number(s.invested_amount||0)+Number(s.accumulated_profit||0)+Number(s.admin_profit_adjustment||0);
+    root.innerHTML=`
+<div class="mb-[10px] flex items-center gap-3">
+  <div class="inner-back" onclick="location.href='/user/mining.html'"><i class="fa-solid fa-chevron-left"></i></div>
+  <div class="inner-title">Mining Subscription</div>
+</div>
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] mb-3">
+  <div class="flex items-center justify-between mb-3">
+    <div class="flex items-center gap-3">
+      <div class="w-[40px] h-[40px] rounded-[10px] flex items-center justify-center" style="background:${c}22;border:1px solid ${c}44"><i class="fa-solid fa-microchip" style="color:${c}"></i></div>
+      <div>
+        <div class="text-white font-medium">${esc(p.name||'Rig')}</div>
+        <div class="text-[#555] text-[.72rem]">${esc(p.hashrate||'')}</div>
+      </div>
+    </div>
+    <span class="text-[.65rem] font-bold px-[8px] py-[4px] rounded-[6px]" style="background:${active?'rgba(0,212,124,.1)':'rgba(255,69,96,.1)'};color:${active?'#00d47c':'#ff4560'}">${esc(String(s.status||'').toUpperCase())}</span>
+  </div>
+  <div class="text-[.68rem] text-[#555] mb-1">Mining Progress</div>
+  <div class="flex justify-between text-[.65rem] text-[#444] mb-1"><span></span><span>${progress.toFixed(0)}%</span></div>
+  <div class="h-[4px] bg-[#1a1a1a] rounded-full overflow-hidden mb-3"><div class="h-full rounded-full" style="width:${progress}%;background:linear-gradient(90deg,#4a6cf7,#6e8efb)"></div></div>
+  <div class="grid grid-cols-2 gap-2 mb-3">
+    <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-[10px] p-3"><div class="text-[#555] text-[.62rem] uppercase">Invested</div><div class="text-blue2 font-sora font-bold mt-1">${money(s.invested_amount)}</div></div>
+    <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-[10px] p-3"><div class="text-[#555] text-[.62rem] uppercase">Earned</div><div class="text-grn font-sora font-bold mt-1">${money(s.accumulated_profit)}</div></div>
+    <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-[10px] p-3"><div class="text-[#555] text-[.62rem] uppercase">Daily ROI</div><div class="text-white font-sora font-bold mt-1">${Number(s.daily_roi_snapshot||p.daily_roi_percentage||0).toFixed(2)}%</div></div>
+    <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-[10px] p-3"><div class="text-[#555] text-[.62rem] uppercase">Days Left</div><div class="text-white font-sora font-bold mt-1">${left}</div></div>
+  </div>
+  <div class="space-y-2 text-[.8rem]">
+    <div class="flex justify-between border-b border-[#1a1a1a] py-2"><span class="text-[#555]">Plan</span><span class="text-white">${esc(p.name||'')}</span></div>
+    <div class="flex justify-between border-b border-[#1a1a1a] py-2"><span class="text-[#555]">Hashrate</span><span class="text-white">${esc(p.hashrate||'')}</span></div>
+    <div class="flex justify-between border-b border-[#1a1a1a] py-2"><span class="text-[#555]">Started</span><span class="text-white">${s.started_at?new Date(s.started_at).toLocaleString():'—'}</span></div>
+    <div class="flex justify-between border-b border-[#1a1a1a] py-2"><span class="text-[#555]">Expires</span><span class="text-white">${s.expires_at?new Date(s.expires_at).toLocaleString():'—'}</span></div>
+    <div class="flex justify-between py-2"><span class="text-[#555]">Est. Total Payout</span><span class="text-grn font-medium">${money(payout)}</span></div>
+  </div>
+</div>
+${active?`<div class="text-[.72rem] text-[#777] bg-[rgba(245,197,66,.06)] border border-[rgba(245,197,66,.12)] rounded-[10px] p-3 mb-3"><i class="fa-solid fa-circle-info text-ylw mr-1"></i> Stopping your rig early means your funds will be held until admin settlement. Completed rigs are settled automatically.</div>
+<button type="button" id="stopRigBtn" class="w-full py-3 rounded-[12px] text-[.9rem] font-medium text-red2 bg-[rgba(255,69,96,.08)] border border-[rgba(255,69,96,.2)]">Stop Mining Rig</button>`:''}
+`;
+    if(active){
+      root.querySelector('#stopRigBtn').onclick=async()=>{
+        if(!confirm('Stop this mining subscription?')) return;
+        try{
+          const x=await post('/mining/stop/'+id,{});
+          toast(x.message||'mining rig stopped successfully',true);
+          setTimeout(()=>location.href='/user/mining.html',500);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
     }
-    </div><div class="text-white font-bold mt-1">${
-      x[1]
-    }
-    </div></div>`).join('')}</div><div class="mt-4 text-[.72rem] text-[#555]">Mining Progress ${progress.toFixed(0)}%</div><div class="h-[5px] bg-[#1a1a1a] rounded-full mt-1"><div style="width:${progress}%;height:100%;background:#4a6cf7"></div></div></div>`
   }
+
+
     async function dashboard(){
     const d=await get('/assets?asset_class=all'),root=document.getElementById('topAssetsContainer');
     if(!root)return;
@@ -2705,7 +2909,249 @@
       try{const x=await post('/trades/'+id+'/settle',body);toast(x.message||'Profit adjusted successfully.',true);adminTradeView();}catch(err){toast(err.response?.data?.message||err.message,false);}
     };
   }
-    async function routeAdmin(){
+    
+  async function adminMiningPlans(){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading mining plans...</div>';
+    let d; try{d=await get('/mining-plans');}catch(e){toast(e.message,false);return;}
+    const plans=d.plans||[];
+    const stats=d.stats||{};
+    const totalPlans=stats.totalPlans??plans.length;
+    const activePlans=stats.activePlans??plans.filter(p=>p.is_active!==false).length;
+    const activeSubs=stats.activeSubscribers??0;
+    const totalInvested=stats.totalInvested??0;
+    m.innerHTML=`<div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+      <div><h1 class="text-xl font-semibold text-content">Cloud Mining Plans</h1><p class="text-sm text-content-muted mt-1">Create and manage mining plans for users</p></div>
+      <div class="flex gap-2">
+        <a href="/admin/mining-subscriptions.html" class="px-4 py-2 rounded-lg border border-border text-sm">☰ Subscriptions</a>
+        <a href="/admin/mining-plans-create.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium">+ New Plan</a>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      ${[['Total Plans',totalPlans],['Active Plans',activePlans],['Active Subscribers',activeSubs],['Total Invested',money(totalInvested)]].map(([l,v])=>`
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+          <div class="text-xs uppercase text-content-muted tracking-wide">${l}</div>
+          <div class="text-xl font-semibold text-content mt-1">${v}</div>
+        </div>`).join('')}
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+      <div class="px-4 py-3 border-b border-slate-100 font-medium text-content">Mining Plans</div>
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs text-slate-500 uppercase bg-slate-50">
+          <th class="px-4 py-3">Plan</th><th>Hashrate</th><th>Daily ROI</th><th>Duration</th><th>Min / Max</th><th>Subscribers</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody>
+          ${plans.map(p=>`<tr class="border-t border-slate-100">
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:${(p.icon_color||'#4a6cf7')}22"><i class="fa-solid fa-microchip" style="color:${p.icon_color||'#4a6cf7'}"></i></div>
+                <span class="font-medium">${esc(p.name)}</span>
+              </div>
+            </td>
+            <td>${esc(p.hashrate||'—')}</td>
+            <td class="text-emerald-600 font-medium">${Number(p.daily_roi_percentage||0).toFixed(2)}%</td>
+            <td>${Number(p.duration_days||0)} days</td>
+            <td>${money(p.min_investment)} / ${p.max_investment?money(p.max_investment):'—'}</td>
+            <td>${Number(p.subscribers||p.subscriber_count||0)}</td>
+            <td><span class="text-xs px-2 py-0.5 rounded-full ${p.is_active!==false?'bg-emerald-50 text-emerald-600':'bg-slate-100 text-slate-500'}">${p.is_active!==false?'Active':'Inactive'}</span></td>
+            <td class="px-4 py-3 whitespace-nowrap">
+              <div class="flex items-center gap-2">
+                <a href="/admin/mining-plans-edit.html?id=${p._id}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-sm text-primary hover:bg-slate-50">
+                  <i class="fa-solid fa-pen text-xs"></i> Edit
+                </a>
+                <button type="button" data-del-plan="${p._id}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 text-sm text-red-500 hover:bg-red-50">
+                  <i class="fa-solid fa-trash text-xs"></i> Delete
+                </button>
+              </div>
+            </td>
+          </tr>`).join('')||'<tr><td colspan="8" class="py-10 text-center text-content-muted">No mining plans</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+    m.querySelectorAll('[data-del-plan]').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Delete this plan?')) return;
+        try{
+          const x=await del('/mining-plans/'+btn.dataset.delPlan);
+          toast(x.message||'mining plan deleted successfully',true);
+          adminMiningPlans();
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
+  }
+
+  async function adminMiningForm(edit){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    const id=edit?new URLSearchParams(location.search).get('id'):null;
+    let p={};
+    if(edit&&id){
+      try{p=(await get('/mining-plans/'+id)).plan||{};}catch(e){toast(e.message,false);}
+    }
+    m.innerHTML=`<div class="flex items-center justify-between mb-6">
+      <div><h1 class="text-xl font-semibold text-content">${edit?'Edit Mining Plan':'Create Mining Plan'}</h1>
+      <p class="text-sm text-content-muted mt-1">${edit?esc(p.name||''):'Add a new cloud mining plan for users'}</p></div>
+      <a href="/admin/mining-plans.html" class="px-4 py-2 rounded-lg border border-border text-sm">${edit?'Back to Plans':'Cancel'}</a>
+    </div>
+    <form id="minePlanForm" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6 max-w-4xl">
+      <div>
+        <h3 class="text-sm font-semibold text-content mb-3">Plan Details</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="block text-sm"><span class="font-medium">Plan Name *</span><input name="name" required value="${esc(p.name||'')}" placeholder="e.g. Starter Miner" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+          <label class="block text-sm"><span class="font-medium">Hashrate *</span><input name="hashrate" required value="${esc(p.hashrate||'')}" placeholder="1 TH/s" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+          <label class="block text-sm md:col-span-2"><span class="font-medium">Description</span><textarea name="description" rows="2" placeholder="Brief plan description shown to users..." class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">${esc(p.description||'')}</textarea></label>
+        </div>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-content mb-3">ROI & Duration</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <label class="block text-sm"><span class="font-medium">Daily ROI (%) *</span><input name="daily_roi_percentage" type="number" step="any" required value="${p.daily_roi_percentage??''}" placeholder="1.5" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+          <label class="block text-sm"><span class="font-medium">Duration (days) *</span><input name="duration_days" type="number" required value="${p.duration_days??30}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+          <label class="block text-sm"><span class="font-medium">Sort Order</span><input name="sort_order" type="number" value="${p.sort_order??0}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        </div>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-content mb-3">Investment Limits</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="block text-sm"><span class="font-medium">Minimum Investment ($) *</span><input name="min_investment" type="number" step="any" required value="${p.min_investment??''}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+          <label class="block text-sm"><span class="font-medium">Maximum Investment ($)</span><input name="max_investment" type="number" step="any" value="${p.max_investment||''}" placeholder="Leave blank for no limit" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        </div>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-content mb-3">Appearance</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+          <label class="block text-sm"><span class="font-medium">Icon Color</span>
+            <div class="mt-1 flex items-center gap-2"><input name="icon_color" type="color" value="${esc(p.icon_color||'#4a6cf7')}" class="h-10 w-14 rounded border border-slate-200"><span class="text-xs text-content-muted">Hex color for the plan icon</span></div>
+          </label>
+          <label class="inline-flex items-center gap-2 text-sm mt-4"><input type="checkbox" name="is_active" value="1" ${p.is_active!==false?'checked':''}> <span>Active — Plan is visible to users</span></label>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <a href="/admin/mining-plans.html" class="px-4 py-2 rounded-lg border border-border text-sm">Cancel</a>
+        <button type="submit" class="px-5 py-2 rounded-lg bg-primary text-white text-sm font-medium">${edit?'Save Changes':'Create Plan'}</button>
+      </div>
+    </form>`;
+    m.querySelector('#minePlanForm').onsubmit=async e=>{
+      e.preventDefault();
+      const fd=new FormData(e.currentTarget);
+      const body=Object.fromEntries(fd.entries());
+      body.is_active=fd.get('is_active')==='1';
+      body.max_investment=body.max_investment===''?0:body.max_investment;
+      try{
+        if(edit&&id){const x=await put('/mining-plans/'+id,body);toast(x.message||'mining plan updated successfully',true);}
+        else{const x=await post('/mining-plans',body);toast(x.message||'mining plan created successfully',true);}
+        setTimeout(()=>location.href='/admin/mining-plans.html',500);
+      }catch(err){toast(err.response?.data?.message||err.message,false);}
+    };
+  }
+
+  async function adminMiningSubs(){ return adminMiningSubscriptions(); }
+  async function adminMiningSubscriptions(){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading subscriptions...</div>';
+    let d; try{d=await get('/mining-subscriptions');}catch(e){toast(e.message,false);return;}
+    const subs=d.subscriptions||[];
+    const stats=d.stats||{};
+    function userLabel(u){
+      if(!u || typeof u!=='object') return {name:'Unknown user', email:''};
+      const name = u.name || u.full_name || [u.first_name,u.last_name].filter(Boolean).join(' ') || u.username || '';
+      const email = u.email || '';
+      return {name: name || email || 'Unknown user', email: name ? email : ''};
+    }
+    function planLabel(p){
+      if(!p || typeof p!=='object') return {name:'—', hashrate:''};
+      return {name: p.name || '—', hashrate: p.hashrate || ''};
+    }
+    function rows(list){
+      return list.map(s=>{
+        const u=userLabel(s.user_id);
+        const p=planLabel(s.mining_plan_id);
+        const invested=Number(s.invested_amount||0);
+        const accrued=Number(s.accumulated_profit||0);
+        const adj=Number(s.admin_profit_adjustment||0);
+        const payout=invested+accrued+adj;
+        const st=String(s.status||'active').toLowerCase();
+        const exp=s.expires_at?new Date(s.expires_at).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}):'—';
+        return `<tr class="border-t border-slate-100" data-status="${st}">
+          <td class="px-3 py-3"><input type="checkbox"></td>
+          <td class="px-3 py-3">
+            <div class="font-medium text-content">${esc(u.name)}</div>
+            ${u.email?`<div class="text-xs text-content-muted">${esc(u.email)}</div>`:''}
+          </td>
+          <td class="px-3 py-3">
+            <div class="font-medium text-content">${esc(p.name)}</div>
+            ${p.hashrate?`<div class="text-xs text-content-muted">${esc(p.hashrate)}</div>`:''}
+          </td>
+          <td class="px-3 py-3">${money(invested)}</td>
+          <td class="px-3 py-3 text-emerald-600">${money(accrued)}</td>
+          <td class="px-3 py-3">${adj?('+'+money(adj)):('+$0.00')}</td>
+          <td class="px-3 py-3 font-medium">${money(payout)}</td>
+          <td class="px-3 py-3">${exp}</td>
+          <td class="px-3 py-3"><span class="text-xs px-2 py-0.5 rounded-full ${st==='active'?'bg-emerald-50 text-emerald-600':st==='settled'?'bg-slate-100 text-slate-600':st==='stopped'?'bg-red-50 text-red-500':'bg-amber-50 text-amber-600'}">${st.charAt(0).toUpperCase()+st.slice(1)}</span></td>
+          <td class="px-3 py-3">${st!=='settled'?`<button type="button" data-settle="${s._id}" data-payout="${payout}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-primary/30 text-primary text-sm hover:bg-primary/5">Settle</button>`:'—'}</td>
+        </tr>`;
+      }).join('')||'<tr><td colspan="10" class="py-10 text-center text-content-muted">No subscriptions</td></tr>';
+    }
+    m.innerHTML=`<div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+      <div><h1 class="text-xl font-semibold text-content">Mining Subscriptions</h1><p class="text-sm text-content-muted mt-1">Manage user cloud mining subscriptions</p></div>
+      <a href="/admin/mining-plans.html" class="px-4 py-2 rounded-lg border border-border text-sm">← Back to Plans</a>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      ${[['Active Subscriptions',stats.active??subs.filter(s=>s.status==='active').length],
+         ['Total Invested',money(stats.totalInvested??subs.reduce((a,s)=>a+Number(s.invested_amount||0),0))],
+         ['Total Profit',money(stats.totalProfit??subs.reduce((a,s)=>a+Number(s.accumulated_profit||0),0))],
+         ['Settled',stats.settled??subs.filter(s=>s.status==='settled').length]
+        ].map(([l,v])=>`<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4"><div class="text-xs uppercase text-content-muted">${l}</div><div class="text-xl font-semibold mt-1">${v}</div></div>`).join('')}
+    </div>
+    <div class="flex flex-wrap gap-2 mb-4 items-center">
+      <select id="subFilter" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+        <option value="all">All Status</option>
+        <option value="active">Active</option>
+        <option value="stopped">Stopped</option>
+        <option value="completed">Completed</option>
+        <option value="settled">Settled</option>
+      </select>
+      <input id="subSearch" type="search" placeholder="Search user or plan..." class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+      <button type="button" id="subFilterBtn" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Filter</button>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+      <div class="px-4 py-3 border-b border-slate-100 font-medium">Subscriptions</div>
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs text-slate-500 uppercase bg-slate-50">
+          <th class="px-3 py-3"></th><th>User</th><th>Plan</th><th>Invested</th><th>Accrued</th><th>Adj.</th><th>Payout</th><th>Expires</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="subRows">${rows(subs)}</tbody>
+      </table>
+    </div>`;
+    function apply(){
+      const st=m.querySelector('#subFilter').value;
+      const q=(m.querySelector('#subSearch').value||'').toLowerCase();
+      let list=subs.slice();
+      if(st!=='all') list=list.filter(s=>String(s.status)===st);
+      if(q) list=list.filter(s=>String(s.user_id?.name||'').toLowerCase().includes(q)||String(s.user_id?.email||'').toLowerCase().includes(q)||String(s.mining_plan_id?.name||'').toLowerCase().includes(q));
+      m.querySelector('#subRows').innerHTML=rows(list);
+      bindSettle();
+    }
+    function bindSettle(){
+      m.querySelectorAll('[data-settle]').forEach(btn=>{
+        btn.onclick=async()=>{
+          const pay=Number(btn.dataset.payout||0);
+          if(!confirm(`Settle #${btn.dataset.settle}? ${money(pay)} credited to user.`)) return;
+          try{
+            const x=await post('/mining-subscriptions/'+btn.dataset.settle+'/settle',{});
+            toast(x.message||`Subscription settled. ${money(pay)} credited to user.`,true);
+            adminMiningSubscriptions();
+          }catch(e){toast(e.response?.data?.message||e.message,false);}
+        };
+      });
+    }
+    bindSettle();
+    m.querySelector('#subFilterBtn').onclick=apply;
+    m.querySelector('#subFilter').onchange=apply;
+    m.querySelector('#subSearch').oninput=apply;
+  }
+
+
+async function routeAdmin(){
     try{
       if(page==='plans.html')return adminPlans();
       if(page==='new-plan.html')return adminPlanForm(false);
