@@ -3151,6 +3151,1209 @@ ${active?`<div class="text-[.72rem] text-[#777] bg-[rgba(245,197,66,.06)] border
   }
 
 
+
+  async function realEstatePage(){
+    const root=inner()||document.querySelector('#main-content')||document.querySelector('.inner-page')||document.querySelector('.main')||document.body; showDynamicMain();
+    if(!root){ toast('Page container not found',false); return; }
+    root.innerHTML='<div class="p-8 text-center text-[#555]">Loading properties...</div>';
+    let d; try{d=await get('/real-estate');}catch(e){toast(e.message,false);return;}
+    const properties=d.properties||[];
+    const balance=Number(d.balance||0);
+
+    function tagBadge(tag){
+      const t=String(tag||'').toUpperCase();
+      if(t==='HOT') return '<span class="absolute top-3 left-3 px-2 py-0.5 rounded text-[.65rem] font-bold bg-red-500 text-white">HOT</span>';
+      if(t==='TOP') return '<span class="absolute top-3 left-3 px-2 py-0.5 rounded text-[.65rem] font-bold bg-amber-400 text-black">TOP</span>';
+      if(t==='NEW') return '<span class="absolute top-3 left-3 px-2 py-0.5 rounded text-[.65rem] font-bold bg-emerald-500 text-white">NEW</span>';
+      return '';
+    }
+    function card(p){
+      const photos=1+(Array.isArray(p.room_images)?p.room_images.filter(Boolean).length:0);
+      const img=p.main_image?`<img src="${esc(p.main_image)}" class="w-full h-[180px] object-cover">`:`<div class="w-full h-[180px] bg-[#1a1a1a] flex items-center justify-center text-[#333]"><i class="fa-solid fa-building text-3xl"></i></div>`;
+      return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] overflow-hidden mb-4">
+        <div class="relative">${img}${tagBadge(p.tag)}
+          <span class="absolute bottom-3 right-3 px-2 py-0.5 rounded-lg bg-black/60 text-[.7rem] text-white"><i class="fa-solid fa-camera mr-1"></i>${photos} photos</span>
+        </div>
+        <div class="p-4">
+          <div class="font-semibold text-[.95rem] text-white">${esc(p.name)}</div>
+          <div class="text-[#555] text-[.75rem] mt-0.5"><i class="fa-solid fa-location-dot mr-1"></i>${esc(p.location)}</div>
+          <p class="text-[#666] text-[.78rem] mt-2 line-clamp-2">${esc(p.description||'')}</p>
+          <div class="flex flex-wrap gap-3 text-[.72rem] text-[#555] mt-2">
+            ${p.bedrooms?`<span><i class="fa-solid fa-bed mr-1"></i>${esc(p.bedrooms)}</span>`:''}
+            ${p.bathrooms?`<span><i class="fa-solid fa-bath mr-1"></i>${esc(p.bathrooms)}</span>`:''}
+            ${p.sqft?`<span><i class="fa-solid fa-ruler-combined mr-1"></i>${esc(p.sqft)}</span>`:''}
+          </div>
+          <div class="grid grid-cols-3 gap-2 mt-3 text-center">
+            <div><div class="font-sora font-semibold text-[.85rem]">${money(p.property_value)}</div><div class="text-[#444] text-[.62rem]">Value</div></div>
+            <div><div class="font-sora font-semibold text-[.85rem] text-grn">${Number(p.roi_percentage||0).toFixed(1)}% APY</div><div class="text-[#444] text-[.62rem]">Return</div></div>
+            <div><div class="font-sora font-semibold text-[.85rem]">${Number(p.available_tokens != null ? p.available_tokens : (Number(p.total_tokens||0)-Number(p.tokens_sold||0))).toLocaleString()}</div><div class="text-[#444] text-[.62rem]">Available</div></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2 mt-3">
+            <button type="button" data-rooms="${p._id}" class="py-2.5 rounded-[10px] border border-[#2a2a2a] bg-[#1a1a1a] text-[#aaa] text-[.8rem]"><i class="fa-solid fa-images mr-1"></i> View Rooms</button>
+            <button type="button" data-invest="${p._id}" class="py-2.5 rounded-[10px] bg-blue2 text-white text-[.8rem] font-medium"><i class="fa-solid fa-coins mr-1"></i> Invest Now</button>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    root.innerHTML=`
+<div class="mb-2">
+  <div class="text-white font-medium text-[1.05rem]">Real Estate</div>
+  <div class="text-[#555] text-[.78rem]">Invest in tokenized real estate globally</div>
+</div>
+<div class="bg-[rgba(74,108,247,.08)] border border-[rgba(74,108,247,.2)] rounded-[10px] px-3 py-2.5 text-[.75rem] text-[#8aa0ff] mb-4">
+  <i class="fa-solid fa-circle-info mr-1"></i> Invest in tokenized real estate globally. Tap any property to view details. Each token represents fractional ownership with periodic returns.
+</div>
+<div class="flex justify-end mb-3"><a href="/user/my-real-estate.html" class="text-[.8rem] text-blue2">My Portfolio →</a></div>
+${properties.length?properties.map(card).join(''):'<div class="text-center py-16 text-[#555]">No properties available.</div>'}
+<div id="reModal" class="hidden fixed inset-0 z-[100000] flex items-end sm:items-center justify-center">
+  <div class="absolute inset-0 bg-black/75" data-close-modal></div>
+  <div class="relative bg-[#0d0d0d] border border-[#1e1e1e] rounded-t-[18px] sm:rounded-[18px] w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-4 z-10">
+    <div id="reModalBody"></div>
+  </div>
+</div>`;
+
+    const modal=root.querySelector('#reModal');
+    const body=root.querySelector('#reModalBody');
+    function openModal(html){ body.innerHTML=html; modal.classList.remove('hidden'); }
+    function closeModal(){ modal.classList.add('hidden'); body.innerHTML=''; }
+    modal.querySelector('[data-close-modal]').onclick=closeModal;
+
+    root.querySelectorAll('[data-rooms]').forEach(btn=>{
+      btn.onclick=()=>{
+        const p=properties.find(x=>String(x._id)===String(btn.dataset.rooms));
+        if(!p) return;
+        const imgs=[p.main_image,...(p.room_images||[])].filter(Boolean);
+        openModal(`<div class="flex justify-between items-center mb-3"><div class="font-medium text-white">${esc(p.name)} Rooms</div><button type="button" class="text-[#888]" data-x>×</button></div>
+          <div class="grid grid-cols-2 gap-2">${imgs.map(u=>`<img src="${esc(u)}" class="rounded-lg w-full h-28 object-cover">`).join('')||'<div class="text-[#555] col-span-2 text-center py-8">No photos</div>'}</div>`);
+        body.querySelector('[data-x]').onclick=closeModal;
+      };
+    });
+
+    root.querySelectorAll('[data-invest]').forEach(btn=>{
+      btn.onclick=()=>{
+        const p=properties.find(x=>String(x._id)===String(btn.dataset.invest));
+        if(!p) return;
+        openModal(`
+          <div class="flex justify-between items-center mb-3">
+            <div class="font-semibold text-white">Invest</div>
+            <button type="button" class="text-[#888] text-xl" data-x>×</button>
+          </div>
+          <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-[11px] p-4 mb-3">
+            <div class="font-semibold text-[.9rem]">${esc(p.name)}</div>
+            <div class="text-[#555] text-[.72rem] flex items-center gap-1 mb-3"><i class="fa-solid fa-location-dot"></i>${esc(p.location)}</div>
+            <div class="grid grid-cols-3 gap-2 text-center">
+              <div><div class="font-semibold text-[.82rem]">${money(p.property_value)}</div><div class="text-[#444] text-[.62rem]">Value</div></div>
+              <div><div class="font-semibold text-[.82rem] text-grn">${Number(p.roi_percentage||0)}% APY</div><div class="text-[#444] text-[.62rem]">Return</div></div>
+              <div><div class="font-semibold text-[.82rem]">${Number(p.duration_days||365)} days</div><div class="text-[#444] text-[.62rem]">Duration</div></div>
+            </div>
+          </div>
+          <div class="bg-[#111] border border-[#1e1e1e] rounded-[9px] p-3 flex justify-between mb-3">
+            <span class="text-[#666] text-[.78rem]">Available Balance</span>
+            <span class="font-semibold text-[.85rem]">${money(balance)}</span>
+          </div>
+          <div id="reErr" class="hidden bg-red-500/10 border border-red-500/30 text-red-400 text-[.78rem] rounded-[9px] px-3 py-2 mb-2"></div>
+          <label class="text-[#666] text-[.78rem] mb-1 block">Investment Amount (min ${money(p.min_investment)} — max ${p.max_investment?money(p.max_investment):'∞'})</label>
+          <input id="reAmount" type="number" step="0.01" min="${Number(p.min_investment||0)}" class="w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-[9px] px-4 py-3 text-[.88rem] text-white mb-2 outline-none" placeholder="Enter amount in USD">
+          <div class="flex gap-2 flex-wrap mb-2" id="rePresets"></div>
+          <div class="text-[.74rem] text-[#666] mb-3" id="reTokens">≈ 0 tokens</div>
+          <button type="button" id="reSubmit" class="w-full py-[13px] rounded-[9px] bg-[#4a6cf7] text-white font-semibold text-[.9rem]"><i class="fa-solid fa-coins"></i> Invest Now</button>
+        `);
+        body.querySelector('[data-x]').onclick=closeModal;
+        const presets=[500,1000,2500,5000].filter(x=>x>=Number(p.min_investment||0)&&(!p.max_investment||x<=Number(p.max_investment)));
+        body.querySelector('#rePresets').innerHTML=presets.map(x=>`<button type="button" data-preset="${x}" class="px-3 py-1.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-[7px] text-[.74rem] text-[#aaa]">$${x.toLocaleString()}</button>`).join('');
+        const amt=body.querySelector('#reAmount');
+        const tok=body.querySelector('#reTokens');
+        const tp=Number(p.token_price||1)||1;
+        const upd=()=>{ const a=Number(amt.value||0); tok.textContent=`≈ ${Math.floor(a/tp).toLocaleString()} tokens at ${money(tp)}/token`; };
+        amt.oninput=upd;
+        body.querySelectorAll('[data-preset]').forEach(b=>{ b.onclick=()=>{ amt.value=b.dataset.preset; upd(); }; });
+        body.querySelector('#reSubmit').onclick=async()=>{
+          const amount=Number(amt.value||0);
+          const err=body.querySelector('#reErr');
+          err.classList.add('hidden');
+          try{
+            const x=await post('/real-estate/invest',{ property_id:p._id, amount });
+            toast(x.message||`Investment successful! You now own ${x.tokens||Math.floor(amount/tp)} tokens in ${p.name}.`,true);
+            closeModal();
+            setTimeout(()=>location.href='/user/my-real-estate.html',600);
+          }catch(e){
+            err.textContent=e.response?.data?.message||e.message;
+            err.classList.remove('hidden');
+          }
+        };
+      };
+    });
+  }
+
+  async function myRealEstate(){
+    const root=inner()||document.querySelector('#main-content')||document.querySelector('.inner-page')||document.querySelector('.main')||document.body; showDynamicMain();
+    if(!root){ toast('Page container not found',false); return; }
+    root.innerHTML='<div class="p-8 text-center text-[#555]">Loading portfolio...</div>';
+    let d; try{d=await get('/my-real-estate');}catch(e){toast(e.message,false);return;}
+    const invs=d.investments||d.subscriptions||[];
+    const active=invs.filter(x=>String(x.status).toLowerCase()==='active');
+    const totalInvested=Number(d.totalInvested??active.reduce((s,x)=>s+Number(x.amount||0),0));
+    const totalProfit=Number(d.totalProfit??invs.reduce((s,x)=>s+Number(x.profit_earned||0),0));
+
+    function progress(inv){
+      const start=new Date(inv.started_at).getTime();
+      const end=new Date(inv.expires_at).getTime();
+      if(!start||!end||end<=start) return {pct:0,left:0};
+      const pct=Math.min(100,Math.max(0,((Date.now()-start)/(end-start))*100));
+      const left=Math.max(0,Math.ceil((end-Date.now())/86400000));
+      return {pct,left};
+    }
+    function invCard(inv){
+      const p=inv.property_id||{};
+      const st=String(inv.status||'active').toLowerCase();
+      const pr=progress(inv);
+      return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] overflow-hidden mb-3">
+        <div class="flex items-center justify-between px-4 pt-4 pb-2">
+          <div>
+            <div class="font-semibold text-[.9rem]">${esc(p.name||'Property')}</div>
+            <div class="text-[#555] text-[.72rem]">${esc(p.location||'')}</div>
+          </div>
+          <span class="px-2 py-0.5 rounded-[6px] border text-[.7rem] font-medium ${st==='active'?'text-emerald-400 bg-emerald-500/10 border-emerald-500/20':'text-[#888] bg-[#1a1a1a] border-[#2a2a2a]'}">${st.charAt(0).toUpperCase()+st.slice(1)}</span>
+        </div>
+        <div class="px-4 py-4 space-y-3">
+          <div class="grid grid-cols-3 gap-3 text-center">
+            <div><div class="font-semibold text-[.85rem]">${money(inv.amount)}</div><div class="text-[#444] text-[.65rem] mt-0.5">Invested</div></div>
+            <div><div class="font-semibold text-[.85rem] text-grn">${money(inv.profit_earned)}</div><div class="text-[#444] text-[.65rem] mt-0.5">Profit</div></div>
+            <div><div class="font-semibold text-[.85rem]">${Number(inv.tokens||0)}</div><div class="text-[#444] text-[.65rem] mt-0.5">Tokens</div></div>
+          </div>
+          ${st==='active'?`<div>
+            <div class="flex items-center justify-between text-[.72rem] text-[#555] mb-1.5"><span>Progress</span><span>${pr.left} days left</span></div>
+            <div class="w-full h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden"><div class="h-full bg-[#4a6cf7] rounded-full" style="width:${pr.pct}%"></div></div>
+          </div>`:''}
+          <div class="flex items-center justify-between text-[.74rem]">
+            <div><span class="text-[#555]">Started:</span><span class="text-[#aaa] ml-1">${inv.started_at?new Date(inv.started_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'—'}</span></div>
+            <div><span class="text-[#555]">Expires:</span><span class="text-[#aaa] ml-1">${inv.expires_at?new Date(inv.expires_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'—'}</span></div>
+          </div>
+          ${st==='active'?`<button type="button" data-cancel="${inv._id}" class="block w-full text-center py-2.5 rounded-[9px] border border-[#2a2a2a] bg-[#1a1a1a] text-[#aaa] text-[.8rem] font-medium hover:border-red-500/40 hover:text-red-400">Cancel Investment</button>`:''}
+        </div>
+      </div>`;
+    }
+
+    root.innerHTML=`
+<div class="mb-3">
+  <div class="text-white font-medium text-[1.05rem]">My Real Estate</div>
+  <div class="text-[#555] text-[.78rem]">Your property investment portfolio</div>
+</div>
+<div class="grid grid-cols-3 gap-2 mb-4">
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[12px] p-3">
+    <div class="text-[#555] text-[.62rem] uppercase">Total Invested</div>
+    <div class="text-white font-sora font-bold mt-1">${money(totalInvested)}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[12px] p-3">
+    <div class="text-[#555] text-[.62rem] uppercase">Total Profit</div>
+    <div class="text-grn font-sora font-bold mt-1">${money(totalProfit)}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[12px] p-3">
+    <div class="text-[#555] text-[.62rem] uppercase">Active</div>
+    <div class="text-white font-sora font-bold mt-1">${active.length}</div>
+  </div>
+</div>
+<a href="/user/real-estate.html" class="inline-flex items-center gap-2 text-[.8rem] text-blue2 mb-4"><i class="fa-solid fa-building"></i> Browse Properties</a>
+${invs.length?invs.map(invCard).join(''):'<div class="text-center py-16 text-[#555]">No investments yet.</div>'}
+`;
+    root.querySelectorAll('[data-cancel]').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Cancel this investment? Your capital will be returned to your account.')) return;
+        try{
+          const x=await post('/real-estate/cancel/'+btn.dataset.cancel,{});
+          toast(x.message||'Investment cancelled. Capital returned.',true);
+          setTimeout(()=>myRealEstate(),400);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
+  }
+
+  async function adminRealEstate(){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading properties...</div>';
+    let d; try{d=await get('/real-estate-properties');}catch(e){toast(e.message,false);return;}
+    const props=d.properties||[];
+    const st=d.stats||{};
+    const total=st.total!=null?st.total:props.length;
+    const active=st.active!=null?st.active:props.filter(p=>p.is_active!==false&&String(p.status)!=='Inactive').length;
+    const inactive=st.inactive!=null?st.inactive:props.filter(p=>p.is_active===false||String(p.status)==='Inactive').length;
+    const investors=st.activeInvestors!=null?st.activeInvestors:0;
+
+    function tagB(t){
+      t=String(t||'').toUpperCase();
+      if(t==='HOT') return '<span class="absolute top-3 left-3 z-10 px-2 py-0.5 rounded text-[.65rem] font-bold tracking-wide bg-red-500 text-white shadow-sm">HOT</span>';
+      if(t==='TOP') return '<span class="absolute top-3 left-3 z-10 px-2 py-0.5 rounded text-[.65rem] font-bold tracking-wide bg-amber-400 text-black shadow-sm">TOP</span>';
+      if(t==='NEW') return '<span class="absolute top-3 left-3 z-10 px-2 py-0.5 rounded text-[.65rem] font-bold tracking-wide bg-emerald-500 text-white shadow-sm">NEW</span>';
+      return '';
+    }
+
+    function fmtValue(n){
+      const v=Number(n||0);
+      return v.toLocaleString(undefined,{maximumFractionDigits:0});
+    }
+
+    m.innerHTML=`
+<div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+  <div>
+    <h1 class="text-xl font-semibold text-content">Real Estate Properties</h1>
+    <p class="text-sm text-content-muted mt-1">Manage tokenized real estate listings</p>
+  </div>
+  <div class="flex items-center gap-2">
+    <a href="/admin/real-estate-investments.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white text-sm text-content hover:bg-slate-50">
+      <i class="fa-solid fa-chart-bar text-xs"></i> Investments
+    </a>
+    <a href="/admin/real-estate-create.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:opacity-90">
+      <i class="fa-solid fa-plus text-xs"></i> Add Property
+    </a>
+  </div>
+</div>
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-start justify-between">
+    <div>
+      <div class="text-[.65rem] uppercase tracking-wide text-content-muted font-medium">Total Properties</div>
+      <div class="text-2xl font-semibold text-content mt-1">${total}</div>
+    </div>
+    <div class="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400"><i class="fa-solid fa-building"></i></div>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-start justify-between">
+    <div>
+      <div class="text-[.65rem] uppercase tracking-wide text-content-muted font-medium">Active</div>
+      <div class="text-2xl font-semibold text-content mt-1">${active}</div>
+    </div>
+    <div class="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500"><i class="fa-solid fa-circle-check"></i></div>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-start justify-between">
+    <div>
+      <div class="text-[.65rem] uppercase tracking-wide text-content-muted font-medium">Inactive</div>
+      <div class="text-2xl font-semibold text-content mt-1">${inactive}</div>
+    </div>
+    <div class="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400"><i class="fa-solid fa-circle-xmark"></i></div>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-start justify-between">
+    <div>
+      <div class="text-[.65rem] uppercase tracking-wide text-content-muted font-medium">Active Investors</div>
+      <div class="text-2xl font-semibold text-content mt-1">${investors}</div>
+    </div>
+    <div class="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500"><i class="fa-solid fa-users"></i></div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+  ${props.map(p=>{
+    const avail=p.available_tokens!=null?p.available_tokens:(Number(p.total_tokens||0)-Number(p.tokens_sold||0));
+    const isActive=p.is_active!==false&&String(p.status)!=='Inactive';
+    const img=p.main_image
+      ? `<img src="${esc(p.main_image)}" alt="" class="w-full h-full object-cover">`
+      : `<div class="w-full h-full flex items-center justify-center bg-slate-50 text-slate-300"><i class="fa-solid fa-building text-5xl"></i></div>`;
+    return `<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+      <div class="relative h-44 bg-slate-100">
+        ${img}
+        ${tagB(p.tag)}
+        <span class="absolute top-3 right-3 z-10 px-2.5 py-0.5 rounded-full text-[.65rem] font-medium ${isActive?'bg-emerald-50 text-emerald-600 border border-emerald-100':'bg-slate-100 text-slate-500 border border-slate-200'}">${isActive?'Active':'Inactive'}</span>
+      </div>
+      <div class="p-4 flex-1 flex flex-col">
+        <div class="font-semibold text-[.95rem] text-content">${esc(p.name)}</div>
+        <div class="text-xs text-content-muted mt-1 flex items-center gap-1"><i class="fa-solid fa-location-dot text-[.7rem]"></i> ${esc(p.location||'—')}</div>
+        <div class="grid grid-cols-3 gap-2 mt-4 text-center">
+          <div>
+            <div class="font-semibold text-sm text-content">$${fmtValue(p.property_value)}</div>
+            <div class="text-[.65rem] text-content-muted mt-0.5">Value</div>
+          </div>
+          <div>
+            <div class="font-semibold text-sm text-emerald-600">${Number(p.roi_percentage||0).toFixed(1)}% APY</div>
+            <div class="text-[.65rem] text-content-muted mt-0.5">Return</div>
+          </div>
+          <div>
+            <div class="font-semibold text-sm text-content">${Number(avail).toLocaleString()}</div>
+            <div class="text-[.65rem] text-content-muted mt-0.5">Available</div>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mt-4 pt-1">
+          <a href="/admin/admin-real-estate-edit.html?id=${p._id}" class="text-center py-2 rounded-xl border border-slate-200 bg-white text-sm text-content hover:bg-slate-50">Edit</a>
+          <button type="button" data-del-prop="${p._id}" class="py-2 rounded-xl border border-red-100 bg-red-50 text-sm text-red-500 hover:bg-red-100">Delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('')||'<div class="col-span-full text-center py-16 text-content-muted">No properties yet. <a href="/admin/real-estate-create.html" class="text-primary">Add Property</a></div>'}
+</div>`;
+
+    m.querySelectorAll('[data-del-prop]').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Delete this property?')) return;
+        try{
+          const x=await del('/real-estate-properties/'+btn.dataset.delProp);
+          toast(x.message||'property deleted successfully',true);
+          adminRealEstate();
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
+  }
+
+async function adminRealEstateForm(edit){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    const id=edit?new URLSearchParams(location.search).get('id'):null;
+    let p={};
+    if(edit&&id){ try{p=(await get('/real-estate-properties/'+id)).property||{};}catch(e){toast(e.message,false);} }
+    const rooms=Array.isArray(p.room_images)?p.room_images:[];
+    m.innerHTML=`<div class="flex items-center justify-between mb-6">
+      <div><h1 class="text-xl font-semibold text-content">${edit?'Edit Property':'Add New Property'}</h1>
+      <p class="text-sm text-content-muted mt-1">${edit?esc(p.name||''):'Create a tokenized real estate listing'}</p></div>
+      <a href="/admin/admin-real-estate.html" class="px-4 py-2 rounded-lg border border-border text-sm">Back</a>
+    </div>
+    <form id="reForm" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5 max-w-5xl" enctype="multipart/form-data">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="block text-sm"><span class="font-medium">Property Name *</span><input name="name" required value="${esc(p.name||'')}" placeholder="e.g. Luxury Miami Condo" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Location *</span><input name="location" required value="${esc(p.location||'')}" placeholder="e.g. Miami, FL, USA" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm md:col-span-2"><span class="font-medium">Description</span><textarea name="description" rows="2" placeholder="Describe the property..." class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">${esc(p.description||'')}</textarea></label>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <span class="text-sm font-medium">Main Property Image ${edit?'':'*'}</span>
+          <div class="mt-1 flex items-start gap-3 flex-wrap">
+            <img id="mainPrev" src="${esc(p.main_image||'')}" alt="" class="h-24 w-40 rounded-lg object-cover border border-slate-200 ${p.main_image?'':'hidden'} bg-slate-50">
+            <input name="main_image" type="file" accept="image/*" class="block w-full text-sm" id="mainImg">
+          </div>
+          <p class="text-xs text-content-muted mt-1">Upload a cover image (JPG/PNG/WebP)</p>
+        </div>
+        <label class="block text-sm"><span class="font-medium">Tag</span>
+          <select name="tag" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">
+            <option value="">— None —</option>
+            ${['HOT','TOP','NEW'].map(t=>`<option ${String(p.tag||'').toUpperCase()===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </label>
+      </div>
+      <div>
+        <div class="text-sm font-medium mb-2">Room Gallery Images</div>
+        <div class="space-y-3">
+          ${[1,2,3,4,5,6].map(i=>`<div class="flex items-center gap-3 flex-wrap">
+            <span class="text-xs text-content-muted w-14">Room ${i}</span>
+            <img id="roomPrev${i}" src="${esc(rooms[i-1]||'')}" class="h-12 w-16 rounded object-cover border border-slate-200 ${rooms[i-1]?'':'hidden'} bg-slate-50" alt="">
+            <input name="room_${i}" type="file" accept="image/*" class="text-sm flex-1" data-room-prev="${i}">
+          </div>`).join('')}
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="block text-sm"><span class="font-medium">Property Value (display) *</span><input name="property_value" type="number" step="any" required value="${p.property_value??''}" placeholder="e.g. 1400000" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">ROI Percentage (APY %) *</span><input name="roi_percentage" type="number" step="any" required value="${p.roi_percentage??''}" placeholder="e.g. 12.5" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Total Tokens *</span><input name="total_tokens" type="number" required value="${p.total_tokens??''}" placeholder="e.g. 8000" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Token Price ($) *</span><input name="token_price" type="number" step="any" required value="${p.token_price??''}" placeholder="e.g. 100" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Minimum Investment ($) *</span><input name="min_investment" type="number" step="any" required value="${p.min_investment??''}" placeholder="e.g. 500" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Maximum Investment ($) *</span><input name="max_investment" type="number" step="any" required value="${p.max_investment??''}" placeholder="e.g. 50000" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">ROI Interval *</span>
+          <select name="roi_interval" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">
+            ${['Daily','Weekly','Monthly'].map(x=>`<option ${String(p.roi_interval||'Daily')===x?'selected':''}>${x}</option>`).join('')}
+          </select>
+        </label>
+        <label class="block text-sm"><span class="font-medium">ROI Type *</span>
+          <select name="roi_type" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">
+            <option>Percentage of invested amount</option>
+          </select>
+        </label>
+        <label class="block text-sm"><span class="font-medium">ROI Amount per Interval *</span><input name="roi_amount_per_interval" type="number" step="any" value="${p.roi_amount_per_interval??''}" placeholder="e.g. 1.5" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="block text-sm"><span class="font-medium">Duration (days) *</span><input name="duration_days" type="number" required value="${p.duration_days??365}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+      </div>
+      <div>
+        <div class="text-sm font-medium mb-2">Property Features</div>
+        <div class="grid grid-cols-3 gap-3">
+          <input name="bedrooms" value="${esc(p.bedrooms||'')}" placeholder="3 beds" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+          <input name="bathrooms" value="${esc(p.bathrooms||'')}" placeholder="2 baths" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+          <input name="sqft" value="${esc(p.sqft||'')}" placeholder="1850 sqft" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+        </div>
+      </div>
+      <label class="block text-sm max-w-xs"><span class="font-medium">Status *</span>
+        <select name="status" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">
+          <option ${p.status!=='Inactive'?'selected':''}>Active</option>
+          <option ${p.status==='Inactive'?'selected':''}>Inactive</option>
+        </select>
+      </label>
+      <div class="flex justify-end gap-2 pt-2">
+        <a href="/admin/admin-real-estate.html" class="px-4 py-2 rounded-lg border border-border text-sm">Cancel</a>
+        <button type="submit" class="px-5 py-2 rounded-lg bg-primary text-white text-sm font-medium">${edit?'Update Property':'Create Property'}</button>
+      </div>
+    </form>`;
+
+    function bindPreview(input, img){
+      if(!input||!img) return;
+      input.addEventListener('change',()=>{
+        const f=input.files&&input.files[0];
+        if(!f) return;
+        img.src=URL.createObjectURL(f);
+        img.classList.remove('hidden');
+      });
+    }
+    bindPreview(m.querySelector('#mainImg'), m.querySelector('#mainPrev'));
+    for(let i=1;i<=6;i++){
+      const inp=m.querySelector(`input[data-room-prev="${i}"]`);
+      const img=m.querySelector(`#roomPrev${i}`);
+      bindPreview(inp, img);
+    }
+
+    m.querySelector('#reForm').onsubmit=async e=>{
+      e.preventDefault();
+      const fd=new FormData(e.currentTarget);
+      try{
+        const cfg={ headers:{ 'Content-Type':'multipart/form-data' } };
+        if(edit&&id) await window.api.put('/admin/dashboard/feature/real-estate-properties/'+id, fd, cfg);
+        else await window.api.post('/admin/dashboard/feature/real-estate-properties', fd, cfg);
+        toast(edit?'property updated successfully':'property created successfully',true);
+        setTimeout(()=>location.href='/admin/admin-real-estate.html',500);
+      }catch(err){ toast(err.response?.data?.message||err.message,false); }
+    };
+  }
+
+async function adminRealEstateInvestments(){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading investments...</div>';
+    let d; try{d=await get('/real-estate-investments');}catch(e){toast(e.message,false);return;}
+    const invs=d.investments||[];
+    const st=d.stats||{};
+    const props=d.properties||[];
+    function rows(list){
+      return list.map((inv,idx)=>{
+        const u=inv.user_id||{};
+        const p=inv.property_id||{};
+        const status=String(inv.status||'active');
+        return `<tr class="border-t border-slate-100">
+          <td class="px-3 py-3 text-content-muted">${list.length-idx}</td>
+          <td><div class="font-medium">${esc(u.name||u.username||'—')}</div><div class="text-xs text-content-muted">${esc(u.email||'')}</div></td>
+          <td><div class="font-medium">${esc(p.name||'—')}</div><div class="text-xs text-content-muted">${esc(p.location||'')}</div></td>
+          <td>${money(inv.amount)}</td>
+          <td>${Number(inv.tokens||0)}</td>
+          <td class="text-emerald-600">${money(inv.profit_earned)}</td>
+          <td><span class="text-xs px-2 py-0.5 rounded-full ${status==='active'?'bg-emerald-50 text-emerald-600':'bg-slate-100 text-slate-500'}">${status.charAt(0).toUpperCase()+status.slice(1)}</span></td>
+          <td>${inv.expires_at?new Date(inv.expires_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'—'}</td>
+          <td>${inv.started_at?new Date(inv.started_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'—'}</td>
+        </tr>`;
+      }).join('')||'<tr><td colspan="9" class="py-10 text-center text-content-muted">No investments</td></tr>';
+    }
+    m.innerHTML=`<div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+      <div><h1 class="text-xl font-semibold text-content">Real Estate Investments</h1><p class="text-sm text-content-muted mt-1">All user investments across properties</p></div>
+      <a href="/admin/admin-real-estate.html" class="px-4 py-2 rounded-lg border border-border text-sm">← Properties</a>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      ${[['Total Investments',st.total??invs.length],['Active',st.active??invs.filter(x=>x.status==='active').length],['Expired',st.expired??invs.filter(x=>x.status==='expired').length],['Total Profit Paid',money(st.totalProfit??invs.reduce((s,x)=>s+Number(x.profit_earned||0),0))]].map(([l,v])=>`
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4"><div class="text-xs uppercase text-content-muted">${l}</div><div class="text-xl font-semibold mt-1">${v}</div></div>`).join('')}
+    </div>
+    <div class="flex flex-wrap gap-2 mb-4 items-end">
+      <label class="text-sm"><span class="text-content-muted text-xs">Property</span>
+        <select id="fProp" class="block mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm">
+          <option value="">All Properties</option>
+          ${props.map(p=>`<option value="${p._id}">${esc(p.name)}</option>`).join('')}
+        </select>
+      </label>
+      <label class="text-sm"><span class="text-content-muted text-xs">Status</span>
+        <select id="fStatus" class="block mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm">
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="expired">Expired</option>
+          <option value="completed">Completed</option>
+        </select>
+      </label>
+      <button type="button" id="fBtn" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">Filter</button>
+      <button type="button" id="fReset" class="px-4 py-2 rounded-lg border border-border text-sm">Reset</button>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs text-slate-500 uppercase bg-slate-50">
+          <th class="px-3 py-3">#</th><th>User</th><th>Property</th><th>Amount</th><th>Tokens</th><th>Profit Earned</th><th>Status</th><th>Expires</th><th>Date</th>
+        </tr></thead>
+        <tbody id="invRows">${rows(invs)}</tbody>
+      </table>
+    </div>`;
+    function apply(){
+      const pid=m.querySelector('#fProp').value;
+      const stv=m.querySelector('#fStatus').value;
+      let list=invs.slice();
+      if(pid) list=list.filter(x=>String(x.property_id?._id||x.property_id)===pid);
+      if(stv) list=list.filter(x=>String(x.status)===stv);
+      m.querySelector('#invRows').innerHTML=rows(list);
+    }
+    m.querySelector('#fBtn').onclick=apply;
+    m.querySelector('#fReset').onclick=()=>{ m.querySelector('#fProp').value=''; m.querySelector('#fStatus').value=''; apply(); };
+  }
+
+
+
+  async function myLoansPage(){
+    const root=inner()||document.querySelector('#main-content')||document.body; showDynamicMain();
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-[#555]">Loading loans...</div>';
+    let d; try{d=await get('/my-loans');}catch(e){toast(e.message,false);return;}
+    const loans=d.loans||[];
+    const st=d.stats||{};
+    function statusBadge(s){
+      s=String(s||'').toLowerCase();
+      const map={pending:'bg-amber-500/15 text-amber-400 border-amber-500/20',active:'bg-blue-500/15 text-blue-400 border-blue-500/20',repaying:'bg-blue-500/15 text-blue-400 border-blue-500/20',completed:'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',defaulted:'bg-red-500/15 text-red-400 border-red-500/20',rejected:'bg-slate-500/15 text-slate-400 border-slate-500/20'};
+      const cls=map[s]||'bg-[#1a1a1a] text-[#888] border-[#2a2a2a]';
+      return `<span class="px-2 py-0.5 rounded-md border text-[.7rem] font-medium ${cls}">${s.charAt(0).toUpperCase()+s.slice(1)}</span>`;
+    }
+    function repayPct(loan){
+      const total=Number(loan.total_repayable||0);
+      const paid=Number(loan.total_repaid||0);
+      if(!total) return 0;
+      return Math.min(100,(paid/total)*100);
+    }
+    root.innerHTML=`
+<div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+  <div>
+    <div class="text-white font-medium text-[1.05rem]">My Loans</div>
+    <div class="text-[#555] text-[.78rem]">Track and manage your loan applications</div>
+  </div>
+  <a href="/user/apply.html" class="px-4 py-2 rounded-lg bg-blue2 text-white text-[.8rem] font-medium">Apply for Loan</a>
+</div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
+  ${[['Active Loans',st.active??0],['Total Borrowed',money(st.totalBorrowed)],['Total Repaid',money(st.totalRepaid)],['Pending',st.pending??0]].map(([l,v])=>`
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[12px] p-3">
+    <div class="text-[#555] text-[.62rem] uppercase">${l}</div>
+    <div class="text-white font-sora font-bold mt-1 text-[1.05rem]">${v}</div>
+  </div>`).join('')}
+</div>
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-[.65rem] uppercase text-[#555] border-b border-[#1e1e1e]">
+        <th class="px-3 py-3">#</th><th>Plan</th><th>Amount</th><th>Duration</th><th>Repayment</th><th>Status</th><th>Date</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${loans.length?loans.map((loan,i)=>{
+          const plan=loan.plan_id||{};
+          const pct=repayPct(loan);
+          return `<tr class="border-t border-[#1a1a1a]">
+            <td class="px-3 py-3 text-[#555]">${i+1}</td>
+            <td class="text-white">${esc(plan.name||'—')}</td>
+            <td>${money(loan.approved_amount||loan.amount)}</td>
+            <td>${loan.duration_months||0} mo</td>
+            <td>
+              <div class="w-24 h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden"><div class="h-full bg-blue2 rounded-full" style="width:${pct}%"></div></div>
+              <div class="text-[.65rem] text-[#555] mt-0.5">${pct.toFixed(1)}%</div>
+            </td>
+            <td>${statusBadge(loan.status)}</td>
+            <td class="text-[#888] text-[.75rem]">${loan.applied_at?new Date(loan.applied_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'—'}</td>
+            <td><a href="/user/loans-details.html?id=${loan._id}" class="text-blue2 text-[.8rem]">View</a></td>
+          </tr>`;
+        }).join(''):'<tr><td colspan="8" class="py-12 text-center text-[#555]">No loans yet.</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>`;
+  }
+
+  async function applyLoanPage(){
+    const root=inner()||document.querySelector('#main-content')||document.body; showDynamicMain();
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-[#555]">Loading plans...</div>';
+    let d; try{d=await get('/loan-plans');}catch(e){toast(e.message,false);return;}
+    const plans=d.plans||[];
+    const balance=Number(d.balance||0);
+    let selected=plans[0]||null;
+    function planCard(p,on){
+      return `<button type="button" data-plan="${p._id}" class="text-left w-full bg-[#111] border ${on?'border-blue2':'border-[#1e1e1e]'} rounded-[12px] p-3 mb-2 hover:border-[#2a2a2a] transition">
+        <div class="flex justify-between items-start gap-2">
+          <div class="font-medium text-white text-[.88rem]">${esc(p.name)}</div>
+          <span class="text-[.7rem] px-2 py-0.5 rounded bg-[#1a1a1a] text-[#aaa]">${Number(p.interest_rate||0).toFixed(2)}% ${esc(p.interest_type||'Simple')}</span>
+        </div>
+        <p class="text-[#555] text-[.72rem] mt-1 line-clamp-2">${esc(p.description||'')}</p>
+        <div class="grid grid-cols-2 gap-2 mt-2 text-[.72rem] text-[#888]">
+          <div>Amount: <span class="text-[#ccc]">${money(p.min_amount)} – ${money(p.max_amount)}</span></div>
+          <div>Duration: <span class="text-[#ccc]">${p.min_duration} – ${p.max_duration} mo</span></div>
+          <div>Fee: <span class="text-[#ccc]">${Number(p.processing_fee||0).toFixed(2)}%</span></div>
+          <div>Min Balance: <span class="text-[#ccc]">${money(p.min_account_balance)}</span></div>
+        </div>
+        ${p.requires_collateral?`<div class="text-amber-400 text-[.68rem] mt-1">Requires ${Number(p.collateral_percentage||0)}% collateral</div>`:''}
+      </button>`;
+    }
+    function render(){
+      root.innerHTML=`
+<div class="mb-3 flex items-center gap-2">
+  <button type="button" onclick="history.back()" class="w-8 h-8 rounded-lg bg-[#111] border border-[#1e1e1e] text-[#888]"><i class="fa-solid fa-chevron-left"></i></button>
+  <div>
+    <div class="text-white font-medium">Apply for a Loan</div>
+    <div class="text-[#555] text-[.72rem]">Choose a plan, enter your details, and preview your repayment</div>
+  </div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  <div class="lg:col-span-2">
+    <div class="text-[.68rem] uppercase text-[#555] mb-2 tracking-wide">Available Plans</div>
+    <div id="planList">${plans.map(p=>planCard(p,selected&&String(selected._id)===String(p._id))).join('')||'<div class="text-[#555] py-8 text-center">No plans available</div>'}</div>
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-[12px] p-4 mt-3 space-y-3">
+      <div class="text-[.68rem] uppercase text-[#555]">Loan Details</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label class="block text-[.78rem] text-[#888]">Loan Amount ($)
+          <input id="loanAmt" type="number" step="0.01" class="mt-1 w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-lg px-3 py-2.5 text-white" placeholder="${selected?'Min: '+Number(selected.min_amount||0):''}">
+        </label>
+        <label class="block text-[.78rem] text-[#888]">Duration (months)
+          <input id="loanMo" type="number" class="mt-1 w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-lg px-3 py-2.5 text-white" placeholder="${selected?(selected.min_duration+' – '+selected.max_duration):''}">
+        </label>
+      </div>
+      <label class="block text-[.78rem] text-[#888]">Purpose of Loan
+        <textarea id="loanPurpose" rows="2" class="mt-1 w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-lg px-3 py-2.5 text-white" placeholder="Describe why you need this loan..."></textarea>
+      </label>
+      <div id="applyErr" class="hidden text-red-400 text-[.78rem]"></div>
+      <button type="button" id="submitLoan" class="px-4 py-2.5 rounded-lg bg-blue2 text-white text-[.85rem] font-medium disabled:opacity-40" ${selected?'':'disabled'}>Submit Application</button>
+    </div>
+  </div>
+  <div class="space-y-3">
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-[12px] p-4">
+      <div class="text-[.68rem] uppercase text-[#555] mb-2">Repayment Preview</div>
+      <div id="previewBox" class="text-[#555] text-[.8rem]">Enter amount and duration to see preview</div>
+    </div>
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-[12px] p-4 flex justify-between items-center">
+      <div class="text-[.68rem] uppercase text-[#555]">Your Account Balance</div>
+      <div class="text-white font-medium">${money(balance)}</div>
+    </div>
+  </div>
+</div>`;
+      root.querySelectorAll('[data-plan]').forEach(btn=>{
+        btn.onclick=()=>{ selected=plans.find(x=>String(x._id)===String(btn.dataset.plan)); render(); };
+      });
+      const amt=root.querySelector('#loanAmt');
+      const mo=root.querySelector('#loanMo');
+      async function updatePreview(){
+        if(!selected||!amt.value||!mo.value) return;
+        try{
+          const x=await post('/loans/preview',{ plan_id:selected._id, amount:Number(amt.value), duration_months:Number(mo.value) });
+          const p=x.preview||{};
+          root.querySelector('#previewBox').innerHTML=`
+            <div class="space-y-1.5 text-[.82rem]">
+              <div class="flex justify-between"><span class="text-[#555]">Principal</span><span class="text-white">${money(p.amount)}</span></div>
+              <div class="flex justify-between"><span class="text-[#555]">Processing Fee</span><span class="text-white">${money(p.fee)}</span></div>
+              <div class="flex justify-between"><span class="text-[#555]">Interest</span><span class="text-white">${money(p.interest)}</span></div>
+              <div class="flex justify-between font-medium pt-1 border-t border-[#1e1e1e]"><span class="text-[#888]">Total Repayable</span><span class="text-white">${money(p.total_repayable)}</span></div>
+            </div>`;
+        }catch(e){ root.querySelector('#previewBox').textContent=e.response?.data?.message||e.message; }
+      }
+      amt?.addEventListener('change',updatePreview);
+      mo?.addEventListener('change',updatePreview);
+      root.querySelector('#submitLoan')?.addEventListener('click',async()=>{
+        const err=root.querySelector('#applyErr');
+        err.classList.add('hidden');
+        try{
+          const x=await post('/loans/apply',{
+            plan_id:selected._id,
+            amount:Number(amt.value),
+            duration_months:Number(mo.value),
+            purpose:root.querySelector('#loanPurpose').value
+          });
+          toast(x.message||'Loan application submitted successfully.',true);
+          setTimeout(()=>location.href='/user/my-loans.html',600);
+        }catch(e){
+          err.textContent=e.response?.data?.message||e.message;
+          err.classList.remove('hidden');
+        }
+      });
+    }
+    render();
+  }
+
+  async function loanDetailsPage(){
+    showDynamicMain();
+    const main=document.getElementById('main-content')||document.querySelector('main');
+    let root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page');
+    if(!root && main){ main.innerHTML='<div class="inner-page p-4"></div>'; root=main.querySelector('.inner-page'); }
+    if(!root) root=main||document.body;
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading loan details...</div>';
+    if(main){ main.style.visibility='visible'; main.style.opacity='1'; }
+
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){
+      root.innerHTML='<div class="p-8 text-center text-[#555]">Missing loan id. <a class="text-blue2" href="/user/my-loans.html">Back to My Loans</a></div>';
+      return;
+    }
+    const flash=sessionStorage.getItem('loan_repay_flash');
+    if(flash){ sessionStorage.removeItem('loan_repay_flash'); setTimeout(()=>toast(flash,true),250); }
+
+    let d;
+    try{ d=await get('/loans/'+id); }
+    catch(e){
+      root.innerHTML=`<div class="p-8 text-center text-red-400">${esc(e.response?.data?.message||e.message||'Failed to load loan')}<div class="mt-3"><a class="text-blue2" href="/user/my-loans.html">Back to My Loans</a></div></div>`;
+      return;
+    }
+
+    const loan=d.loan||{};
+    const plan=loan.plan_id||{};
+    const pr=d.progress||{ paid:0, remaining:0, total:0, pct:0 };
+    const next=d.nextPayment;
+    const pct=Number(pr.pct||0).toFixed(1);
+    const schedule=Array.isArray(loan.schedule)?loan.schedule:[];
+    const balance=Number(d.balance||0);
+
+    // payment methods for "Pay via New Deposit"
+    let methods=[
+      { id:'btc', name:'Bitcoin', icon:'https://assets.coingecko.com/coins/images/1/standard/bitcoin.png?1696501400' },
+      { id:'usdt', name:'USDT', icon:'https://assets.coingecko.com/coins/images/325/standard/Tether.png?1696501661' },
+      { id:'eth', name:'Ethereum', icon:'https://assets.coingecko.com/coins/images/279/standard/ethereum.png?1696501628' },
+      { id:'sol', name:'Solana', icon:'https://assets.coingecko.com/coins/images/4128/standard/solana.png?1718769756' }
+    ];
+    try{
+      const w=await get('/wallets');
+      const list=w.wallets||w.methods||w.addresses||[];
+      if(Array.isArray(list)&&list.length){
+        methods=list.map((m,i)=>({
+          id:String(m._id||m.id||i),
+          name:m.name||m.coin||m.method||'Crypto',
+          icon:m.icon||m.logo||m.image||'',
+          address:m.address||m.wallet_address||''
+        }));
+      }
+    }catch(_){}
+
+    function statusBadge(s){
+      s=String(s||'').toLowerCase();
+      const map={pending:'text-amber-400',active:'text-blue-400',repaying:'text-blue-400',completed:'text-emerald-400',defaulted:'text-red-400',rejected:'text-[#888]'};
+      return `<span class="${map[s]||'text-[#888]'}">${s.charAt(0).toUpperCase()+s.slice(1)}</span>`;
+    }
+
+    root.innerHTML=`
+<div class="mb-4 flex items-center gap-2">
+  <a href="/user/my-loans.html" class="w-8 h-8 rounded-lg bg-[#111] border border-[#1e1e1e] text-[#888] flex items-center justify-center"><i class="fa-solid fa-chevron-left"></i></a>
+  <div>
+    <div class="text-white font-medium">Loan #${String(loan._id||'').slice(-4)}</div>
+    <div class="text-[#555] text-[.75rem]">${esc(plan.name||'Loan')} · ${statusBadge(loan.status)}</div>
+  </div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  <div class="lg:col-span-2 space-y-3">
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-4">
+      <div class="text-[.68rem] uppercase text-[#555] mb-3">Loan Details</div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[.82rem]">
+        <div><div class="text-[#555] text-[.68rem]">Requested Amount</div><div class="text-white font-medium">${money(loan.amount)}</div></div>
+        <div><div class="text-[#555] text-[.68rem]">Approved Amount</div><div class="text-white font-medium">${money(loan.approved_amount||0)}</div></div>
+        <div><div class="text-[#555] text-[.68rem]">Duration</div><div class="text-white font-medium">${loan.duration_months||0} months</div></div>
+        <div><div class="text-[#555] text-[.68rem]">Interest Rate</div><div class="text-white font-medium">${Number(loan.interest_rate||0).toFixed(2)}% ${esc(loan.interest_type||'')}</div></div>
+        <div><div class="text-[#555] text-[.68rem]">Processing Fee</div><div class="text-white font-medium">${money(loan.processing_fee)}</div></div>
+        <div><div class="text-[#555] text-[.68rem]">Total Repayable</div><div class="text-white font-medium">${money(loan.total_repayable)}</div></div>
+        <div><div class="text-[#555] text-[.68rem]">Disbursed</div><div class="text-white font-medium">${loan.disbursed_at?new Date(loan.disbursed_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'—'}</div></div>
+        <div><div class="text-[#555] text-[.68rem]">Maturity Date</div><div class="text-white font-medium">${loan.maturity_date?new Date(loan.maturity_date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'—'}</div></div>
+        <div><div class="text-[#555] text-[.68rem]">Applied</div><div class="text-white font-medium">${loan.applied_at?new Date(loan.applied_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'—'}</div></div>
+      </div>
+      <div class="mt-3 pt-3 border-t border-[#1e1e1e] text-[.78rem]"><span class="text-[#555]">Purpose</span><div class="text-[#aaa] mt-1">${esc(loan.purpose||'—')}</div></div>
+    </div>
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] overflow-hidden">
+      <div class="px-4 py-3 text-[.68rem] uppercase text-[#555] border-b border-[#1e1e1e]">Repayment Schedule</div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-[.78rem]">
+          <thead><tr class="text-left text-[#555] border-b border-[#1a1a1a]">
+            <th class="px-3 py-2">#</th><th>Due Date</th><th>Principal</th><th>Interest</th><th>Total</th><th>Late Fee</th><th>Status</th><th></th>
+          </tr></thead>
+          <tbody id="schedBody">
+            ${schedule.map((item,idx)=>{
+              const st=String(item.status||'upcoming');
+              const canPay=st==='upcoming'||st==='overdue';
+              const sid=item._id||idx;
+              const dueAmt=Number(item.total||0)+Number(item.late_fee||0);
+              return `<tr class="border-t border-[#1a1a1a]" data-row="${idx}">
+                <td class="px-3 py-2 text-[#555]">${idx+1}</td>
+                <td>${item.due_date?new Date(item.due_date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'—'}</td>
+                <td>${money(item.principal)}</td>
+                <td>${money(item.interest)}</td>
+                <td>${money(item.total)}</td>
+                <td>${item.late_fee?money(item.late_fee):'—'}</td>
+                <td class="${st==='paid'?'text-emerald-400':st==='overdue'?'text-red-400':'text-[#888]'}">${st.charAt(0).toUpperCase()+st.slice(1)}</td>
+                <td>${canPay?`<button type="button" class="open-pay px-2.5 py-1.5 rounded-lg bg-blue2 text-white text-[.72rem] font-medium whitespace-nowrap" data-idx="${idx}" data-sid="${sid}" data-amt="${dueAmt}" data-inst="${idx+1}">Pay ${money(dueAmt)}</button>`:''}</td>
+              </tr>
+              <tr class="pay-panel-row hidden" data-panel="${idx}">
+                <td colspan="8" class="px-3 py-4 bg-[#0d0d0d] border-t border-[#1a1a1a]">
+                  <div class="max-w-lg space-y-4">
+                    <div class="rounded-[10px] border border-[#1e1e1e] p-4">
+                      <h4 class="text-[.82rem] font-semibold text-white mb-2">Pay from Account Balance</h4>
+                      <p class="text-[.78rem] text-[#aaa] mb-3">Available balance: <span class="font-medium text-white">${money(balance)}</span></p>
+                      <button type="button" class="pay-balance w-full py-[11px] rounded-[10px] bg-[#4a6cf7] text-white text-[.82rem] font-medium" data-idx="${idx}" data-sid="${sid}" data-amt="${dueAmt}">
+                        Pay ${money(dueAmt)} from Balance
+                      </button>
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <div class="flex-1 border-t border-[#1e1e1e]"></div>
+                      <span class="text-[.68rem] text-[#555] uppercase tracking-wide">or</span>
+                      <div class="flex-1 border-t border-[#1e1e1e]"></div>
+                    </div>
+                    <div class="rounded-[10px] border border-[#1e1e1e] p-4">
+                      <h4 class="text-[.82rem] font-semibold text-white mb-2">Pay via New Deposit</h4>
+                      <p class="text-[.78rem] text-[#aaa] mb-3">Make a deposit using one of the methods below. Your loan payment will be applied once admin verifies the deposit.</p>
+                      <div class="grid grid-cols-2 gap-2 mb-3 method-grid" data-idx="${idx}">
+                        ${methods.map((m,mi)=>`
+                          <button type="button" data-method="${esc(m.name)}" data-mid="${esc(m.id)}" class="method-btn flex items-center gap-2 p-3 rounded-[10px] border border-[#1e1e1e] hover:border-[#2a2a2a] transition-all text-left">
+                            ${m.icon?`<img src="${esc(m.icon)}" alt="" class="w-8 h-8 rounded object-contain bg-[#161616] p-0.5">`:`<div class="w-8 h-8 rounded bg-[#161616]"></div>`}
+                            <span class="truncate text-white text-[.72rem] font-medium">${esc(m.name)}</span>
+                          </button>`).join('')}
+                      </div>
+                      <button type="button" class="pay-deposit w-full py-[11px] rounded-[10px] bg-[#4a6cf7] text-white text-[.82rem] font-medium opacity-50" disabled data-idx="${idx}" data-sid="${sid}" data-amt="${dueAmt}" data-inst="${idx+1}">
+                        Continue with Selected Method
+                      </button>
+                    </div>
+                  </div>
+                </td>
+              </tr>`;
+            }).join('')||'<tr><td colspan="8" class="py-8 text-center text-[#555]">No schedule yet (loan may still be pending approval)</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="space-y-3">
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+      <p class="text-[.68rem] font-medium text-[#444] uppercase tracking-wide mb-3">Repayment Progress</p>
+      <div class="flex items-center justify-center mb-4">
+        <div class="relative w-32 h-32">
+          <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#1a1a1a" stroke-width="3"></path>
+            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#4a6cf7" stroke-width="3" stroke-dasharray="${pct}, 100"></path>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center"><span class="font-sora font-bold text-white text-[1.1rem]">${pct}%</span></div>
+        </div>
+      </div>
+      <div class="space-y-2 text-[.82rem]">
+        <div class="flex justify-between"><span class="text-[#555]">Paid</span><span class="text-grn font-medium">${money(pr.paid)}</span></div>
+        <div class="flex justify-between"><span class="text-[#555]">Remaining</span><span class="text-white font-medium">${money(pr.remaining)}</span></div>
+        <div class="flex justify-between"><span class="text-[#555]">Total</span><span class="text-white font-medium">${money(pr.total)}</span></div>
+      </div>
+    </div>
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+      <p class="text-[.68rem] font-medium text-[#444] uppercase tracking-wide mb-2">Next Payment</p>
+      ${next?`<p class="font-sora font-bold text-white text-[1.2rem]">${money(next.total)}</p>
+        <p class="text-[#aaa] text-[.82rem]">Due ${next.due_date?new Date(next.due_date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'—'}</p>
+        ${String(next.status)==='overdue'?`<p class="text-red2 font-medium text-[.72rem] mt-1">Overdue</p>`:''}
+        <button type="button" class="open-pay mt-3 w-full py-2.5 rounded-lg bg-blue2 text-white text-[.82rem] font-medium" data-idx="${Math.max(0,schedule.findIndex(x=>String(x.status)==='upcoming'||String(x.status)==='overdue'))}" data-sid="${(next&&next._id)||''}" data-amt="${Number(next.total||0)+Number(next.late_fee||0)}" data-inst="${Math.max(1,schedule.findIndex(x=>String(x.status)==='upcoming'||String(x.status)==='overdue')+1)}">Pay ${money(Number(next.total||0)+Number(next.late_fee||0))}</button>`
+        :'<p class="text-[#555] text-[.8rem]">No upcoming payment</p>'}
+    </div>
+  </div>
+</div>`;
+
+    // Toggle pay panel (template style — not a custom modal)
+    const selectedMethods={};
+    root.querySelectorAll('.open-pay').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const idx=btn.dataset.idx;
+        root.querySelectorAll('.pay-panel-row').forEach(r=>{
+          if(r.dataset.panel===idx) r.classList.toggle('hidden');
+          else r.classList.add('hidden');
+        });
+        // scroll panel into view
+        const panel=root.querySelector(`.pay-panel-row[data-panel="${idx}"]`);
+        panel?.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      });
+    });
+
+    root.querySelectorAll('.method-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const grid=btn.closest('.method-grid');
+        const idx=grid.dataset.idx;
+        grid.querySelectorAll('.method-btn').forEach(b=>{
+          b.classList.remove('border-blue2','bg-[rgba(74,108,247,.1)]','ring-1','ring-blue2');
+          b.classList.add('border-[#1e1e1e]');
+        });
+        btn.classList.add('border-blue2','bg-[rgba(74,108,247,.1)]','ring-1','ring-blue2');
+        btn.classList.remove('border-[#1e1e1e]');
+        selectedMethods[idx]=btn.dataset.method;
+        const cont=root.querySelector(`.pay-deposit[data-idx="${idx}"]`);
+        if(cont){ cont.disabled=false; cont.classList.remove('opacity-50'); }
+      });
+    });
+
+    root.querySelectorAll('.pay-balance').forEach(btn=>{
+      btn.addEventListener('click',async()=>{
+        const amt=Number(btn.dataset.amt||0);
+        if(!confirm(`Deduct ${money(amt)} from your account balance?`)) return;
+        try{
+          const x=await post('/loans/'+id+'/repay',{
+            schedule_id: btn.dataset.sid,
+            amount: amt
+          });
+          sessionStorage.setItem('loan_repay_flash', x.message||`Payment of ${money(amt)} recorded successfully.`);
+          toast(x.message||'Payment recorded successfully.',true);
+          setTimeout(()=>loanDetailsPage(),500);
+        }catch(e){ toast(e.response?.data?.message||e.message,false); }
+      });
+    });
+
+    root.querySelectorAll('.pay-deposit').forEach(btn=>{
+      btn.addEventListener('click',async()=>{
+        const idx=btn.dataset.idx;
+        const method=selectedMethods[idx];
+        if(!method){ toast('Select a payment method',false); return; }
+        const amt=Number(btn.dataset.amt||0);
+        btn.disabled=true;
+        const prev=btn.textContent;
+        btn.textContent='Redirecting...';
+        try{
+          // Same as normal deposit: store draft → go to payment.html for address + proof
+          const x=await post('/loans/'+id+'/repay-deposit',{
+            amount: amt,
+            method,
+            payment_method: method,
+            schedule_id: btn.dataset.sid,
+            installment: btn.dataset.inst
+          });
+          const dest=(x.redirect)||'/user/payment.html';
+          location.href=dest;
+        }catch(e){
+          btn.disabled=false;
+          btn.textContent=prev;
+          toast(e.response?.data?.message||e.message,false);
+        }
+      });
+    });
+  }
+
+async function adminLoanPlans(){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/loan-plans');}catch(e){toast(e.message,false);return;}
+    const plans=d.plans||[];
+    const loans=d.loans||[];
+    const st=d.stats||{};
+    let tab='plans';
+
+    function loanRows(list){
+      return list.map(loan=>{
+        const u=loan.user_id||{};
+        const p=loan.plan_id||{};
+        const status=String(loan.status||'');
+        const actions = status==='pending'
+          ? `<a href="/admin/loans-view.html?id=${loan._id}" class="text-primary text-sm mr-2">View</a>
+             <button type="button" data-approve="${loan._id}" class="text-emerald-600 text-sm">Approve</button>`
+          : `<a href="/admin/loans-view.html?id=${loan._id}" class="text-primary text-sm">View</a>`;
+        return `<tr class="border-t border-slate-100">
+          <td class="px-3 py-3"><div class="font-medium">${esc(u.name||u.username||'—')}</div><div class="text-xs text-content-muted">${esc(u.email||'')}</div></td>
+          <td>${esc(p.name||'—')}</td>
+          <td>${money(loan.approved_amount||loan.amount)}</td>
+          <td>${Number(loan.interest_rate||0).toFixed(2)}%</td>
+          <td>${loan.duration_months||0} mo</td>
+          <td>${money(loan.total_repayable)}</td>
+          <td>${money(loan.total_repaid)}</td>
+          <td><span class="text-xs px-2 py-0.5 rounded-full ${status==='pending'?'bg-amber-50 text-amber-600':status==='defaulted'?'bg-red-50 text-red-600':status==='completed'?'bg-emerald-50 text-emerald-600':'bg-blue-50 text-blue-600'}">${status.charAt(0).toUpperCase()+status.slice(1)}</span></td>
+          <td class="text-xs text-content-muted">${loan.applied_at?new Date(loan.applied_at).toLocaleDateString():'—'}</td>
+          <td>${actions}</td>
+        </tr>`;
+      }).join('')||'<tr><td colspan="10" class="py-10 text-center text-content-muted">No loans</td></tr>';
+    }
+
+    function render(){
+      const pendingN=loans.filter(x=>x.status==='pending').length;
+      m.innerHTML=`
+<div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+  <div><h1 class="text-xl font-semibold text-content">Manage Loans</h1><p class="text-sm text-content-muted mt-1">Manage loan plans and applications</p></div>
+</div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  ${[['Total Disbursed',money(st.totalDisbursed),'fa-sack-dollar'],['Outstanding',money(st.outstanding),'fa-scale-balanced'],['Total Collected',money(st.totalCollected),'fa-circle-check'],['Pending / Defaulted',st.pendingDefaulted||((st.pending||0)+' / '+(st.defaulted||0)),'fa-triangle-exclamation']].map(([l,v,ico])=>`
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex justify-between">
+    <div><div class="text-[.65rem] uppercase text-content-muted">${l}</div><div class="text-xl font-semibold mt-1">${v}</div></div>
+    <div class="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400"><i class="fa-solid ${ico}"></i></div>
+  </div>`).join('')}
+</div>
+<div class="flex gap-4 border-b border-slate-200 mb-4 text-sm overflow-x-auto">
+  ${[['plans','Loan Plans'],['pending','Pending '+(pendingN||'')],['active','Active'],['completed','Completed'],['defaulted','Defaulted'],['all','All']].map(([k,l])=>`
+  <button type="button" data-tab="${k}" class="pb-2 border-b-2 ${tab===k?'border-primary text-primary':'border-transparent text-content-muted'} whitespace-nowrap">${l}</button>`).join('')}
+</div>
+<div id="tabBody"></div>`;
+      const body=m.querySelector('#tabBody');
+      if(tab==='plans'){
+        body.innerHTML=`
+<div class="flex justify-between items-center mb-3">
+  <div class="font-medium text-content">Loan Plans</div>
+  <a href="/admin/loan-plans-create.html" class="px-4 py-2 rounded-lg bg-primary text-white text-sm">+ Create Plan</a>
+</div>
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead><tr class="text-left text-xs text-slate-500 uppercase bg-slate-50">
+      <th class="px-3 py-3">#</th><th>Name</th><th>Rate (APR)</th><th>Amount Range</th><th>Duration</th><th>Fee</th><th>Active Loans</th><th>Status</th><th>Actions</th>
+    </tr></thead>
+    <tbody>
+      ${plans.map((p,i)=>`<tr class="border-t border-slate-100">
+        <td class="px-3 py-3 text-content-muted">${i+1}</td>
+        <td class="font-medium">${esc(p.name)}</td>
+        <td>${Number(p.interest_rate||0).toFixed(2)}% (${esc(p.interest_type||'Simple')})</td>
+        <td>${money(p.min_amount)} – ${money(p.max_amount)}</td>
+        <td>${p.min_duration}–${p.max_duration} mo</td>
+        <td>${Number(p.processing_fee||0).toFixed(2)}%</td>
+        <td>${p.active_loans||0}</td>
+        <td><span class="text-xs ${p.is_active!==false?'text-emerald-600':'text-slate-400'}">${p.is_active!==false?'Active':'Inactive'}</span></td>
+        <td class="space-x-2">
+          <a href="/admin/loan-plans-edit.html?id=${p._id}" class="px-2 py-1 rounded border border-slate-200 text-xs">Edit</a>
+          <button type="button" data-toggle="${p._id}" class="px-2 py-1 rounded border border-amber-200 text-amber-600 text-xs">${p.is_active!==false?'Deactivate':'Activate'}</button>
+        </td>
+      </tr>`).join('')||'<tr><td colspan="9" class="py-10 text-center text-content-muted">No plans</td></tr>'}
+    </tbody>
+  </table>
+</div>`;
+      } else {
+        let list=loans;
+        if(tab==='pending') list=loans.filter(x=>x.status==='pending');
+        else if(tab==='active') list=loans.filter(x=>['active','repaying'].includes(x.status));
+        else if(tab==='completed') list=loans.filter(x=>x.status==='completed');
+        else if(tab==='defaulted') list=loans.filter(x=>x.status==='defaulted');
+        body.innerHTML=`<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="text-left text-xs text-slate-500 uppercase bg-slate-50">
+              <th class="px-3 py-3">User</th><th>Plan</th><th>Amount</th><th>Rate</th><th>Duration</th><th>Total Repayable</th><th>Repaid</th><th>Status</th><th>Date</th><th>Actions</th>
+            </tr></thead>
+            <tbody>${loanRows(list)}</tbody>
+          </table>
+        </div>`;
+      }
+      m.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ tab=b.dataset.tab; render(); });
+      m.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async()=>{
+        try{ const x=await post('/loan-plans/'+b.dataset.toggle+'/toggle',{}); toast(x.message,true); adminLoanPlans(); }
+        catch(e){toast(e.response?.data?.message||e.message,false);}
+      });
+      m.querySelectorAll('[data-approve]').forEach(b=>b.onclick=async()=>{
+        if(!confirm('Approve this loan and credit funds?')) return;
+        try{ const x=await post('/loans/'+b.dataset.approve+'/approve',{}); toast(x.message||'Loan approved, schedule generated, and funds credited.',true); adminLoanPlans(); }
+        catch(e){toast(e.response?.data?.message||e.message,false);}
+      });
+    }
+    render();
+  }
+
+  async function adminLoanPlanForm(edit){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    const id=edit?new URLSearchParams(location.search).get('id'):null;
+    let p={};
+    if(edit&&id){ try{p=(await get('/loan-plans/'+id)).plan||{};}catch(e){toast(e.message,false);} }
+    m.innerHTML=`
+<div class="mb-6"><h1 class="text-xl font-semibold text-content">${edit?'Edit Loan Plan: '+esc(p.name||''):'Create Loan Plan'}</h1></div>
+<form id="loanPlanForm" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5 max-w-3xl">
+  <label class="block text-sm"><span class="font-medium">Plan Name *</span>
+    <input name="name" required value="${esc(p.name||'')}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+  <label class="block text-sm"><span class="font-medium">Description</span>
+    <textarea name="description" rows="2" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">${esc(p.description||'')}</textarea></label>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <label class="block text-sm"><span class="font-medium">Minimum Amount ($) *</span><input name="min_amount" type="number" step="any" required value="${p.min_amount??100}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+    <label class="block text-sm"><span class="font-medium">Maximum Amount ($) *</span><input name="max_amount" type="number" step="any" required value="${p.max_amount??50000}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+    <label class="block text-sm"><span class="font-medium">Interest Rate (APR %) *</span><input name="interest_rate" type="number" step="any" required value="${p.interest_rate??5}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+    <label class="block text-sm"><span class="font-medium">Interest Type *</span>
+      <select name="interest_type" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">
+        <option ${p.interest_type!=='Compound'?'selected':''}>Simple</option>
+        <option ${p.interest_type==='Compound'?'selected':''}>Compound</option>
+      </select></label>
+    <label class="block text-sm"><span class="font-medium">Min Duration (months) *</span><input name="min_duration" type="number" required value="${p.min_duration??1}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+    <label class="block text-sm"><span class="font-medium">Max Duration (months) *</span><input name="max_duration" type="number" required value="${p.max_duration??60}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+  </div>
+  <div class="text-sm font-medium text-content">Eligibility & Limits</div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <label class="block text-sm"><span class="font-medium">Max Active Loans Per User *</span><input name="max_active_loans" type="number" required value="${p.max_active_loans??1}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+    <label class="block text-sm"><span class="font-medium">Min Account Balance ($) *</span><input name="min_account_balance" type="number" step="any" required value="${p.min_account_balance??0}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+  </div>
+  <div class="text-sm font-medium text-content">Fees & Penalties</div>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <label class="block text-sm"><span class="font-medium">Processing Fee (%) *</span><input name="processing_fee" type="number" step="any" required value="${p.processing_fee??0}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+    <label class="block text-sm"><span class="font-medium">Grace Period (days) *</span><input name="grace_period_days" type="number" required value="${p.grace_period_days??0}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+    <label class="block text-sm"><span class="font-medium">Late Fee (%) *</span><input name="late_fee" type="number" step="any" required value="${p.late_fee??0}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+  </div>
+  <div class="text-sm font-medium text-content">Collateral</div>
+  <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="requires_collateral" ${p.requires_collateral?'checked':''}> Requires Collateral</label>
+  <label class="block text-sm max-w-sm"><span class="font-medium">Collateral Percentage (%)</span><input name="collateral_percentage" type="number" step="any" value="${p.collateral_percentage??''}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="Percentage of loan amount frozen from user's balance"></label>
+  <div class="flex gap-2 pt-2">
+    <button type="submit" class="px-5 py-2 rounded-lg bg-primary text-white text-sm font-medium">${edit?'Update Plan':'Create Plan'}</button>
+    <a href="/admin/loan-plans.html" class="px-4 py-2 rounded-lg border border-border text-sm">Cancel</a>
+  </div>
+</form>`;
+    m.querySelector('#loanPlanForm').onsubmit=async e=>{
+      e.preventDefault();
+      const fd=new FormData(e.currentTarget);
+      const body=Object.fromEntries(fd.entries());
+      body.requires_collateral = !!fd.get('requires_collateral');
+      try{
+        if(edit&&id) await put('/loan-plans/'+id, body);
+        else await post('/loan-plans', body);
+        toast(edit?'loan plan updated successfully':'loan plan created successfully',true);
+        setTimeout(()=>location.href='/admin/loan-plans.html',500);
+      }catch(err){toast(err.response?.data?.message||err.message,false);}
+    };
+  }
+
+  async function adminLoanView(){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){ m.innerHTML='<div class="p-8 text-content-muted">Missing loan id</div>'; return; }
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/loans/'+id);}catch(e){toast(e.message,false);return;}
+    const loan=d.loan||{};
+    const u=loan.user_id||{};
+    const plan=loan.plan_id||{};
+    const elig=d.eligibility||[];
+    const pending=loan.status==='pending';
+    const active=['active','repaying'].includes(loan.status);
+    m.innerHTML=`
+<div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+  <div>
+    <h1 class="text-xl font-semibold text-content">Loan #${String(loan._id).slice(-4)} Details</h1>
+    <p class="text-sm text-content-muted mt-1">Loan application details and actions</p>
+  </div>
+  <a href="/admin/loan-plans.html" class="px-4 py-2 rounded-lg border border-border text-sm">← Back to Loans</a>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+    <div class="font-medium mb-3">Loan Summary</div>
+    <div class="space-y-2 text-sm">
+      ${[['Loan ID','#'+String(loan._id).slice(-4)],['Plan',plan.name||'—'],['Requested Amount',money(loan.amount)],['Interest Rate',Number(loan.interest_rate||0).toFixed(2)+'% APR ('+(loan.interest_type||'Simple')+')'],['Duration',(loan.duration_months||0)+' months'],['Processing Fee',money(loan.processing_fee)],['Total Repayable',money(loan.total_repayable)],['Total Repaid',money(loan.total_repaid)],['Status',loan.status],['Applied',loan.applied_at?new Date(loan.applied_at).toLocaleString():'—'],['Monthly income',money(loan.monthly_income)],['Purpose',loan.purpose||'—']].map(([k,v])=>`
+      <div class="flex justify-between border-b border-slate-50 py-2"><span class="text-content-muted">${k}</span><span class="font-medium text-right max-w-[60%]">${esc(String(v))}</span></div>`).join('')}
+    </div>
+  </div>
+  <div class="space-y-4">
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+      <div class="font-medium mb-3">Applicant</div>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-content-muted">Name</span><span>${esc(u.name||u.username||'—')}</span></div>
+        <div class="flex justify-between"><span class="text-content-muted">Email</span><span>${esc(u.email||'—')}</span></div>
+        <div class="flex justify-between"><span class="text-content-muted">Account Balance</span><span>${money(u.account_bal)}</span></div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+      <div class="font-medium mb-3">Eligibility Checks</div>
+      <div class="space-y-2 text-sm">
+        ${elig.map(e=>`<div class="flex justify-between gap-2">
+          <span class="${e.pass?'text-emerald-600':'text-red-500'} text-xs font-medium">${e.pass?'PASS':'FAIL'}</span>
+          <span class="flex-1 text-content-muted">${esc(e.label)}</span>
+          <span class="text-xs text-content-muted">${esc(e.detail||'')}</span>
+        </div>`).join('')||'<div class="text-content-muted text-sm">—</div>'}
+      </div>
+    </div>
+    ${pending?`<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
+      <div class="font-medium">Actions</div>
+      <label class="block text-sm"><span class="text-content-muted">Approved Amount</span>
+        <input id="apprAmt" type="number" step="0.01" value="${loan.amount}" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+      <button type="button" id="btnApprove" class="w-full py-2 rounded-lg bg-emerald-500 text-white text-sm font-medium">Approve & Disburse</button>
+      <hr class="border-slate-100">
+      <label class="block text-sm"><span class="text-content-muted">Rejection Reason *</span>
+        <textarea id="rejReason" rows="2" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></textarea></label>
+      <button type="button" id="btnReject" class="w-full py-2 rounded-lg bg-red-500 text-white text-sm font-medium">Reject Application</button>
+    </div>`:''}
+    ${active?`<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+      <div class="font-medium mb-3">Risk Actions</div>
+      <button type="button" id="btnDefault" class="w-full py-2 rounded-lg border border-red-200 text-red-600 text-sm">Mark as Defaulted</button>
+    </div>`:''}
+  </div>
+</div>`;
+    m.querySelector('#btnApprove')?.addEventListener('click',async()=>{
+      try{
+        const x=await post('/loans/'+id+'/approve',{ approved_amount:Number(m.querySelector('#apprAmt').value) });
+        toast(x.message||'Loan approved, schedule generated, and funds credited.',true);
+        setTimeout(()=>adminLoanView(),500);
+      }catch(e){toast(e.response?.data?.message||e.message,false);}
+    });
+    m.querySelector('#btnReject')?.addEventListener('click',async()=>{
+      const reason=m.querySelector('#rejReason').value.trim();
+      if(!reason){toast('Rejection reason is required',false);return;}
+      try{
+        const x=await post('/loans/'+id+'/reject',{ rejection_reason:reason });
+        toast(x.message||'Loan application rejected.',true);
+        setTimeout(()=>adminLoanView(),500);
+      }catch(e){toast(e.response?.data?.message||e.message,false);}
+    });
+    m.querySelector('#btnDefault')?.addEventListener('click',async()=>{
+      if(!confirm('Are you sure you want to mark this loan as defaulted?')) return;
+      try{
+        const x=await post('/loans/'+id+'/default',{});
+        toast(x.message||'Loan marked as defaulted.',true);
+        setTimeout(()=>adminLoanView(),500);
+      }catch(e){toast(e.response?.data?.message||e.message,false);}
+    });
+  }
+
+
 async function routeAdmin(){
     try{
       if(page==='plans.html')return adminPlans();
@@ -3187,6 +4390,18 @@ async function routeAdmin(){
       if(page==='mwalletsettings.html')return adminWalletSettings();
       if(page==='active-investments.html')return adminInvestmentList();
       if(page==='active-investments-view.html')return adminInvestmentView();
+      if(page==='admin-real-estate.html')return adminRealEstate();
+      if(page==='real-estate-create.html')return adminRealEstateForm(false);
+      if(page==='admin-real-estate-edit.html')return adminRealEstateForm(true);
+      if(page==='real-estate-investments.html')return adminRealEstateInvestments();
+      if(page==='admin-stock-shares.html')return adminStockShares();
+      if(page==='stock-shares-trades.html')return adminStockTrades();
+      if(page==='stock-shares-user.html')return adminStockUser();
+      if(page==='stock-shares-positions-edit.html')return adminStockPosEdit();
+      if(page==='loan-plans.html')return adminLoanPlans();
+      if(page==='loan-plans-create.html')return adminLoanPlanForm(false);
+      if(page==='loan-plans-edit.html')return adminLoanPlanForm(true);
+      if(page==='loans-view.html')return adminLoanView();
     }
     catch(e){
       toast(e.message,false)
@@ -3195,7 +4410,616 @@ async function routeAdmin(){
       showDynamicMain()
     }
   }
-    async function routeUser(){
+    
+  // ===================== STOCK SHARES =====================
+  async function stocksPage(){
+    showDynamicMain();
+    const root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page')||document.getElementById('main-content');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading stocks...</div>';
+    let d; try{d=await get('/stocks');}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-400">${esc(e.message)}</div>`;return;}
+    const stocks=d.stocks||[];
+    function card(s){
+      const ch=Number(s.price_change_pct_24h||s.change_24h||0);
+      const up=ch>=0;
+      const logo=s.logo_url?`<img src="${esc(s.logo_url)}" class="w-9 h-9 rounded-full object-cover" alt="">`:`<div class="w-9 h-9 rounded-full bg-[#1a1a1a] flex items-center justify-center text-[.7rem] font-bold text-white">${esc(String(s.symbol||'').slice(0,2))}</div>`;
+      return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-4 flex flex-col gap-3">
+        <div class="flex items-center gap-3">
+          ${logo}
+          <div class="min-w-0">
+            <div class="font-semibold text-white text-[.9rem] truncate">${esc(s.symbol)}</div>
+            <div class="text-[#555] text-[.72rem] truncate">${esc(s.name||'')}</div>
+          </div>
+        </div>
+        <div>
+          <div class="font-sora font-semibold text-white text-[1.05rem]">${money(s.price)}</div>
+          <div class="text-[.75rem] ${up?'text-grn':'text-red2'}">${up?'+':''}${ch.toFixed(2)}%</div>
+        </div>
+        <a href="/user/stock-detail.html?id=${s._id}" class="mt-auto block text-center py-2.5 rounded-lg bg-blue2 text-white text-[.82rem] font-medium">Trade</a>
+      </div>`;
+    }
+    root.innerHTML=`
+<div class="mb-4">
+  <h1 class="text-white font-medium text-[1.15rem]">Stock Shares</h1>
+  <p class="text-[#555] text-[.8rem]">Buy and sell fractional shares of real stocks</p>
+</div>
+<div class="flex gap-2 mb-4">
+  <a href="/user/stock-portfolio.html" class="px-3 py-1.5 rounded-lg bg-[#111] border border-[#1e1e1e] text-[#aaa] text-[.78rem]"><i class="fa-solid fa-chart-pie mr-1"></i> My Portfolio</a>
+  <a href="/user/stock-history.html" class="px-3 py-1.5 rounded-lg bg-[#111] border border-[#1e1e1e] text-[#aaa] text-[.78rem]"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Trade History</a>
+</div>
+<div class="mb-4">
+  <input id="stockSearch" type="search" placeholder="Search stocks by name or symbol..." class="w-full bg-[#111] border border-[#1e1e1e] rounded-xl px-4 py-3 text-white text-[.85rem] outline-none">
+</div>
+<div id="stockGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+  ${stocks.length?stocks.map(card).join(''):'<div class="col-span-full text-center text-[#555] py-12">No stocks available</div>'}
+</div>`;
+    const grid=root.querySelector('#stockGrid');
+    root.querySelector('#stockSearch').oninput=function(){
+      const q=this.value.trim().toLowerCase();
+      const filtered=stocks.filter(s=>!q||String(s.symbol).toLowerCase().includes(q)||String(s.name).toLowerCase().includes(q));
+      grid.innerHTML=filtered.length?filtered.map(card).join(''):'<div class="col-span-full text-center text-[#555] py-12">No matches</div>';
+    };
+  }
+
+  async function stockHistoryPage(){
+    showDynamicMain();
+    const root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page')||document.getElementById('main-content');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading history...</div>';
+    let filter='all';
+    async function load(){
+      let d; try{d=await get('/stocks/history?type='+filter);}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-400">${esc(e.message)}</div>`;return;}
+      const trades=d.trades||[];
+      root.innerHTML=`
+<div class="mb-4">
+  <h1 class="text-white font-medium text-[1.15rem]">Stock Trade History</h1>
+  <p class="text-[#555] text-[.8rem]">Your buy and sell activity</p>
+</div>
+<div class="flex gap-2 mb-4">
+  <a href="/user/stocks.html" class="px-3 py-1.5 rounded-lg bg-[#111] border border-[#1e1e1e] text-[#aaa] text-[.78rem]"><i class="fa-solid fa-chart-line mr-1"></i> Browse Stocks</a>
+  <a href="/user/stock-portfolio.html" class="px-3 py-1.5 rounded-lg bg-[#111] border border-[#1e1e1e] text-[#aaa] text-[.78rem]"><i class="fa-solid fa-chart-pie mr-1"></i> My Portfolio</a>
+</div>
+<div class="flex gap-2 mb-4" id="histFilters">
+  ${['all','Buys','Sells'].map(t=>{
+    const v=t==='all'?'all':t.slice(0,-1).toUpperCase();
+    const on=(filter==='all'&&t==='all')||filter===v;
+    return `<button data-f="${v}" class="px-3 py-1.5 rounded-lg text-[.78rem] font-medium ${on?'bg-blue2 text-white':'bg-[#111] border border-[#1e1e1e] text-[#aaa]'}">${t==='all'?'All':t}</button>`;
+  }).join('')}
+</div>
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-[#161616]"><tr>
+        <th class="px-5 py-3 text-left text-xs font-semibold text-[#555] uppercase">Stock</th>
+        <th class="px-5 py-3 text-center text-xs font-semibold text-[#555] uppercase">Type</th>
+        <th class="px-5 py-3 text-right text-xs font-semibold text-[#555] uppercase">Shares</th>
+        <th class="px-5 py-3 text-right text-xs font-semibold text-[#555] uppercase">Price/Share</th>
+        <th class="px-5 py-3 text-right text-xs font-semibold text-[#555] uppercase">Total</th>
+        <th class="px-5 py-3 text-right text-xs font-semibold text-[#555] uppercase">Fee</th>
+        <th class="px-5 py-3 text-right text-xs font-semibold text-[#555] uppercase">Date</th>
+      </tr></thead>
+      <tbody class="divide-y divide-[#1e1e1e]">
+        ${trades.length?trades.map(t=>{
+          const isBuy=String(t.type).toUpperCase()==='BUY';
+          const logo=t.logo_url?`<img src="${esc(t.logo_url)}" class="w-8 h-8 rounded-full object-cover">`:`<div class="w-8 h-8 rounded-full bg-[#1a1a1a] flex items-center justify-center text-[.65rem] font-bold">${esc(String(t.symbol||'').slice(0,2))}</div>`;
+          return `<tr class="hover:bg-[#161616]/50">
+            <td class="px-5 py-4"><div class="flex items-center gap-3">${logo}<div><p class="font-medium text-white">${esc(t.symbol)}</p><p class="text-xs text-[#555]">${esc(t.name||'')}</p></div></div></td>
+            <td class="px-5 py-4 text-center"><span class="px-2 py-0.5 text-xs font-medium rounded ${isBuy?'bg-grn/10 text-grn':'bg-red2/10 text-red2'}">${isBuy?'BUY':'SELL'}</span></td>
+            <td class="px-5 py-4 text-right text-white">${Number(t.shares||0).toFixed(4)}</td>
+            <td class="px-5 py-4 text-right text-[#aaa]">${money(t.price)}</td>
+            <td class="px-5 py-4 text-right text-white font-medium">${money(t.total)}</td>
+            <td class="px-5 py-4 text-right text-[#555]">${money(t.fee||0)}</td>
+            <td class="px-5 py-4 text-right text-[#555]">${t.createdAt?new Date(t.createdAt).toLocaleString(undefined,{month:'short',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—'}</td>
+          </tr>`;
+        }).join(''):'<tr><td colspan="7" class="py-12 text-center text-[#555]">No trades yet</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>`;
+      root.querySelectorAll('#histFilters [data-f]').forEach(b=>{
+        b.onclick=()=>{ filter=b.dataset.f; load(); };
+      });
+    }
+    await load();
+  }
+
+  async function stockPortfolioPage(){
+    showDynamicMain();
+    const root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page')||document.getElementById('main-content');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading portfolio...</div>';
+    let d; try{d=await get('/stocks/portfolio');}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-400">${esc(e.message)}</div>`;return;}
+    const st=d.stats||{};
+    const positions=d.positions||[];
+    const pl=Number(st.totalPl||0);
+    root.innerHTML=`
+<div class="mb-4">
+  <h1 class="text-white font-medium text-[1.15rem]">Stock Portfolio</h1>
+  <p class="text-[#555] text-[.8rem]">Your stock share holdings and performance</p>
+</div>
+<div class="flex gap-2 mb-4">
+  <a href="/user/stocks.html" class="px-3 py-1.5 rounded-lg bg-blue2 text-white text-[.78rem]"><i class="fa-solid fa-chart-line mr-1"></i> Browse Stocks</a>
+  <a href="/user/stock-history.html" class="px-3 py-1.5 rounded-lg bg-[#111] border border-[#1e1e1e] text-[#aaa] text-[.78rem]"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Trade History</a>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-4"><div class="text-[.68rem] text-[#555] uppercase mb-1">Total Invested</div><div class="font-sora font-semibold text-white text-lg">${money(st.totalInvested)}</div></div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-4"><div class="text-[.68rem] text-[#555] uppercase mb-1">Current Value</div><div class="font-sora font-semibold text-white text-lg">${money(st.currentValue)}</div></div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-4"><div class="text-[.68rem] text-[#555] uppercase mb-1">Total P/L</div><div class="font-sora font-semibold text-lg ${pl>=0?'text-grn':'text-red2'}">${pl>=0?'+':''}${money(pl)}</div></div>
+</div>
+${positions.length?`
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-[#161616]"><tr>
+        <th class="px-5 py-3 text-left text-xs font-semibold text-[#555] uppercase">Stock</th>
+        <th class="px-5 py-3 text-right text-xs font-semibold text-[#555] uppercase">Shares</th>
+        <th class="px-5 py-3 text-right text-xs font-semibold text-[#555] uppercase">Avg Cost</th>
+        <th class="px-5 py-3 text-right text-xs font-semibold text-[#555] uppercase">Current Price</th>
+        <th class="px-5 py-3 text-right text-xs font-semibold text-[#555] uppercase">Market Value</th>
+        <th class="px-5 py-3 text-right text-xs font-semibold text-[#555] uppercase">P/L</th>
+        <th class="px-5 py-3 text-right text-xs font-semibold text-[#555] uppercase">Action</th>
+      </tr></thead>
+      <tbody class="divide-y divide-[#1e1e1e]">
+        ${positions.map(p=>{
+          const ppl=Number(p.pl||0); const pp=Number(p.pl_pct||0);
+          const logo=p.logo_url?`<img src="${esc(p.logo_url)}" class="w-8 h-8 rounded-full object-cover">`:`<div class="w-8 h-8 rounded-full bg-[#1a1a1a] flex items-center justify-center text-[.65rem] font-bold">${esc(String(p.symbol||'').slice(0,2))}</div>`;
+          const id=p.asset_id||p.symbol;
+          return `<tr class="hover:bg-[#161616]/50">
+            <td class="px-5 py-4"><div class="flex items-center gap-3">${logo}<div><p class="font-medium text-white">${esc(p.symbol)}</p><p class="text-xs text-[#555]">${esc(p.name||'')}</p></div></div></td>
+            <td class="px-5 py-4 text-right text-white">${Number(p.shares||0).toFixed(4)}</td>
+            <td class="px-5 py-4 text-right text-[#aaa]">${money(p.avg_cost)}</td>
+            <td class="px-5 py-4 text-right text-white">${money(p.current_price)}</td>
+            <td class="px-5 py-4 text-right text-white font-medium">${money(p.market_value)}</td>
+            <td class="px-5 py-4 text-right"><span class="font-medium ${ppl>=0?'text-grn':'text-red2'}">${ppl>=0?'+':''}${money(ppl)}</span><span class="block text-xs ${ppl>=0?'text-grn':'text-red2'}">${ppl>=0?'+':''}${pp.toFixed(2)}%</span></td>
+            <td class="px-5 py-4 text-right"><a href="/user/stock-detail.html?id=${id}" class="text-xs font-medium text-blue2">Trade</a></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>
+</div>`:`
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-12 text-center">
+  <i class="fa-solid fa-chart-column text-4xl text-[#333] mb-3"></i>
+  <h3 class="text-white font-semibold mb-1">No positions yet</h3>
+  <p class="text-sm text-[#555] mb-4">Start building your portfolio by buying stocks.</p>
+  <a href="/user/stocks.html" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-blue2 text-white rounded-[10px]">Browse Stocks</a>
+</div>`}`;
+  }
+
+  async function stockDetailPage(){
+    showDynamicMain();
+    const root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page')||document.getElementById('main-content');
+    if(!root) return;
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){ root.innerHTML='<div class="p-8 text-center text-[#555]">Missing stock id. <a class="text-blue2" href="/user/stocks.html">Back</a></div>'; return; }
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/stocks/'+id);}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-400">${esc(e.message)}</div>`;return;}
+    const s=d.stock||{};
+    const pos=d.position;
+    const hasPos=!!(pos && Number(pos.shares||0)>0);
+    const availShares=hasPos?Number(pos.shares||0):0;
+    const bal=Number(d.balance||0);
+    const ch=Number(s.price_change_pct_24h||s.change_24h||0);
+    const up=ch>=0;
+    const price=Number(s.price||0);
+    const logo=s.logo_url?`<img src="${esc(s.logo_url)}" class="w-12 h-12 rounded-full object-cover">`:`<div class="w-12 h-12 rounded-full bg-[#1a1a1a] flex items-center justify-center font-bold">${esc(String(s.symbol||'').slice(0,2))}</div>`;
+    const stockLabel=esc(s.symbol||s.name||'this stock');
+    let side='buy';
+
+    const buyFormHtml=`
+      <div id="buyForm">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-[#aaa] mb-1.5">Amount (USD)</label>
+          <input type="number" id="tradeAmt" step="0.01" min="1" placeholder="Enter dollar amount..."
+            class="w-full bg-[#161616] border border-[#1e1e1e] rounded-[10px] px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-blue"/>
+        </div>
+        <div class="bg-[#161616] rounded-[10px] p-4 mb-4">
+          <div class="flex justify-between text-sm mb-2">
+            <span class="text-[#555]">You will receive</span>
+            <span class="text-white font-medium" id="recvShares">—</span>
+          </div>
+          <div class="flex justify-between text-sm mb-2">
+            <span class="text-[#555]">Price per share</span>
+            <span class="text-white">${money(price)}</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-[#555]">Available balance</span>
+            <span class="text-white">${money(bal)}</span>
+          </div>
+        </div>
+        <button type="button" id="tradeBtn" class="w-full bg-grn hover:bg-grn/90 text-black rounded-[10px] py-2.5 text-sm font-medium transition-colors">Buy ${esc(s.symbol||'')}</button>
+      </div>`;
+
+    const sellFormHtml=hasPos?`
+      <div id="sellForm">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-[#aaa] mb-1.5">Shares to sell</label>
+          <div class="relative">
+            <input type="number" id="sellShares" step="0.00000001" min="0.00000001" max="${availShares}" placeholder="Enter shares..."
+              class="w-full bg-[#161616] border border-[#1e1e1e] rounded-[10px] px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-blue pr-16"/>
+            <button type="button" id="sellMaxBtn" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium text-blue2 hover:text-brand-blue px-2 py-1">MAX</button>
+          </div>
+          <p class="text-xs text-[#555] mt-1">Available: ${availShares.toFixed(6)} shares</p>
+        </div>
+        <div class="bg-[#161616] rounded-[10px] p-4 mb-4">
+          <div class="flex justify-between text-sm mb-2">
+            <span class="text-[#555]">You will receive</span>
+            <span class="text-white font-medium" id="sellRecv">—</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-[#555]">Current price</span>
+            <span class="text-white">${money(price)}</span>
+          </div>
+        </div>
+        <button type="button" id="sellBtn" class="w-full bg-red2 hover:bg-red2/90 text-white rounded-[10px] py-2.5 text-sm font-medium transition-colors">Sell ${esc(s.symbol||'')}</button>
+      </div>`:`
+      <div id="sellEmpty" class="text-center py-8">
+        <p class="text-[#555] text-sm">You don't hold any shares of ${stockLabel}.</p>
+        <p class="text-[#555] text-xs mt-1">Buy some shares first to start selling.</p>
+      </div>`;
+
+    root.innerHTML=`
+<a href="/user/stocks.html" class="inline-flex items-center gap-1 text-[#888] text-[.82rem] mb-4"><i class="fa-solid fa-chevron-left"></i> Back to Stocks</a>
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-4 mb-4 flex items-center gap-4">
+  ${logo}
+  <div>
+    <div class="text-white font-medium text-lg">${esc(s.name||s.symbol)}</div>
+    <div class="text-[#555] text-[.8rem]">${esc(s.symbol)}</div>
+    <div class="font-sora font-semibold text-white text-[1.4rem] mt-1">${money(s.price)} <span class="text-[.85rem] font-medium ${up?'text-grn':'text-red2'}">${up?'+':''}${ch.toFixed(2)}%</span></div>
+    <div class="text-[#555] text-[.72rem] mt-1">High: ${money(s.high_24h)} · Low: ${money(s.low_24h)} · Vol: ${Number(s.volume_24h||0).toLocaleString()}</div>
+  </div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  <div class="lg:col-span-2 bg-[#111] border border-[#1e1e1e] rounded-[13px] p-6">
+    <div class="flex gap-1 mb-6 bg-[#161616] rounded-[10px] p-1">
+      <button id="tabBuy" type="button" class="flex-1 py-2 text-sm font-medium rounded-md transition-colors bg-grn text-white">Buy</button>
+      <button id="tabSell" type="button" class="flex-1 py-2 text-sm font-medium rounded-md transition-colors text-[#aaa] hover:text-white">Sell</button>
+    </div>
+    <div id="tradePanel">${buyFormHtml}</div>
+  </div>
+  <div class="space-y-4">
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-4">
+      <div class="text-[.72rem] text-[#555] uppercase mb-3">Your Position</div>
+      ${hasPos?`<div class="space-y-2 text-[.85rem]">
+        <div class="flex justify-between"><span class="text-[#555]">Shares</span><span class="text-white font-medium">${availShares.toFixed(6)}</span></div>
+        <div class="flex justify-between"><span class="text-[#555]">Avg cost</span><span class="text-white">${money(pos.avg_cost||pos.avgCost)}</span></div>
+        <div class="flex justify-between"><span class="text-[#555]">Invested</span><span class="text-white">${money(pos.total_invested||pos.invested)}</span></div>
+        <div class="flex justify-between"><span class="text-[#555]">Market value</span><span class="text-white">${money(availShares*price)}</span></div>
+        <div class="flex justify-between"><span class="text-[#555]">P/L</span><span class="${(availShares*price-Number(pos.total_invested||0))>=0?'text-grn':'text-red2'} font-medium">${money(availShares*price-Number(pos.total_invested||0))}</span></div>
+      </div>`:'<p class="text-[#555] text-[.8rem]">No open position</p>'}
+    </div>
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-4">
+      <div class="text-[.72rem] text-[#555] uppercase mb-3">Recent Trades</div>
+      ${(d.recentTrades||[]).length?(d.recentTrades||[]).map(t=>`<div class="flex justify-between text-[.78rem] py-1.5 border-b border-[#1a1a1a] last:border-0"><span class="${String(t.type)==='BUY'?'text-grn':'text-red2'} font-medium">${esc(t.type)}</span><span class="text-[#aaa]">${Number(t.shares).toFixed(4)} @ ${money(t.price)}</span><span class="text-[#555]">${t.createdAt?new Date(t.createdAt).toLocaleDateString(undefined,{month:'short',day:'numeric'}):''}</span></div>`).join(''):'<p class="text-[#555] text-[.8rem]">No recent trades</p>'}
+    </div>
+  </div>
+</div>`;
+
+    const panel=root.querySelector('#tradePanel');
+    function showBuy(){
+      side='buy';
+      root.querySelector('#tabBuy').className='flex-1 py-2 text-sm font-medium rounded-md transition-colors bg-grn text-white';
+      root.querySelector('#tabSell').className='flex-1 py-2 text-sm font-medium rounded-md transition-colors text-[#aaa] hover:text-white';
+      panel.innerHTML=buyFormHtml;
+      const amt=root.querySelector('#tradeAmt');
+      const recv=root.querySelector('#recvShares');
+      const btn=root.querySelector('#tradeBtn');
+      function updateRecv(){
+        const a=Number(amt.value||0);
+        if(a>0&&price>0) recv.textContent=(a/price).toFixed(6)+' shares';
+        else recv.textContent='—';
+      }
+      amt.oninput=updateRecv;
+      btn.onclick=async()=>{
+        const a=Number(amt.value||0);
+        if(a<=0){toast('Enter amount',false);return;}
+        try{
+          const x=await post('/stocks/'+s._id+'/buy',{amount:a});
+          toast(x.message||'Success',true);
+          setTimeout(()=>stockDetailPage(),600);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    }
+    function showSell(){
+      side='sell';
+      root.querySelector('#tabSell').className='flex-1 py-2 text-sm font-medium rounded-md transition-colors bg-red2 text-white';
+      root.querySelector('#tabBuy').className='flex-1 py-2 text-sm font-medium rounded-md transition-colors text-[#aaa] hover:text-white';
+      panel.innerHTML=sellFormHtml;
+      if(!hasPos) return;
+      const sh=root.querySelector('#sellShares');
+      const recv=root.querySelector('#sellRecv');
+      const maxBtn=root.querySelector('#sellMaxBtn');
+      const btn=root.querySelector('#sellBtn');
+      function updateRecv(){
+        const n=Number(sh.value||0);
+        if(n>0&&price>0) recv.textContent=money(n*price);
+        else recv.textContent='—';
+      }
+      sh.oninput=updateRecv;
+      maxBtn.onclick=()=>{ sh.value=String(availShares); updateRecv(); };
+      btn.onclick=async()=>{
+        const n=Number(sh.value||0);
+        if(n<=0){toast('Enter shares to sell',false);return;}
+        if(n>availShares+1e-12){toast('Not enough shares',false);return;}
+        try{
+          const x=await post('/stocks/'+s._id+'/sell',{shares:n});
+          toast(x.message||'Success',true);
+          setTimeout(()=>stockDetailPage(),600);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    }
+    root.querySelector('#tabBuy').onclick=showBuy;
+    root.querySelector('#tabSell').onclick=showSell;
+    showBuy();
+  }
+
+async function adminStockShares(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/stocks');}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-500">${esc(e.message)}</div>`;return;}
+    const st=d.stats||{};
+    const stocks=d.stocks||[];
+    root.innerHTML=`
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-xl font-semibold text-gray-900">Stock Shares</h1>
+    <p class="text-sm text-gray-500">Manage stock listings and user positions</p>
+  </div>
+  <a href="/admin/stock-shares-trades.html" class="px-3 py-2 text-sm border rounded-lg bg-white hover:bg-gray-50">All Trades</a>
+</div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white border rounded-xl p-4"><div class="text-xs text-gray-400 uppercase mb-1">Total Stocks</div><div class="text-xl font-semibold">${st.totalStocks||0}</div></div>
+  <div class="bg-white border rounded-xl p-4"><div class="text-xs text-gray-400 uppercase mb-1">Active Stocks</div><div class="text-xl font-semibold">${st.activeStocks||0}</div></div>
+  <div class="bg-white border rounded-xl p-4"><div class="text-xs text-gray-400 uppercase mb-1">Total Holders</div><div class="text-xl font-semibold">${st.totalHolders||0}</div></div>
+  <div class="bg-white border rounded-xl p-4"><div class="text-xs text-gray-400 uppercase mb-1">Total Invested</div><div class="text-xl font-semibold">${money(st.totalInvested)}</div></div>
+</div>
+<div class="bg-white border rounded-xl overflow-hidden">
+  <div class="px-5 py-3 border-b font-medium">All Stocks</div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-gray-500 text-xs uppercase"><tr>
+        <th class="px-4 py-3 text-left">Stock</th><th class="px-4 py-3 text-right">Price</th><th class="px-4 py-3 text-right">24h Change</th>
+        <th class="px-4 py-3 text-right">Holders</th><th class="px-4 py-3 text-right">Total Shares</th><th class="px-4 py-3 text-right">Total Invested</th><th class="px-4 py-3 text-right">Status</th>
+      </tr></thead>
+      <tbody class="divide-y">
+        ${stocks.map(s=>{
+          const ch=Number(s.price_change_pct_24h||s.change_24h||0);
+          const logo=s.logo_url?`<img src="${esc(s.logo_url)}" class="w-8 h-8 rounded-full">`:`<div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold">${esc(String(s.symbol||'').slice(0,2))}</div>`;
+          return `<tr>
+            <td class="px-4 py-3"><div class="flex items-center gap-2">${logo}<div><div class="font-medium">${esc(s.symbol)}</div><div class="text-xs text-gray-400">${esc(s.name||'')}</div></div></div></td>
+            <td class="px-4 py-3 text-right">${money(s.price)}</td>
+            <td class="px-4 py-3 text-right ${ch>=0?'text-green-600':'text-red-500'}">${ch>=0?'+':''}${ch.toFixed(2)}%</td>
+            <td class="px-4 py-3 text-right">${s.holders||0}</td>
+            <td class="px-4 py-3 text-right">${Number(s.total_shares||0).toFixed(4)}</td>
+            <td class="px-4 py-3 text-right">${money(s.total_invested)}</td>
+            <td class="px-4 py-3 text-right"><span class="px-2 py-0.5 rounded-full text-xs ${s.status==='Active'?'bg-green-50 text-green-700':'bg-gray-100 text-gray-500'}">${esc(s.status||'Active')}</span></td>
+          </tr>`;
+        }).join('')||'<tr><td colspan="7" class="py-10 text-center text-gray-400">No stocks</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>`;
+  }
+
+  async function adminStockTrades(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let filter='all';
+    async function load(){
+      let d; try{d=await get('/stocks/trades?type='+filter);}catch(e){root.innerHTML=`<div class="p-8 text-red-500">${esc(e.message)}</div>`;return;}
+      const trades=d.trades||[];
+      root.innerHTML=`
+<div class="flex items-center justify-between mb-6">
+  <div><h1 class="text-xl font-semibold">All Stock Trades</h1><p class="text-sm text-gray-500">View all user stock buy/sell activity</p></div>
+  <a href="/admin/admin-stock-shares.html" class="px-3 py-2 text-sm border rounded-lg bg-white">Back to Stocks</a>
+</div>
+<div class="flex gap-2 mb-4" id="tf">
+  ${[['all','All'],['BUY','Buys'],['SELL','Sells']].map(([v,l])=>`<button data-f="${v}" class="px-3 py-1.5 rounded-lg text-sm ${filter===v?'bg-blue-600 text-white':'bg-gray-100 text-gray-600'}">${l}</button>`).join('')}
+</div>
+<div class="bg-white border rounded-xl overflow-hidden">
+  <div class="px-5 py-3 border-b font-medium">Trade History</div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr>
+        <th class="px-4 py-3 text-left">User</th><th class="px-4 py-3 text-left">Stock</th><th class="px-4 py-3 text-center">Type</th>
+        <th class="px-4 py-3 text-right">Shares</th><th class="px-4 py-3 text-right">Price</th><th class="px-4 py-3 text-right">Total</th>
+        <th class="px-4 py-3 text-right">Fee</th><th class="px-4 py-3 text-right">Date</th><th class="px-4 py-3 text-right">Actions</th>
+      </tr></thead>
+      <tbody class="divide-y">
+        ${trades.map(t=>{
+          const isBuy=String(t.type)==='BUY';
+          const logo=t.logo_url?`<img src="${esc(t.logo_url)}" class="w-7 h-7 rounded-full">`:'';
+          return `<tr>
+            <td class="px-4 py-3"><div class="font-medium">${esc(t.user_name||'User')}</div><div class="text-xs text-gray-400">${esc(t.user_email||'')}</div></td>
+            <td class="px-4 py-3"><div class="flex items-center gap-2">${logo}<span class="font-medium">${esc(t.symbol)}</span></div></td>
+            <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 rounded text-xs font-medium ${isBuy?'bg-green-50 text-green-700':'bg-red-50 text-red-600'}">${esc(t.type)}</span></td>
+            <td class="px-4 py-3 text-right">${Number(t.shares||0).toFixed(4)}</td>
+            <td class="px-4 py-3 text-right">${money(t.price)}</td>
+            <td class="px-4 py-3 text-right">${money(t.total)}</td>
+            <td class="px-4 py-3 text-right">${money(t.fee||0)}</td>
+            <td class="px-4 py-3 text-right text-gray-500">${t.createdAt?new Date(t.createdAt).toLocaleString(undefined,{month:'short',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—'}</td>
+            <td class="px-4 py-3 text-right"><a href="/admin/stock-shares-user.html?userId=${t.user_id}" class="px-2 py-1 border rounded text-xs">Portfolio</a></td>
+          </tr>`;
+        }).join('')||'<tr><td colspan="9" class="py-10 text-center text-gray-400">No trades</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>`;
+      root.querySelectorAll('#tf [data-f]').forEach(b=>b.onclick=()=>{filter=b.dataset.f;load();});
+    }
+    await load();
+  }
+
+  async function adminStockUser(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    const userId=new URLSearchParams(location.search).get('userId')||new URLSearchParams(location.search).get('id');
+    if(!userId){root.innerHTML='<div class="p-8 text-center text-gray-400">Missing userId</div>';return;}
+    root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/stocks/user/'+userId);}catch(e){root.innerHTML=`<div class="p-8 text-red-500">${esc(e.message)}</div>`;return;}
+    const u=d.user||{};
+    const st=d.stats||{};
+    const positions=d.positions||[];
+    const stocks=d.stocks||[];
+    const pl=Number(st.totalPl||0);
+    root.innerHTML=`
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-xl font-semibold">Stock Positions</h1>
+    <p class="text-sm text-gray-500">${esc(u.fullname||'User')} ${u.email?'('+esc(u.email)+')':''}</p>
+  </div>
+  <a href="/admin/stock-shares-trades.html" class="px-3 py-2 text-sm border rounded-lg bg-white">User Trades</a>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+  <div class="bg-white border rounded-xl p-4"><div class="text-xs text-gray-400 uppercase mb-1">Total Invested</div><div class="text-xl font-semibold">${money(st.totalInvested)}</div></div>
+  <div class="bg-white border rounded-xl p-4"><div class="text-xs text-gray-400 uppercase mb-1">Current Value</div><div class="text-xl font-semibold">${money(st.currentValue)}</div></div>
+  <div class="bg-white border rounded-xl p-4"><div class="text-xs text-gray-400 uppercase mb-1">Total P&L</div><div class="text-xl font-semibold ${pl>=0?'text-green-600':'text-red-500'}">${pl>=0?'+':''}${money(pl)}</div></div>
+</div>
+<div class="bg-white border rounded-xl p-5 mb-6">
+  <h3 class="font-medium mb-1">Add Position (No Balance Debit)</h3>
+  <p class="text-xs text-gray-400 mb-3">Creates an open holding without changing the user balance.</p>
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+    <div>
+      <label class="text-xs text-gray-500">Stock Asset</label>
+      <select id="apStock" class="w-full border rounded-lg px-3 py-2 text-sm">
+        <option value="">Select stock...</option>
+        ${stocks.map(s=>`<option value="${s._id}" data-price="${s.price}">${esc(s.symbol)} — ${esc(s.name||'')}</option>`).join('')}
+      </select>
+    </div>
+    <div>
+      <label class="text-xs text-gray-500">Shares</label>
+      <input id="apShares" type="number" step="any" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="0">
+    </div>
+    <div>
+      <label class="text-xs text-gray-500">Avg Buy Price ($)</label>
+      <input id="apAvg" type="number" step="any" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="0">
+    </div>
+    <button id="apBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">+ Add Position</button>
+  </div>
+</div>
+<div class="bg-white border rounded-xl overflow-hidden">
+  <div class="px-5 py-3 border-b font-medium">Holdings</div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr>
+        <th class="px-4 py-3 text-left">Stock</th><th class="px-4 py-3 text-right">Shares</th><th class="px-4 py-3 text-right">Avg Cost</th>
+        <th class="px-4 py-3 text-right">Current Price</th><th class="px-4 py-3 text-right">Invested</th><th class="px-4 py-3 text-right">Value</th>
+        <th class="px-4 py-3 text-right">P&L</th><th class="px-4 py-3 text-right">Actions</th>
+      </tr></thead>
+      <tbody class="divide-y">
+        ${positions.map(p=>{
+          const ppl=Number(p.pl||0);
+          const logo=p.logo_url?`<img src="${esc(p.logo_url)}" class="w-7 h-7 rounded-full">`:'';
+          return `<tr>
+            <td class="px-4 py-3"><div class="flex items-center gap-2">${logo}<div><div class="font-medium">${esc(p.symbol)}</div><div class="text-xs text-gray-400">${esc(p.name||'')}</div></div></div></td>
+            <td class="px-4 py-3 text-right">${Number(p.shares).toFixed(4)}</td>
+            <td class="px-4 py-3 text-right">${money(p.avg_cost)}</td>
+            <td class="px-4 py-3 text-right">${money(p.current_price)}</td>
+            <td class="px-4 py-3 text-right">${money(p.total_invested)}</td>
+            <td class="px-4 py-3 text-right">${money(p.market_value)}</td>
+            <td class="px-4 py-3 text-right ${ppl>=0?'text-green-600':'text-red-500'}">${ppl>=0?'+':''}${money(ppl)} (${Number(p.pl_pct||0).toFixed(1)}%)</td>
+            <td class="px-4 py-3 text-right space-x-1">
+              <a href="/admin/stock-shares-positions-edit.html?id=${p._id}&userId=${userId}" class="px-2 py-1 border rounded text-xs">Edit</a>
+              <button data-del="${p._id}" class="px-2 py-1 border border-red-200 text-red-600 rounded text-xs">Delete</button>
+            </td>
+          </tr>`;
+        }).join('')||'<tr><td colspan="8" class="py-10 text-center text-gray-400">No open positions</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>`;
+    const apStock=root.querySelector('#apStock');
+    const apAvg=root.querySelector('#apAvg');
+    apStock.onchange=()=>{ const o=apStock.selectedOptions[0]; if(o&&o.dataset.price) apAvg.value=o.dataset.price; };
+    root.querySelector('#apBtn').onclick=async()=>{
+      try{
+        const x=await post('/stocks/user/'+userId+'/positions',{
+          asset_id: apStock.value,
+          shares: Number(root.querySelector('#apShares').value||0),
+          avg_cost: Number(apAvg.value||0)
+        });
+        toast(x.message||'Position added',true);
+        setTimeout(()=>adminStockUser(),500);
+      }catch(e){toast(e.response?.data?.message||e.message,false);}
+    };
+    root.querySelectorAll('[data-del]').forEach(b=>{
+      b.onclick=async()=>{
+        if(!confirm('Delete this stock position?')) return;
+        try{
+          const x=await del('/stocks/positions/'+b.dataset.del);
+          toast(x.message||'Stock position deleted successfully',true);
+          setTimeout(()=>adminStockUser(),500);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
+  }
+
+  async function adminStockPosEdit(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    const id=new URLSearchParams(location.search).get('id');
+    const userId=new URLSearchParams(location.search).get('userId')||'';
+    if(!id){root.innerHTML='<div class="p-8 text-center text-gray-400">Missing position id</div>';return;}
+    root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/stocks/positions/'+id);}catch(e){root.innerHTML=`<div class="p-8 text-red-500">${esc(e.message)}</div>`;return;}
+    const p=d.position||{};
+    const u=d.user||{};
+    const uname=u.name||[u.firstname,u.lastname].filter(Boolean).join(' ')||u.username||'User';
+    const pl=Number(p.pl||0);
+    root.innerHTML=`
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-xl font-semibold">Edit Position — ${esc(p.symbol)}</h1>
+    <p class="text-sm text-gray-500">${esc(p.symbol)} — ${esc(uname)}</p>
+  </div>
+  <a href="/admin/stock-shares-user.html?userId=${userId||p.user_id}" class="px-3 py-2 text-sm border rounded-lg bg-white">Back to Portfolio</a>
+</div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white border rounded-xl p-4"><div class="text-xs text-gray-400 uppercase mb-1">Current Price</div><div class="text-xl font-semibold">${money(p.current_price)}</div></div>
+  <div class="bg-white border rounded-xl p-4"><div class="text-xs text-gray-400 uppercase mb-1">Current Value</div><div class="text-xl font-semibold">${money(p.market_value)}</div></div>
+  <div class="bg-white border rounded-xl p-4"><div class="text-xs text-gray-400 uppercase mb-1">Unrealized P&L</div><div class="text-xl font-semibold ${pl>=0?'text-green-600':'text-red-500'}">${pl>=0?'+':''}${money(pl)}</div></div>
+  <div class="bg-white border rounded-xl p-4"><div class="text-xs text-gray-400 uppercase mb-1">P&L %</div><div class="text-xl font-semibold">${Number(p.pl_pct||0).toFixed(2)}%</div></div>
+</div>
+<div class="bg-white border rounded-xl p-5 max-w-xl">
+  <h3 class="font-medium mb-1">Adjust Position</h3>
+  <p class="text-xs text-gray-400 mb-4">Changes are logged as STOCK_ADMIN_ADJUST in the transaction ledger. This does not affect the user's account balance.</p>
+  <label class="block text-xs text-gray-500 mb-1">Shares</label>
+  <input id="edShares" type="number" step="any" value="${Number(p.shares||0)}" class="w-full border rounded-lg px-3 py-2 text-sm mb-3">
+  <label class="block text-xs text-gray-500 mb-1">Average Buy Price ($)</label>
+  <input id="edAvg" type="number" step="any" value="${Number(p.avg_cost||0)}" class="w-full border rounded-lg px-3 py-2 text-sm mb-3">
+  <label class="block text-xs text-gray-500 mb-1">Total Invested ($)</label>
+  <input id="edInv" type="number" step="any" value="${Number(p.total_invested||0)}" class="w-full border rounded-lg px-3 py-2 text-sm mb-4">
+  <div class="flex gap-2">
+    <button id="edSave" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">Update Position</button>
+    <a href="/admin/stock-shares-user.html?userId=${userId||p.user_id}" class="px-4 py-2 border rounded-lg text-sm">Cancel</a>
+  </div>
+</div>`;
+    const edShares=root.querySelector('#edShares');
+    const edAvg=root.querySelector('#edAvg');
+    const edInv=root.querySelector('#edInv');
+    function syncInv(){ edInv.value=(Number(edShares.value||0)*Number(edAvg.value||0)).toFixed(4); }
+    edShares.oninput=syncInv; edAvg.oninput=syncInv;
+    root.querySelector('#edSave').onclick=async()=>{
+      try{
+        const x=await put('/stocks/positions/'+id,{
+          shares: Number(edShares.value||0),
+          avg_cost: Number(edAvg.value||0),
+          total_invested: Number(edInv.value||0)
+        });
+        toast(x.message||'Position updated successfully',true);
+        setTimeout(()=>adminStockPosEdit(),500);
+      }catch(e){toast(e.response?.data?.message||e.message,false);}
+    };
+  }
+
+
+  async function routeUser(){
     try{
       if(page==='dashboard.html')await dashboard();
       else if(page==='connect-wallet.html')await userWallet();
@@ -3213,6 +5037,15 @@ async function routeAdmin(){
       else if(page==='bot-trading-details.html')await botDetails();
       else if(page==='mining.html')await mining();
       else if(page==='subscription-mining.html')await miningSubscription();
+      else if(page==='real-estate.html')await realEstatePage();
+      else if(page==='my-real-estate.html')await myRealEstate();
+      else if(page==='my-loans.html')await myLoansPage();
+      else if(page==='apply.html')await applyLoanPage();
+      else if(page==='loans-details.html')await loanDetailsPage();
+      else if(page==='stocks.html')await stocksPage();
+      else if(page==='stock-history.html')await stockHistoryPage();
+      else if(page==='stock-portfolio.html')await stockPortfolioPage();
+      else if(page==='stock-detail.html')await stockDetailPage();
     }
     catch(e){
       toast(e.message,false)

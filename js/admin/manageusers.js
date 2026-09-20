@@ -362,7 +362,12 @@
       '/admin/dashboard': `${base}/adminDashboard.html`,
       '/admin/dashboard/': `${base}/adminDashboard.html`,
       '/admin/dashboard/manageusers': `${base}/manageusers.html`,
-      '/admin/dashboard/manageusers/': `${base}/manageusers.html`
+      '/admin/dashboard/manageusers/': `${base}/manageusers.html`,
+      '/admin/dashboard/stock-shares': `${base}/admin-stock-shares.html`,
+      '/admin/dashboard/stock-shares/': `${base}/admin-stock-shares.html`,
+      '/admin/stock-shares': `${base}/admin-stock-shares.html`,
+      '/admin/stock-shares/': `${base}/admin-stock-shares.html`,
+      '/admin/stock-shares.html': `${base}/admin-stock-shares.html`
     };
     document.querySelectorAll('a[href]').forEach((anchor) => {
       const href = anchor.getAttribute('href');

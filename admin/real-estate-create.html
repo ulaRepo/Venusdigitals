@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="5HgeEAY2xYAIf7TtJSt6KYllMvNyOcywDzOKVMxc">
     <title>Add Real Estate Property — Digital-grownt</title>
-    <link rel="icon" href="https://digital-grownt.com/storage/app/public/photos/BCPc6799aTDnlcAtaRZAXzQZ7MBzrLZL0H6DStQv.png" type="image/png">
+    <link rel="icon" href="storage/app/public/photos/BCPc6799aTDnlcAtaRZAXzQZ7MBzrLZL0H6DStQv.png" type="image/png">
 
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -208,17 +207,15 @@
     <div x-show="mobileSidebar" x-transition.opacity class="fixed inset-0 bg-surface-overlay/60 z-40 lg:hidden" @click="mobileSidebar = false"></div>
 
     
-    <aside
-    :class="mobileSidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
-    class="fixed top-0 left-0 z-50 h-full w-64 bg-sidebar flex flex-col transition-transform duration-200 ease-in-out overflow-hidden"
->
+    <aside :class="mobileSidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'" class="fixed top-0 left-0 z-50 h-full w-64 bg-sidebar flex flex-col transition-transform duration-200 ease-in-out overflow-hidden -translate-x-full lg:translate-x-0">
     
     <div class="flex items-center justify-between h-16 px-5 border-b border-sidebar-border shrink-0">
-        <a href="https://digital-grownt.com/admin/dashboard" class="text-base font-semibold text-content-inverse truncate">
+        <a href="/admin/manageusers.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
             Digital-grownt
         </a>
         <button @click="mobileSidebar = false" class="lg:hidden text-sidebar-muted hover:text-content-inverse">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
     </div>
 
@@ -241,17 +238,15 @@
         
         <p class="px-6 pt-4 pb-2 text-[0.65rem] font-semibold text-sidebar-muted uppercase tracking-widest">Main</p>
 
-        <a href="https://digital-grownt.com/admin/dashboard"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
+        <a href="/admin/manageusers.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"></path></svg>
         <span class="flex-1">Dashboard</span>
     </a>
 
-        <a href="https://digital-grownt.com/admin/dashboard/manageusers"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
+        <a href="/admin/manageusers.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"></path></svg>
         <span class="flex-1">Manage Users</span>
     </a>
 
@@ -261,61 +256,53 @@
 
         <div x-data="{ expanded: false }">
     
-    <button @click="expanded = !expanded"
-            class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+    <button @click="expanded = !expanded" class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
                    text-sidebar-text hover:bg-sidebar-hover">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" /></svg>
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"></path></svg>
                 <span class="flex-1 text-left">Investment</span>
-                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded && 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded &amp;&amp; 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg>
     </button>
     
-    <div x-show="expanded" x-collapse class="mt-0.5">
-        <a href="https://digital-grownt.com/admin/dashboard/plans"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+    <div x-show="expanded" x-collapse="" class="mt-0.5" style="display: none;">
+        <a href="/admin/plans.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Investment Plans</span>
     </a>
-            <a href="https://digital-grownt.com/admin/dashboard/active-investments"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+            <a href="/admin/active-investments.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Active Investments</span>
     </a>
     </div>
 </div>
 
-        <a href="https://digital-grownt.com/admin/dashboard/mdeposits"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+        <a href="/admin/mdeposits.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path></svg>
         <span class="flex-1">Manage Deposits</span>
     </a>
 
-        <a href="https://digital-grownt.com/admin/dashboard/mwithdrawals"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
+        <a href="/admin/mwithdrawals.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"></path></svg>
         <span class="flex-1">Manage Withdrawals</span>
     </a>
 
         <div x-data="{ expanded: false }">
     
-    <button @click="expanded = !expanded"
-            class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+    <button @click="expanded = !expanded" class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
                    text-sidebar-text hover:bg-sidebar-hover">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" /></svg>
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3"></path></svg>
                 <span class="flex-1 text-left">Wallet Connect</span>
-                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded && 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded &amp;&amp; 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg>
     </button>
     
-    <div x-show="expanded" x-collapse class="mt-0.5">
-        <a href="https://digital-grownt.com/admin/dashboard/mwalletconnect"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+    <div x-show="expanded" x-collapse="" class="mt-0.5" style="display: none;">
+        <a href="/admin/mwalletconnect.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Connected Wallets</span>
     </a>
-            <a href="https://digital-grownt.com/admin/dashboard/mwalletsettings"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+            <a href="/admin/mwalletsettings.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Wallet Settings</span>
     </a>
     </div>
@@ -326,28 +313,24 @@
 
         <div x-data="{ expanded: false }">
     
-    <button @click="expanded = !expanded"
-            class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+    <button @click="expanded = !expanded" class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
                    text-sidebar-text hover:bg-sidebar-hover">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"></path></svg>
                 <span class="flex-1 text-left">Trades</span>
-                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded && 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded &amp;&amp; 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg>
     </button>
     
-    <div x-show="expanded" x-collapse class="mt-0.5">
-        <a href="https://digital-grownt.com/admin/admin/trades/create"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+    <div x-show="expanded" x-collapse="" class="mt-0.5" style="display: none;">
+        <a href="/admin/create-trade.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Create Trade for Clients</span>
     </a>
-            <a href="https://digital-grownt.com/admin/managetrades"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+            <a href="/admin/managetrades.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Clients Trades</span>
     </a>
-            <a href="https://digital-grownt.com/admin/assets"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+            <a href="/admin/assets.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Trading Assets</span>
     </a>
     </div>
@@ -355,23 +338,20 @@
 
         <div x-data="{ expanded: false }">
     
-    <button @click="expanded = !expanded"
-            class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+    <button @click="expanded = !expanded" class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
                    text-sidebar-text hover:bg-sidebar-hover">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.348 14.651a3.75 3.75 0 010-5.303m5.304 0a3.75 3.75 0 010 5.303m-7.425 2.122a6.75 6.75 0 010-9.546m9.546 0a6.75 6.75 0 010 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.79M12 12h.008v.007H12V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.348 14.651a3.75 3.75 0 010-5.303m5.304 0a3.75 3.75 0 010 5.303m-7.425 2.122a6.75 6.75 0 010-9.546m9.546 0a6.75 6.75 0 010 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.79M12 12h.008v.007H12V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"></path></svg>
                 <span class="flex-1 text-left">Signals</span>
-                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded && 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded &amp;&amp; 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg>
     </button>
     
-    <div x-show="expanded" x-collapse class="mt-0.5">
-        <a href="https://digital-grownt.com/admin/signal-plans"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+    <div x-show="expanded" x-collapse="" class="mt-0.5" style="display: none;">
+        <a href="/admin/signal-plans.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Signal Plans</span>
     </a>
-            <a href="https://digital-grownt.com/admin/signal"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+            <a href="/admin/signal.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Signals</span>
     </a>
     </div>
@@ -379,23 +359,20 @@
 
         <div x-data="{ expanded: false }">
     
-    <button @click="expanded = !expanded"
-            class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+    <button @click="expanded = !expanded" class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
                    text-sidebar-text hover:bg-sidebar-hover">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"></path></svg>
                 <span class="flex-1 text-left">Copy Trading</span>
-                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded && 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded &amp;&amp; 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg>
     </button>
     
-    <div x-show="expanded" x-collapse class="mt-0.5">
-        <a href="https://digital-grownt.com/admin/experts"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+    <div x-show="expanded" x-collapse="" class="mt-0.5" style="display: none;">
+        <a href="/admin/admin-experts.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Experts</span>
     </a>
-            <a href="https://digital-grownt.com/admin/copy-trades"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+            <a href="/admin/copy-trades.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Copy Trades</span>
     </a>
     </div>
@@ -403,23 +380,20 @@
 
         <div x-data="{ expanded: false }">
     
-    <button @click="expanded = !expanded"
-            class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+    <button @click="expanded = !expanded" class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
                    text-sidebar-text hover:bg-sidebar-hover">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25zm.75-12h9v9h-9v-9z" /></svg>
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25zm.75-12h9v9h-9v-9z"></path></svg>
                 <span class="flex-1 text-left">Bot Trading</span>
-                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded && 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded &amp;&amp; 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg>
     </button>
     
-    <div x-show="expanded" x-collapse class="mt-0.5">
-        <a href="https://digital-grownt.com/admin/bot-trading"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+    <div x-show="expanded" x-collapse="" class="mt-0.5" style="display: none;">
+        <a href="/admin/admin-bot-trading.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Bots</span>
     </a>
-            <a href="https://digital-grownt.com/admin/bot-trading/subscriptions"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+            <a href="/admin/bot-trading-subscriptions.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Subscriptions</span>
     </a>
     </div>
@@ -427,23 +401,20 @@
 
         <div x-data="{ expanded: false }">
     
-    <button @click="expanded = !expanded"
-            class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+    <button @click="expanded = !expanded" class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
                    text-sidebar-text hover:bg-sidebar-hover">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25zm.75-12h9v9h-9V7.5z" /></svg>
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25zm.75-12h9v9h-9V7.5z"></path></svg>
                 <span class="flex-1 text-left">Cloud Mining</span>
-                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded && 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded &amp;&amp; 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg>
     </button>
     
-    <div x-show="expanded" x-collapse class="mt-0.5">
-        <a href="https://digital-grownt.com/admin/admin/mining/plans"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+    <div x-show="expanded" x-collapse="" class="mt-0.5" style="display: none;">
+        <a href="/admin/mining-plans.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+          bg-sidebar-active text-content-inverse relative before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:rounded-full before:bg-primary">
         <span class="flex-1">Plans</span>
     </a>
-            <a href="https://digital-grownt.com/admin/admin/mining/subscriptions"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+            <a href="/admin/mining-subscriptions.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Subscriptions</span>
     </a>
     </div>
@@ -456,106 +427,92 @@
 
         <div x-data="{ expanded: false }">
     
-    <button @click="expanded = !expanded"
-            class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+    <button @click="expanded = !expanded" class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
                    text-sidebar-text hover:bg-sidebar-hover">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" /></svg>
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5"></path></svg>
                 <span class="flex-1 text-left">Membership</span>
-                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded && 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded &amp;&amp; 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg>
     </button>
     
-    <div x-show="expanded" x-collapse class="mt-0.5">
-        <a href="https://digital-grownt.com/admin/courses"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+    <div x-show="expanded" x-collapse="" class="mt-0.5" style="display: none;">
+        <a href="/admin/courses.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Courses</span>
     </a>
-            <a href="https://digital-grownt.com/admin/categories"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+            <a href="/admin/categories.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Categories</span>
     </a>
-            <a href="https://digital-grownt.com/admin/lessons-without-course"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+            <a href="/admin/lessons-without-course.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Standalone Lessons</span>
     </a>
     </div>
 </div>
 
-        <a href="https://digital-grownt.com/admin/admin/loan-plans"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" /></svg>
+        <a href="/admin/loan-plans.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"></path></svg>
         <span class="flex-1">Manage Loans</span>
     </a>
 
-        <div x-data="{ expanded: true }">
+        <div x-data="{ expanded: false }">
     
-    <button @click="expanded = !expanded"
-            class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-                   text-content-inverse">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
+    <button @click="expanded = !expanded" class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-sidebar-text hover:bg-sidebar-hover">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"></path></svg>
                 <span class="flex-1 text-left">Real Estate</span>
-                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded && 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded &amp;&amp; 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg>
     </button>
     
-    <div x-show="expanded" x-collapse class="mt-0.5">
-        <a href="https://digital-grownt.com/admin/admin/real-estate"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+    <div x-show="expanded" x-collapse="" class="mt-0.5" style="display: none;">
+        <a href="/admin/admin-real-estate.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Properties</span>
     </a>
-            <a href="https://digital-grownt.com/admin/admin/real-estate/create"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          bg-sidebar-active text-content-inverse relative before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:rounded-full before:bg-primary">
+            <a href="/admin/real-estate-create.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Add Property</span>
     </a>
-            <a href="https://digital-grownt.com/admin/admin/real-estate/investments"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+            <a href="/admin/real-estate-investments.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Client Investments</span>
     </a>
     </div>
 </div>
 
-        <a href="https://digital-grownt.com/admin/admin/cards"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>
+        <a href="/admin/admin-cards.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"></path></svg>
         <span class="flex-1">Digital Cards</span>
     </a>
 
         
 
-        <a href="https://digital-grownt.com/admin/admin/stock-shares"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
+        <a href="/admin/stock-shares.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"></path></svg>
         <span class="flex-1">Stock Shares</span>
     </a>
 
         
         <p class="px-6 pt-6 pb-2 text-[0.65rem] font-semibold text-sidebar-muted uppercase tracking-widest">Management</p>
 
-        <a href="https://digital-grownt.com/admin/dashboard/email-services"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
+        <a href="/admin/email-services.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"></path></svg>
         <span class="flex-1">Email Services</span>
     </a>
 
-        <a href="https://digital-grownt.com/admin/dashboard/kyc-applications"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
+        <a href="/admin/kyc-applications.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"></path></svg>
         <span class="flex-1">KYC Applications</span>
     </a>
 
-        <a href="https://digital-grownt.com/admin/dashboard/support-tickets"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" /></svg>
+        <a href="/admin/support-tickets.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"></path></svg>
         <span class="flex-1">Support Tickets</span>
     </a>
 
@@ -573,23 +530,20 @@
 
             <div x-data="{ expanded: false }">
     
-    <button @click="expanded = !expanded"
-            class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+    <button @click="expanded = !expanded" class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
                    text-sidebar-text hover:bg-sidebar-hover">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"></path></svg>
                 <span class="flex-1 text-left">Administrators</span>
-                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded && 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded &amp;&amp; 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg>
     </button>
     
-    <div x-show="expanded" x-collapse class="mt-0.5">
-        <a href="https://digital-grownt.com/admin/dashboard/addmanager"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+    <div x-show="expanded" x-collapse="" class="mt-0.5" style="display: none;">
+        <a href="/admin/addmanager.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Add Manager</span>
     </a>
-                <a href="https://digital-grownt.com/admin/dashboard/madmin"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+                <a href="/admin/madmin.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Manage Admins</span>
     </a>
     </div>
@@ -597,53 +551,45 @@
 
             <div x-data="{ expanded: false }">
     
-    <button @click="expanded = !expanded"
-            class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+    <button @click="expanded = !expanded" class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
                    text-sidebar-text hover:bg-sidebar-hover">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 <span class="flex-1 text-left">Settings</span>
-                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded && 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded &amp;&amp; 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg>
     </button>
     
-    <div x-show="expanded" x-collapse class="mt-0.5">
-        <a href="https://digital-grownt.com/admin/dashboard/settings/app-settings"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+    <div x-show="expanded" x-collapse="" class="mt-0.5" style="display: none;">
+        <a href="/admin/app-settings.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">App Settings</span>
     </a>
-                <a href="https://digital-grownt.com/admin/dashboard/settings/referral-settings"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+                <a href="/admin/referral-settings.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Referral/Bonus</span>
     </a>
-                <a href="https://digital-grownt.com/admin/dashboard/settings/payment-settings"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+                <a href="/admin/payment-settings.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Payment Settings</span>
     </a>
-                <a href="https://digital-grownt.com/admin/dashboard/manage-crypto-assets"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+                <a href="/admin/manage-crypto-assets.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Swap Settings</span>
     </a>
-                <a href="https://digital-grownt.com/admin/dashboard/ipaddress"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+                <a href="/admin/ipaddress.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">IP Address</span>
     </a>
                 
-                <a href="https://digital-grownt.com/admin/dashboard/settings/exchange-rates"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
+                <a href="/admin/exchange-rates.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
         <span class="flex-1">Exchange Rates</span>
     </a>
     </div>
 </div>
         
-        <a href="https://digital-grownt.com/admin/dashboard/about"
-   class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
-          text-sidebar-text hover:bg-sidebar-hover">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+        <a href="/admin/about.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"></path></svg>
         <span class="flex-1">For More Script</span>
     </a>
 
@@ -651,12 +597,9 @@
 
     
     <div class="border-t border-sidebar-border p-4 shrink-0">
-        <form method="POST" action="https://digital-grownt.com/adminlogin/logout" id="admin-sidebar-logout-form">
-            <input type="hidden" name="_token" value="5HgeEAY2xYAIf7TtJSt6KYllMvNyOcywDzOKVMxc">        </form>
-        <a href="https://digital-grownt.com/adminlogin/logout"
-           onclick="event.preventDefault(); document.getElementById('admin-sidebar-logout-form').submit();"
-           class="mx-0 flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-danger hover:bg-danger/10 transition-colors cursor-pointer">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg>
+        <form method="POST" action="#" data-auth-logout="true" id="admin-sidebar-logout-form">        </form>
+        <a href="#" data-auth-logout="true" class="mx-0 flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-danger hover:bg-danger/10 transition-colors cursor-pointer">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"></path></svg>
             Logout
         </a>
     </div>
@@ -670,7 +613,7 @@
             <button @click="mobileSidebar = !mobileSidebar" class="lg:hidden text-content-muted hover:text-content p-1">
                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
             </button>
-            <h1 class="text-lg font-semibold text-content hidden sm:block">Add Real Estate Property</h1>
+            <h1 class="text-lg font-semibold text-content hidden sm:block">Manage Mining Plans</h1>
         </div>
 
         
@@ -697,16 +640,16 @@
     
     <div x-show="open" x-transition
          class="absolute left-0 sm:left-auto sm:right-0 mt-2 w-48 bg-surface-raised rounded-xl border border-border shadow-lg py-1 z-50 max-h-[70vh] overflow-y-auto">
-        <a href="https://digital-grownt.com/admin/dashboard/adminprofile" class="flex items-center gap-2 px-4 py-2.5 text-sm text-content-secondary hover:bg-surface-alt hover:text-content transition-colors">
+        <a href="/admin/dashboard/adminprofile" class="flex items-center gap-2 px-4 py-2.5 text-sm text-content-secondary hover:bg-surface-alt hover:text-content transition-colors">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     Account Settings
                 </a>
-                <a href="https://digital-grownt.com/admin/dashboard/adminchangepassword" class="flex items-center gap-2 px-4 py-2.5 text-sm text-content-secondary hover:bg-surface-alt hover:text-content transition-colors">
+                <a href="/admin/dashboard/adminchangepassword" class="flex items-center gap-2 px-4 py-2.5 text-sm text-content-secondary hover:bg-surface-alt hover:text-content transition-colors">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>
                     Change Password
                 </a>
                 <div class="border-t border-border my-1"></div>
-                <a href="https://digital-grownt.com/adminlogin/logout"
+                <a href="/adminlogin/logout"
                    onclick="event.preventDefault(); document.getElementById('admin-sidebar-logout-form').submit();"
                    class="flex items-center gap-2 px-4 py-2.5 text-sm text-danger hover:bg-surface-alt transition-colors">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg>
@@ -719,7 +662,7 @@
 </header>
 
     
-    <main class="transition-all duration-200 lg:ml-64 pt-16 min-h-screen">
+    <main style="visibility:hidden" class="transition-all duration-200 lg:ml-64 pt-16 min-h-screen">
         
         <div x-data="{ toasts: [] }"
              x-init="
@@ -747,291 +690,192 @@
         </div>
 
         <div class="p-4 lg:p-6 space-y-6">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
-        <h1 class="text-2xl font-semibold text-content tracking-tight">Add New Property</h1>
+        <h1 class="text-2xl font-semibold text-content tracking-tight">Cloud Mining Plans</h1>
+                    <p class="mt-1 text-sm text-content-secondary">Create and manage mining plans for users</p>
             </div>
             <div class="flex items-center gap-3">
-            <a href="https://digital-grownt.com/admin/admin/real-estate"
-               class="inline-flex items-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-3 py-1.5 text-xs font-medium transition-colors">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
-                Back
-            </a>
+            <a href="/admin/admin/mining/subscriptions" class="bg-surface-alt text-content border border-border hover:bg-surface-alt/80 rounded-lg px-4 py-2 text-sm font-medium inline-flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" /></svg>
+            Subscriptions
+        </a>
+        <a href="/admin/admin/mining/plans/create" class="bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2 text-sm font-medium inline-flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            New Plan
+        </a>
         </div>
     </div>
 
-    
-    <div class="mt-6">
-        <div class="bg-surface-card rounded-xl border border-border shadow-card p-6">
-    <form method="POST" action="https://digital-grownt.com/admin/admin/real-estate" enctype="multipart/form-data">
-                <input type="hidden" name="_token" value="5HgeEAY2xYAIf7TtJSt6KYllMvNyOcywDzOKVMxc">                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-                    
-                    <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            Property Name
-                            <span class="text-danger">*</span>
-                    </label>
-        <input name="name" type="text" value="" required
-                               placeholder="e.g. Luxury Miami Condo"
-                               class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-        </div>
-
-                    <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            Location
-                            <span class="text-danger">*</span>
-                    </label>
-        <input name="location" type="text" value="" required
-                               placeholder="e.g. Miami, FL · USA"
-                               class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-        </div>
-
-                    <div class="md:col-span-2">
-                        <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            Description
-                    </label>
-        <textarea name="description" rows="3"
-                                      placeholder="Describe the property..."
-                                      class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"></textarea>
-        </div>
+<div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mt-6">
+    <div class="bg-surface-card rounded-xl border border-border shadow-card p-5">
+    <div class="flex items-start justify-between">
+        <div>
+            <p class="text-xs font-medium text-content-muted uppercase tracking-wide">Total Plans</p>
+            <p class="text-stat text-content mt-3">3</p>
                     </div>
-
-                    
-                    <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            Main Property Image
-                            <span class="text-danger">*</span>
-                    </label>
-        <input name="image" type="file" accept="image/jpeg,image/png,image/jpg,image/webp" required
-                               class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content file:mr-3 file:rounded file:border-0 file:bg-primary file:text-primary-foreground file:px-2 file:py-1 file:text-xs focus:outline-none">
-            <p class="text-xs text-content-muted mt-1">Hero image shown on the listing card (JPEG/PNG/WebP, max 5MB)</p>
-        </div>
-
-                    <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            Tag
-                    </label>
-        <select name="tag"
-                                class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30">
-                            <option value="">— None —</option>
-                            <option value="HOT" >HOT</option>
-                            <option value="NEW" >NEW</option>
-                            <option value="TOP" >TOP</option>
-                        </select>
-            <p class="text-xs text-content-muted mt-1">Optional badge shown on listing card</p>
-        </div>
-
-                    
-                    <div class="md:col-span-2">
-                        <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            Room Gallery Images
-                    </label>
-        <div id="roomImageRows" class="space-y-3">
-                                                                    <div class="flex gap-3 items-center">
-                                        <input type="text" name="room_labels[]" placeholder="Label (e.g. Living Room)"
-                                               class="w-40 flex-shrink-0 bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none">
-                                        <input type="file" name="room_images[]" accept="image/jpeg,image/png,image/jpg,image/webp"
-                                               class="flex-1 bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content file:mr-3 file:rounded file:border-0 file:bg-surface-hover file:text-content file:px-2 file:py-1 file:text-xs focus:outline-none">
-                                    </div>
-                                                                    <div class="flex gap-3 items-center">
-                                        <input type="text" name="room_labels[]" placeholder="Label (e.g. Living Room)"
-                                               class="w-40 flex-shrink-0 bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none">
-                                        <input type="file" name="room_images[]" accept="image/jpeg,image/png,image/jpg,image/webp"
-                                               class="flex-1 bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content file:mr-3 file:rounded file:border-0 file:bg-surface-hover file:text-content file:px-2 file:py-1 file:text-xs focus:outline-none">
-                                    </div>
-                                                                    <div class="flex gap-3 items-center">
-                                        <input type="text" name="room_labels[]" placeholder="Label (e.g. Living Room)"
-                                               class="w-40 flex-shrink-0 bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none">
-                                        <input type="file" name="room_images[]" accept="image/jpeg,image/png,image/jpg,image/webp"
-                                               class="flex-1 bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content file:mr-3 file:rounded file:border-0 file:bg-surface-hover file:text-content file:px-2 file:py-1 file:text-xs focus:outline-none">
-                                    </div>
-                                                                    <div class="flex gap-3 items-center">
-                                        <input type="text" name="room_labels[]" placeholder="Label (e.g. Living Room)"
-                                               class="w-40 flex-shrink-0 bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none">
-                                        <input type="file" name="room_images[]" accept="image/jpeg,image/png,image/jpg,image/webp"
-                                               class="flex-1 bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content file:mr-3 file:rounded file:border-0 file:bg-surface-hover file:text-content file:px-2 file:py-1 file:text-xs focus:outline-none">
-                                    </div>
-                                                                    <div class="flex gap-3 items-center">
-                                        <input type="text" name="room_labels[]" placeholder="Label (e.g. Living Room)"
-                                               class="w-40 flex-shrink-0 bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none">
-                                        <input type="file" name="room_images[]" accept="image/jpeg,image/png,image/jpg,image/webp"
-                                               class="flex-1 bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content file:mr-3 file:rounded file:border-0 file:bg-surface-hover file:text-content file:px-2 file:py-1 file:text-xs focus:outline-none">
-                                    </div>
-                                                                    <div class="flex gap-3 items-center">
-                                        <input type="text" name="room_labels[]" placeholder="Label (e.g. Living Room)"
-                                               class="w-40 flex-shrink-0 bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none">
-                                        <input type="file" name="room_images[]" accept="image/jpeg,image/png,image/jpg,image/webp"
-                                               class="flex-1 bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content file:mr-3 file:rounded file:border-0 file:bg-surface-hover file:text-content file:px-2 file:py-1 file:text-xs focus:outline-none">
-                                    </div>
-                                                            </div>
-            <p class="text-xs text-content-muted mt-1">Up to 6 room photos. Each image can have an optional label (e.g. Living Room, Master Bedroom).</p>
-        </div>
-                    </div>
-
-                    
-                    <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            Property Value (display)
-                            <span class="text-danger">*</span>
-                    </label>
-        <input name="property_value" type="text" value="" required
-                               placeholder='e.g. $2,400,000'
-                               class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-            <p class="text-xs text-content-muted mt-1">Display string e.g. &quot;$2,400,000&quot;</p>
-        </div>
-
-                    <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            ROI Percentage (APY %)
-                            <span class="text-danger">*</span>
-                    </label>
-        <input name="roi_percentage" type="number" step="0.01" min="0" value="" required
-                               placeholder="e.g. 12.4"
-                               class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-            <p class="text-xs text-content-muted mt-1">Annual yield shown to users e.g. 12.4</p>
-        </div>
-
-                    <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            Total Tokens
-                            <span class="text-danger">*</span>
-                    </label>
-        <input name="total_tokens" type="number" min="1" value="" required
-                               placeholder="e.g. 4200"
-                               class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-            <p class="text-xs text-content-muted mt-1">Total fractional ownership tokens for this property</p>
-        </div>
-
-                    <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            Token Price ($)
-                            <span class="text-danger">*</span>
-                    </label>
-        <input name="token_price" type="number" step="0.01" min="0" value="" required
-                               placeholder="e.g. 100"
-                               class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-            <p class="text-xs text-content-muted mt-1">Price per token in USD</p>
-        </div>
-
-                    <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            Minimum Investment ($)
-                            <span class="text-danger">*</span>
-                    </label>
-        <input name="min_investment" type="number" step="0.01" min="0" value="" required
-                               placeholder="e.g. 500"
-                               class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-        </div>
-
-                    <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            Maximum Investment ($)
-                            <span class="text-danger">*</span>
-                    </label>
-        <input name="max_investment" type="number" step="0.01" min="0" value="" required
-                               placeholder="e.g. 50000"
-                               class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-        </div>
-
-                    
-                    <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            ROI Interval
-                            <span class="text-danger">*</span>
-                    </label>
-        <select name="increment_interval" required
-                                class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30">
-                                                            <option value="Daily" >Daily</option>
-                                                            <option value="Weekly" >Weekly</option>
-                                                            <option value="Monthly" >Monthly</option>
-                                                            <option value="Hourly" >Hourly</option>
-                                                    </select>
-            <p class="text-xs text-content-muted mt-1">How often profits are credited to investor accounts</p>
-        </div>
-
-                    <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            ROI Type
-                            <span class="text-danger">*</span>
-                    </label>
-        <select name="increment_type" required
-                                class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30">
-                            <option value="Percentage" selected>Percentage of invested amount</option>
-                            <option value="Fixed" >Fixed amount per interval</option>
-                        </select>
-        </div>
-
-                    <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            ROI Amount per Interval
-                            <span class="text-danger">*</span>
-                    </label>
-        <input name="increment_amount" type="number" step="0.0001" min="0" value="" required
-                               placeholder="e.g. 1.5"
-                               class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-            <p class="text-xs text-content-muted mt-1">If Percentage: enter e.g. 1.5 for 1.5%. If Fixed: enter dollar amount e.g. 25</p>
-        </div>
-
-                    <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            Duration (days)
-                            <span class="text-danger">*</span>
-                    </label>
-        <input name="expiration_days" type="number" min="1" value="365" required
-                               placeholder="e.g. 365"
-                               class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-            <p class="text-xs text-content-muted mt-1">How long the investment runs before it expires</p>
-        </div>
-
-                    
-                    <div class="md:col-span-2">
-                        <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            Property Features
-                    </label>
-        <div class="grid grid-cols-3 gap-3">
-                                                                    <input type="text" name="features[]" value=""
-                                           placeholder="3 beds"
-                                           class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-                                                                    <input type="text" name="features[]" value=""
-                                           placeholder="2 baths"
-                                           class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-                                                                    <input type="text" name="features[]" value=""
-                                           placeholder="2,100 sqft"
-                                           class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-                                                            </div>
-            <p class="text-xs text-content-muted mt-1">e.g. 3 beds, 2 baths, 2100 sqft — shown as feature chips on the listing card</p>
-        </div>
-                    </div>
-
-                    <div class="">
-            <label  class="block text-sm font-medium text-content mb-1.5">
-            Status
-                            <span class="text-danger">*</span>
-                    </label>
-        <select name="status" required
-                                class="w-full bg-surface-card border border-border rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary/30">
-                            <option value="active" selected>Active</option>
-                            <option value="inactive" >Inactive</option>
-                        </select>
-        </div>
-
-                </div>
-
-                <div class="mt-6 flex justify-end gap-3">
-                    <a href="https://digital-grownt.com/admin/admin/real-estate"
-                       class="px-5 py-2 rounded-lg border border-border text-content text-sm hover:bg-surface-hover transition-colors">Cancel</a>
-                    <button type="submit"
-                            class="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors">
-                        Create Property
-                    </button>
-                </div>
-            </form>
+                    <div class="w-10 h-10 rounded-lg bg-primary-light flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25zm.75-12h9v9h-9V7.5z" /></svg>
+            </div>
+            </div>
 </div>
+    <div class="bg-surface-card rounded-xl border border-border shadow-card p-5">
+    <div class="flex items-start justify-between">
+        <div>
+            <p class="text-xs font-medium text-content-muted uppercase tracking-wide">Active Plans</p>
+            <p class="text-stat text-content mt-3">3</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-primary-light flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            </div>
+</div>
+    <div class="bg-surface-card rounded-xl border border-border shadow-card p-5">
+    <div class="flex items-start justify-between">
+        <div>
+            <p class="text-xs font-medium text-content-muted uppercase tracking-wide">Active Subscribers</p>
+            <p class="text-stat text-content mt-3">1</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-primary-light flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-info" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
+            </div>
+            </div>
+</div>
+    <div class="bg-surface-card rounded-xl border border-border shadow-card p-5">
+    <div class="flex items-start justify-between">
+        <div>
+            <p class="text-xs font-medium text-content-muted uppercase tracking-wide">Total Invested</p>
+            <p class="text-stat text-content mt-3">$249.75</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-primary-light flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-warning" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            </div>
+</div>
+</div>
+
+<div class="mt-6">
+    <div class="bg-surface-card rounded-xl border border-border shadow-card">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-border">
+                            <h3 class="text-base font-medium text-content">Mining Plans</h3>
+                                </div>
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="bg-surface-alt">
+                    <th class="text-left text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">Plan</th>
+                    <th class="text-left text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">Hashrate</th>
+                    <th class="text-left text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">Daily ROI</th>
+                    <th class="text-left text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">Duration</th>
+                    <th class="text-left text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">Min / Max</th>
+                    <th class="text-left text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">Subscribers</th>
+                    <th class="text-left text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">Status</th>
+                    <th class="text-right text-xs font-medium text-content-muted uppercase tracking-wide px-5 py-3">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                                <tr class="border-b border-border hover:bg-surface-alt/50">
+                    <td class="px-5 py-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#4a6cf722">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#4a6cf7"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25zm.75-12h9v9h-9V7.5z" /></svg>
+                            </div>
+                            <span class="font-medium text-content">Starter Miner</span>
+                        </div>
+                    </td>
+                    <td class="px-5 py-3 text-content">1 TH/s</td>
+                    <td class="px-5 py-3 text-success font-medium">1.50%</td>
+                    <td class="px-5 py-3 text-content">30 days</td>
+                    <td class="px-5 py-3 text-content">$50 / $999</td>
+                    <td class="px-5 py-3 text-content">1</td>
+                    <td class="px-5 py-3">
+                                                    <span class="inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded-full bg-success-light text-success">
+    Active
+</span>
+                                            </td>
+                    <td class="px-5 py-3 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="/admin/admin/mining/plans/1/edit" class="text-content-secondary hover:text-content transition-colors" title="Edit">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                            </a>
+                            <form method="POST" action="/admin/admin/mining/plans/1" onsubmit="return confirm('Delete this plan?')"> <input type="hidden" name="_method" value="DELETE">                                <button type="submit" class="text-content-secondary hover:text-danger transition-colors" title="Delete">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                                <tr class="border-b border-border hover:bg-surface-alt/50">
+                    <td class="px-5 py-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#f7924a22">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#f7924a"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25zm.75-12h9v9h-9V7.5z" /></svg>
+                            </div>
+                            <span class="font-medium text-content">Pro Miner</span>
+                        </div>
+                    </td>
+                    <td class="px-5 py-3 text-content">10 TH/s</td>
+                    <td class="px-5 py-3 text-success font-medium">2.00%</td>
+                    <td class="px-5 py-3 text-content">60 days</td>
+                    <td class="px-5 py-3 text-content">$1,000 / $9,999</td>
+                    <td class="px-5 py-3 text-content">0</td>
+                    <td class="px-5 py-3">
+                                                    <span class="inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded-full bg-success-light text-success">
+    Active
+</span>
+                                            </td>
+                    <td class="px-5 py-3 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="/admin/admin/mining/plans/2/edit" class="text-content-secondary hover:text-content transition-colors" title="Edit">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                            </a>
+                            <form method="POST" action="/admin/admin/mining/plans/2" onsubmit="return confirm('Delete this plan?')"> <input type="hidden" name="_method" value="DELETE">                                <button type="submit" class="text-content-secondary hover:text-danger transition-colors" title="Delete">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                                <tr class="border-b border-border hover:bg-surface-alt/50">
+                    <td class="px-5 py-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#4af7a422">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#4af7a4"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25zm.75-12h9v9h-9V7.5z" /></svg>
+                            </div>
+                            <span class="font-medium text-content">Elite Miner</span>
+                        </div>
+                    </td>
+                    <td class="px-5 py-3 text-content">50 TH/s</td>
+                    <td class="px-5 py-3 text-success font-medium">2.50%</td>
+                    <td class="px-5 py-3 text-content">90 days</td>
+                    <td class="px-5 py-3 text-content">$10,000 / —</td>
+                    <td class="px-5 py-3 text-content">0</td>
+                    <td class="px-5 py-3">
+                                                    <span class="inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded-full bg-success-light text-success">
+    Active
+</span>
+                                            </td>
+                    <td class="px-5 py-3 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="/admin/admin/mining/plans/3/edit" class="text-content-secondary hover:text-content transition-colors" title="Edit">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                            </a>
+                            <form method="POST" action="/admin/admin/mining/plans/3" onsubmit="return confirm('Delete this plan?')"> <input type="hidden" name="_method" value="DELETE">                                <button type="submit" class="text-content-secondary hover:text-danger transition-colors" title="Delete">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                            </tbody>
+        </table>
+        <div class="px-5 py-3"></div>
     </div>
+</div>
+</div>
+
         </div>
 
         
@@ -1075,8 +919,11 @@
     
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<!-- livewire removed -->
 
-        <script src="/livewire/livewire.js?id=90730a3b0e7144480175" data-turbo-eval="false" data-turbolinks-eval="false" ></script><script data-turbo-eval="false" data-turbolinks-eval="false" >window.livewire = new Livewire();window.Livewire = window.livewire;window.livewire_app_url = '';window.livewire_token = '5HgeEAY2xYAIf7TtJSt6KYllMvNyOcywDzOKVMxc';window.deferLoadingAlpine = function (callback) {window.addEventListener('livewire:load', function () {callback();});};let started = false;window.addEventListener('alpine:initializing', function () {if (! started) {window.livewire.start();started = true;}});document.addEventListener("DOMContentLoaded", function () {if (! started) {window.livewire.start();started = true;}});</script>
-
+<script src="https://cdn.jsdelivr.net/npm/axios@1.7.9/dist/axios.min.js"></script>
+<script src="../js/convert/config.js"></script>
+<script src="../js/convert/auth.js"></script>
+<script src="../js/convert/feature-pages.js"></script>
 </body>
 </html>

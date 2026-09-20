@@ -2070,8 +2070,87 @@ document.addEventListener('DOMContentLoaded',()=>{
 </script>
 <script>
 (() => {
-  async function loadPayment(){try{const r=await api.get('/user/dashboard/payment-data');const d=r.data;const card=document.querySelector('.inner-page');if(!card)return;const texts=Array.from(card.querySelectorAll('*')).filter(e=>e.children.length===0);texts.forEach(el=>{if(el.textContent.trim()==='USDT')el.textContent=d.method;if(el.textContent.trim()==='$100.00')el.textContent=(d.currency_code==='NGN'?'₦':'$')+Number(d.amount).toFixed(2);});const addr=card.querySelector('input[readonly]');if(addr)addr.value=d.address||'Payment address will be provided by support';const info=Array.from(card.querySelectorAll('strong')).find(el=>/\$100\.00/.test(el.textContent));if(info)info.textContent=(d.currency_code==='NGN'?'₦':'$')+Number(d.amount).toFixed(2);const form=document.querySelector('#proof-upload')?.closest('form');if(form){form.querySelector('input[name=amount]')?.setAttribute('value',d.amount);form.querySelector('input[name=paymethd_method]')?.setAttribute('value',d.method);form.addEventListener('submit',async e=>{e.preventDefault();if(!form.reportValidity())return;const btn=form.querySelector('button[type=submit]');if(btn){btn.disabled=true;btn.textContent='Submitting...';}try{const fd=new FormData(form);const rr=await fetch(`${String(window.API_BASE_URL||'').replace(/\/$/,'')}/user/dashboard/savedeposit`,{method:'POST',credentials:'include',body:fd,headers:{Accept:'application/json'}});const data=await rr.json();if(!rr.ok)throw new Error(data.message||'Could not submit deposit');location.href=data.redirect||'/user/deposits.html?success=deposit';}catch(err){alert(err.message);if(btn){btn.disabled=false;btn.textContent='Submit Deposit';}}});}}catch(e){if(e.response?.status===404)location.href='/user/deposits.html';}}
-  document.addEventListener('DOMContentLoaded',loadPayment);
+  async function loadPayment(){
+    try{
+      const r = await api.get('/user/dashboard/payment-data');
+      const d = r.data || {};
+      const card = document.querySelector('.inner-page');
+      if(!card) return;
+      const sym = (d.currency_code === 'NGN') ? '₦' : '$';
+      const amtStr = sym + Number(d.amount || 0).toFixed(2);
+
+      // Title: Loan Repayment when applicable
+      const titleEl = card.querySelector('.inner-title');
+      if(titleEl){
+        titleEl.textContent = d.is_loan_repayment
+          ? ('Loan Repayment' + (d.installment ? (' — Installment #' + d.installment) : ''))
+          : (titleEl.textContent || 'Make Payment');
+      }
+      // Back link
+      const back = card.querySelector('.inner-back');
+      if(back && d.return_url){
+        back.onclick = () => { location.href = d.return_url; };
+      }
+
+      // Info banner for loan
+      if(d.is_loan_repayment){
+        let banner = document.getElementById('loanRepayBanner');
+        if(!banner){
+          banner = document.createElement('div');
+          banner.id = 'loanRepayBanner';
+          banner.className = 'flex items-start gap-[9px] bg-[rgba(74,108,247,.05)] border border-[rgba(74,108,247,.15)] rounded-[13px] p-[14px] mb-[14px]';
+          banner.innerHTML = '<i class="fa-solid fa-circle-info text-blue2 text-[.85rem] flex-shrink-0 mt-0.5"></i><div><div class="text-[.84rem] font-semibold text-blue2 mb-1" id="loanRepayBannerTitle"></div><div class="text-[.76rem] text-[#555] leading-[1.55]">This deposit will be applied to your loan repayment once verified by admin. After completing payment, upload your proof below.</div></div>';
+          const hdr = card.querySelector('.inner-hdr');
+          if(hdr && hdr.nextSibling) hdr.parentNode.insertBefore(banner, hdr.nextSibling);
+          else card.insertBefore(banner, card.firstChild);
+        }
+        const bt = document.getElementById('loanRepayBannerTitle');
+        if(bt) bt.textContent = 'Loan Repayment' + (d.installment ? (' — Installment #' + d.installment) : '');
+      }
+
+      const texts = Array.from(card.querySelectorAll('*')).filter(e => e.children.length === 0);
+      texts.forEach(el => {
+        const t = el.textContent.trim();
+        if(t === 'USDT' || t === 'Bitcoin' || t === 'Ethereum') el.textContent = d.method || t;
+        if(t === '$100.00' || /^\$[0-9]+(\.[0-9]+)?$/.test(t)) el.textContent = amtStr;
+      });
+      const addr = card.querySelector('input[readonly]');
+      if(addr) addr.value = d.address || 'Payment address will be provided by support';
+      const info = Array.from(card.querySelectorAll('strong')).find(el => /\$[0-9]/.test(el.textContent));
+      if(info) info.textContent = amtStr;
+
+      const form = document.querySelector('#proof-upload')?.closest('form');
+      if(form){
+        form.querySelector('input[name=amount]')?.setAttribute('value', d.amount);
+        form.querySelector('input[name=paymethd_method]')?.setAttribute('value', d.method);
+        let pm = form.querySelector('input[name=payment_method]');
+        if(!pm){ pm = document.createElement('input'); pm.type='hidden'; pm.name='payment_method'; form.appendChild(pm); }
+        pm.value = d.method || '';
+        form.addEventListener('submit', async e => {
+          e.preventDefault();
+          if(!form.reportValidity()) return;
+          const btn = form.querySelector('button[type=submit]');
+          if(btn){ btn.disabled = true; btn.textContent = 'Submitting...'; }
+          try{
+            const fd = new FormData(form);
+            const rr = await fetch(`${String(window.API_BASE_URL||'').replace(/\/$/,'')}/user/dashboard/savedeposit`, {
+              method: 'POST', credentials: 'include', body: fd, headers: { Accept: 'application/json' }
+            });
+            const data = await rr.json();
+            if(!rr.ok) throw new Error(data.message || 'Could not submit deposit');
+            if(data.message) sessionStorage.setItem('loan_repay_flash', data.message);
+            location.href = data.redirect || (d.return_url || '/user/deposits.html?success=deposit');
+          }catch(err){
+            alert(err.message);
+            if(btn){ btn.disabled = false; btn.textContent = 'Submit Deposit'; }
+          }
+        });
+      }
+    }catch(e){
+      if(e.response?.status === 404) location.href = '/user/deposits.html';
+    }
+  }
+  document.addEventListener('DOMContentLoaded', loadPayment);
 })();
 </script>
 </body>
