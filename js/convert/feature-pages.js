@@ -28,6 +28,10 @@
         const response = await api.put(API + path, body);
         return response.data;
     }
+    async function patch(path,body){
+      const r=await api.patch(API+path, body);
+      return r.data;
+    }
     async function del(path) {
         const response = await api.delete(API + path);
         return response.data;
@@ -4395,6 +4399,10 @@ async function routeAdmin(){
       if(page==='admin-real-estate-edit.html')return adminRealEstateForm(true);
       if(page==='real-estate-investments.html')return adminRealEstateInvestments();
       if(page==='admin-stock-shares.html')return adminStockShares();
+      if(page==='courses.html')return adminCoursesPage();
+      if(page==='categories.html')return adminCategoriesPage();
+      if(page==='admin-courses-lessons.html')return adminCourseLessonsPage();
+      if(page==='lessons-without-course.html')return adminStandaloneLessonsPage();
       if(page==='stock-shares-trades.html')return adminStockTrades();
       if(page==='stock-shares-user.html')return adminStockUser();
       if(page==='stock-shares-positions-edit.html')return adminStockPosEdit();
@@ -5046,6 +5054,10 @@ async function adminStockShares(){
       else if(page==='stock-history.html')await stockHistoryPage();
       else if(page==='stock-portfolio.html')await stockPortfolioPage();
       else if(page==='stock-detail.html')await stockDetailPage();
+      else if(page==='courses.html')await coursesPage();
+      else if(page==='course-details.html')await courseDetailsPage();
+      else if(page==='my-courses.html')await myCoursesPage();
+      else if(page==='lesson-details.html')await lessonDetailsPage();
     }
     catch(e){
       toast(e.message,false)
@@ -5059,7 +5071,632 @@ async function adminStockShares(){
     s.textContent='.feature-invest-drawer{position:fixed;top:0;right:0;bottom:0;width:25vw;min-width:340px;max-width:560px;background:#0d0d0d;border-left:1px solid #1e1e1e;z-index:100001;overflow-y:auto}.feature-drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);z-index:100000}.feature-invest-drawer{z-index:100001}@media(max-width:767px){.feature-invest-drawer{width:100%;min-width:0;max-width:none}}';
     document.head.appendChild(s)
   }
-    document.addEventListener('DOMContentLoaded',async()=>{
+    
+  async function coursesPage(){
+    showDynamicMain();
+    const root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page')||document.getElementById('main-content');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/courses');}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-400">${esc(e.message)}</div>`;return;}
+    const courses=d.courses||[];
+    root.innerHTML=`
+<div class="flex items-center justify-between mb-5">
+  <div>
+    <h1 class="text-white text-lg font-medium">All Courses</h1>
+    <p class="text-[#555] text-[.78rem]">Digital-grownt learning library</p>
+  </div>
+  <a href="/user/my-courses.html" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#1e1e1e] bg-[#111] text-[.78rem] text-[#aaa] hover:text-white">
+    <i class="fa-solid fa-graduation-cap"></i> My Courses
+  </a>
+</div>
+<div class="space-y-4" id="coursesList">
+${courses.length?courses.map(c=>{
+  const cover=c.cover||c.image||c.image_url||'';
+  const price=Number(c.price||0);
+  const priceLbl=price<=0?'<span class="text-grn font-medium">Free</span>':`<span class="text-white font-medium">${money(price)}</span>`;
+  return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] overflow-hidden">
+    <div class="h-40 bg-[#0a0a0a] relative">${cover?`<img src="${esc(cover)}" class="w-full h-full object-cover">`:''}</div>
+    <div class="p-4">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="text-white font-medium">${esc(c.title)}</div>
+          <div class="text-[#555] text-[.75rem] mt-1"><i class="fa-solid fa-book-open mr-1"></i>${Number(c.lessons_count||0)} Lessons</div>
+        </div>
+        <div class="text-[#555] text-[.72rem] whitespace-nowrap"><i class="fa-solid fa-user-group mr-1"></i>${Number(c.enrolled_count||0)} enrolled</div>
+      </div>
+      <div class="flex items-center justify-between mt-4">
+        ${priceLbl}
+        <a href="/user/course-details.html?id=${encodeURIComponent(c._id)}" class="px-4 py-1.5 rounded-full border border-blue2/40 text-blue2 text-[.78rem] hover:bg-blue2/10">${c.enrolled?'Open Course':'Get Course'}</a>
+      </div>
+    </div>
+  </div>`;
+}).join(''):`<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-10 text-center text-[#555]">No courses available yet.</div>`}
+</div>`;
+  }
+
+  async function courseDetailsPage(){
+    showDynamicMain();
+    const root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page')||document.getElementById('main-content');
+    if(!root) return;
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){root.innerHTML='<div class="p-8 text-center text-[#555]">Missing course id.</div>';return;}
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/courses/'+id);}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-400">${esc(e.message)}</div>`;return;}
+    const c=d.course||{};
+    const lessons=d.lessons||[];
+    const enrolled=!!d.enrolled;
+    const price=Number(c.price||0);
+    const cover=c.cover||c.image||c.image_url||'';
+    const updated=c.updatedAt?new Date(c.updatedAt).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'';
+    root.innerHTML=`
+<a href="/user/courses.html" class="inline-flex items-center gap-1 text-[#888] text-[.82rem] mb-4"><i class="fa-solid fa-chevron-left"></i> ${esc(c.title||'Course')}</a>
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] overflow-hidden mb-4">
+  <div class="h-44 bg-[#0a0a0a]">${cover?`<img src="${esc(cover)}" class="w-full h-full object-cover">`:''}</div>
+  <div class="p-4 border-t border-[#1e1e1e]">
+    <div class="text-white text-xl font-medium mb-3">${price<=0?'Free':money(price)}</div>
+    ${enrolled
+      ?`<a href="/user/my-courses.html" class="block w-full text-center py-3 rounded-lg bg-brand-blue text-white font-medium">Open in My Courses</a>`
+      :`<button id="buyCourseBtn" class="w-full py-3 rounded-lg bg-brand-blue text-white font-medium">Buy Now</button>`}
+  </div>
+</div>
+<div class="grid grid-cols-3 gap-2 text-center text-[.72rem] text-[#555] mb-4">
+  <div><div class="uppercase tracking-wide mb-1">Created by</div><div class="text-white">Digital-grownt</div></div>
+  <div><div class="uppercase tracking-wide mb-1">Category</div><div class="text-white">${esc(c.category||'—')}</div></div>
+  <div><div class="uppercase tracking-wide mb-1">Updated</div><div class="text-white">${esc(updated)}</div></div>
+</div>
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-4 mb-4">
+  <div class="text-white font-medium mb-2">About Course</div>
+  <p class="text-[#888] text-[.85rem] leading-relaxed">${esc(c.description||'No description.')}</p>
+</div>
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] overflow-hidden">
+  <div class="px-4 py-3 border-b border-[#1e1e1e] text-white font-medium">Course Lessons</div>
+  <div class="divide-y divide-[#1a1a1a]">
+  ${lessons.length?lessons.map((l,i)=>{
+    const locked=!enrolled && !l.is_preview;
+    const thumb=l.image||l.image_url||'';
+    return `<div class="flex items-center gap-3 px-4 py-3">
+      <div class="w-8 h-8 rounded-full bg-[#161616] flex items-center justify-center text-red2"><i class="fa-solid fa-play text-[.7rem]"></i></div>
+      <div class="flex-1 min-w-0">
+        <div class="text-white text-[.85rem] truncate">${esc(l.title)}</div>
+        <div class="text-[#555] text-[.72rem] truncate">${esc(l.description||l.duration||'')}</div>
+      </div>
+      ${locked
+        ?`<span class="text-[#555]"><i class="fa-solid fa-lock"></i></span>`
+        :`<a href="/user/lesson-details.html?id=${encodeURIComponent(l._id)}" class="text-[.75rem] text-blue2">${l.is_preview&&!enrolled?'Preview':'Open'}</a>`}
+    </div>`;
+  }).join(''):`<div class="p-6 text-center text-[#555] text-sm">No lessons yet.</div>`}
+  </div>
+</div>`;
+    const btn=root.querySelector('#buyCourseBtn');
+    if(btn){
+      btn.onclick=async()=>{
+        try{
+          const x=await post('/courses/'+c._id+'/buy',{});
+          toast(x.message||'Success',true);
+          setTimeout(()=>courseDetailsPage(),500);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    }
+  }
+
+  async function myCoursesPage(){
+    showDynamicMain();
+    const root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page')||document.getElementById('main-content');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/courses/my');}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-400">${esc(e.message)}</div>`;return;}
+    const courses=d.courses||[];
+    root.innerHTML=`
+<a href="/user/courses.html" class="inline-flex items-center gap-1 text-[#888] text-[.82rem] mb-4"><i class="fa-solid fa-chevron-left"></i> Your Courses</a>
+${courses.length?`<div class="space-y-4">${courses.map(c=>{
+  const cover=c.cover||c.image||c.image_url||'';
+  return `<a href="/user/course-details.html?id=${encodeURIComponent(c._id)}" class="block bg-[#111] border border-[#1e1e1e] rounded-[14px] overflow-hidden">
+    <div class="h-36 bg-[#0a0a0a]">${cover?`<img src="${esc(cover)}" class="w-full h-full object-cover">`:''}</div>
+    <div class="p-4">
+      <div class="text-white font-medium">${esc(c.title)}</div>
+      <div class="text-[#555] text-[.75rem] mt-1">${Number(c.lessons_count||0)} Lessons</div>
+    </div>
+  </a>`;
+}).join('')}</div>`:`
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-12 text-center">
+  <div class="text-[#333] text-4xl mb-3"><i class="fa-solid fa-graduation-cap"></i></div>
+  <p class="text-[#555] text-sm mb-4">You haven't purchased any courses yet.</p>
+  <a href="/user/courses.html" class="inline-flex items-center px-4 py-2 rounded-lg bg-brand-blue text-white text-sm font-medium">Browse Courses</a>
+</div>`}`;
+  }
+
+  async function lessonDetailsPage(){
+    showDynamicMain();
+    const root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page')||document.getElementById('main-content');
+    if(!root) return;
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){root.innerHTML='<div class="p-8 text-center text-[#555]">Missing lesson id.</div>';return;}
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/lessons/'+id);}catch(e){
+      const msg=e.response?.data?.message||e.message;
+      const locked=e.response?.data?.locked;
+      root.innerHTML=`<div class="p-8 text-center text-[#555]">${esc(msg)}${locked?` <a class="text-blue2" href="/user/courses.html">Browse courses</a>`:''}</div>`;
+      return;
+    }
+    const l=d.lesson||{};
+    const course=d.course||{};
+    let video=l.video_url||'';
+    let embed='';
+    if(video){
+      const yt=video.match(/(?:youtu\.be\/|v=|embed\/)([A-Za-z0-9_-]{6,})/);
+      if(yt) embed=`<iframe class="w-full aspect-video rounded-[12px]" src="https://www.youtube.com/embed/${yt[1]}" frameborder="0" allowfullscreen></iframe>`;
+      else if(video.includes('vimeo')){
+        const vm=video.match(/vimeo\.com\/(\d+)/);
+        if(vm) embed=`<iframe class="w-full aspect-video rounded-[12px]" src="https://player.vimeo.com/video/${vm[1]}" frameborder="0" allowfullscreen></iframe>`;
+      } else if(/\.(mp4|webm|ogg)(\?|$)/i.test(video)){
+        embed=`<video class="w-full rounded-[12px]" controls src="${esc(video)}"></video>`;
+      } else {
+        embed=`<a href="${esc(video)}" target="_blank" class="text-blue2">Open lesson video</a>`;
+      }
+    }
+    root.innerHTML=`
+<a href="${course._id?`/user/course-details.html?id=${course._id}`:'/user/courses.html'}" class="inline-flex items-center gap-1 text-[#888] text-[.82rem] mb-3"><i class="fa-solid fa-chevron-left"></i> ${esc(l.title||'Lesson')}</a>
+<p class="text-[#555] text-[.78rem] mb-4">${esc(l.description||'')}</p>
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-3 mb-4">
+  ${embed||`<div class="aspect-video bg-[#0a0a0a] rounded-[12px] flex items-center justify-center text-[#555]">No video URL set</div>`}
+</div>`;
+  }
+
+  async function adminCoursesPage(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/courses');}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-500">${esc(e.message)}</div>`;return;}
+    const courses=d.courses||[];
+    root.innerHTML=`
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-xl font-semibold text-gray-900">Courses</h1>
+    <p class="text-sm text-gray-500">Manage all courses in your learning platform.</p>
+  </div>
+  <button id="btnCreateCourse" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">+ Create New</button>
+</div>
+<div id="courseGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+${courses.map(c=>{
+  const cover=c.cover||c.image||c.image_url||'';
+  const price=Number(c.price||0);
+  const published=c.status==='published';
+  return `<div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+    <div class="h-36 bg-gray-100">${cover?`<img src="${esc(cover)}" class="w-full h-full object-cover">`:''}</div>
+    <div class="p-4">
+      <div class="flex items-start justify-between gap-2 mb-1">
+        <div class="font-medium text-gray-900">${esc(c.title)}</div>
+        <span class="text-[.7rem] px-2 py-0.5 rounded-full ${published?'bg-emerald-50 text-emerald-600':'bg-amber-50 text-amber-600'}">${published?'Published':'Draft'}</span>
+      </div>
+      <div class="text-xs text-gray-400 mb-2">${esc(c.category||'Uncategorized')}</div>
+      <div class="flex items-center justify-between text-xs text-gray-500 mb-3">
+        <span><i class="fa-solid fa-book-open mr-1"></i>${Number(c.lessons_count||0)} Lessons</span>
+        <span><i class="fa-solid fa-user-group mr-1"></i>${Number(c.enrolled_count||0)} enrolled</span>
+      </div>
+      <div class="font-semibold text-gray-900 mb-3">${price<=0?'Free':money(price)}</div>
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <a href="/admin/admin-courses-lessons.html?id=${encodeURIComponent(c._id)}" class="text-center py-2 rounded-lg bg-sky-50 text-sky-600 font-medium">Lessons</a>
+        <button data-edit="${c._id}" class="py-2 rounded-lg bg-gray-50 text-gray-600 font-medium course-edit">Edit</button>
+        <button data-status="${c._id}" data-cur="${c.status}" class="py-2 rounded-lg bg-amber-50 text-amber-600 font-medium course-status">${published?'Unpublish':'Publish'}</button>
+        <button data-del="${c._id}" class="py-2 rounded-lg bg-red-50 text-red-500 font-medium course-del">Delete</button>
+      </div>
+    </div>
+  </div>`;
+}).join('')||'<div class="col-span-full text-center text-gray-400 py-10">No courses yet. Create one.</div>'}
+</div>
+<div id="courseModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/50" data-close></div>
+  <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+    <h3 class="text-lg font-semibold mb-4" id="courseModalTitle">Create Course</h3>
+    <input type="hidden" id="courseId"/>
+    <div class="space-y-3">
+      <div><label class="text-sm font-medium text-gray-700">Title</label><input id="cTitle" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"/></div>
+      <div><label class="text-sm font-medium text-gray-700">Category</label><input id="cCategory" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Crypto Basics"/></div>
+      <div><label class="text-sm font-medium text-gray-700">Price (0 = Free)</label><input id="cPrice" type="number" step="0.01" min="0" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm" value="0"/></div>
+      <div><label class="text-sm font-medium text-gray-700">Image URL</label><input id="cImage" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"/><div id="cImagePrev" class="mt-2"></div></div>
+      <div><label class="text-sm font-medium text-gray-700">Description</label><textarea id="cDesc" rows="3" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"></textarea></div>
+      <div><label class="text-sm font-medium text-gray-700">Status</label>
+        <select id="cStatus" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"><option value="draft">Draft</option><option value="published">Published</option></select>
+      </div>
+    </div>
+    <div class="mt-5 flex justify-end gap-2">
+      <button data-close class="px-4 py-2 text-sm rounded-lg bg-gray-100 text-gray-600">Cancel</button>
+      <button id="cSave" class="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white">Save</button>
+    </div>
+  </div>
+</div>`;
+    const modal=root.querySelector('#courseModal');
+    const openModal=(course)=>{
+      modal.classList.remove('hidden');
+      root.querySelector('#courseModalTitle').textContent=course?'Edit Course':'Create Course';
+      root.querySelector('#courseId').value=course?course._id:'';
+      root.querySelector('#cTitle').value=course?course.title:'';
+      root.querySelector('#cCategory').value=course?course.category||'':'';
+      root.querySelector('#cPrice').value=course?Number(course.price||0):0;
+      root.querySelector('#cImage').value=course?(course.image||course.image_url||''):'';
+      root.querySelector('#cDesc').value=course?course.description||'':'';
+      root.querySelector('#cStatus').value=course?course.status||'draft':'draft';
+      const prev=root.querySelector('#cImagePrev');
+      const url=root.querySelector('#cImage').value;
+      prev.innerHTML=url?`<img src="${esc(url)}" class="h-24 rounded object-cover">`:'';
+    };
+    root.querySelector('#btnCreateCourse').onclick=()=>openModal(null);
+    root.querySelector('#cImage').oninput=(e)=>{
+      const url=e.target.value.trim();
+      root.querySelector('#cImagePrev').innerHTML=url?`<img src="${esc(url)}" class="h-24 rounded object-cover">`:'';
+    };
+    modal.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>modal.classList.add('hidden'));
+    root.querySelector('#cSave').onclick=async()=>{
+      const id=root.querySelector('#courseId').value;
+      const body={
+        title:root.querySelector('#cTitle').value.trim(),
+        category:root.querySelector('#cCategory').value.trim(),
+        price:Number(root.querySelector('#cPrice').value||0),
+        image_url:root.querySelector('#cImage').value.trim(),
+        description:root.querySelector('#cDesc').value.trim(),
+        status:root.querySelector('#cStatus').value
+      };
+      try{
+        if(id) await put('/courses/'+id, body);
+        else await post('/courses', body);
+        toast(id?'Course updated successfully.':'Course created successfully.',true);
+        modal.classList.add('hidden');
+        setTimeout(()=>adminCoursesPage(),400);
+      }catch(e){toast(e.response?.data?.message||e.message,false);}
+    };
+    root.querySelectorAll('.course-edit').forEach(btn=>{
+      btn.onclick=()=>{
+        const course=courses.find(x=>String(x._id)===btn.getAttribute('data-edit'));
+        openModal(course);
+      };
+    });
+    root.querySelectorAll('.course-status').forEach(btn=>{
+      btn.onclick=async()=>{
+        try{
+          await patch('/courses/'+btn.getAttribute('data-status')+'/status',{});
+          toast('Status updated',true);
+          setTimeout(()=>adminCoursesPage(),400);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
+    root.querySelectorAll('.course-del').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Delete this course and its lessons?')) return;
+        try{
+          await del('/courses/'+btn.getAttribute('data-del'));
+          toast('Course deleted successfully.',true);
+          setTimeout(()=>adminCoursesPage(),400);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
+  }
+
+  async function adminCategoriesPage(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/course-categories');}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-500">${esc(e.message)}</div>`;return;}
+    const cats=d.categories||[];
+    root.innerHTML=`
+<div class="mb-6">
+  <h1 class="text-xl font-semibold text-gray-900">Course Categories</h1>
+  <p class="text-sm text-gray-500">Organize courses and standalone lessons into categories</p>
+</div>
+<div class="bg-white border rounded-xl p-4 mb-5">
+  <div class="text-sm font-medium text-gray-700 mb-2">Add New Category</div>
+  <div class="flex gap-2">
+    <input id="catName" class="flex-1 border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Crypto Basics"/>
+    <button id="catAdd" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium">+ Add Category</button>
+  </div>
+</div>
+<div class="bg-white border rounded-xl overflow-hidden">
+  <div class="px-4 py-3 border-b text-sm font-medium text-gray-700">Categories (${cats.length})</div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-gray-500 text-xs uppercase"><tr>
+        <th class="px-4 py-3 text-left">#</th><th class="px-4 py-3 text-left">Name</th>
+        <th class="px-4 py-3 text-left">Courses</th><th class="px-4 py-3 text-left">Standalone Lessons</th>
+        <th class="px-4 py-3 text-right">Actions</th>
+      </tr></thead>
+      <tbody>
+      ${cats.map((c,i)=>`<tr class="border-t">
+        <td class="px-4 py-3">${i+1}</td>
+        <td class="px-4 py-3 font-medium">${esc(c.name)}</td>
+        <td class="px-4 py-3 text-blue-600">${Number(c.courses_count||0)}</td>
+        <td class="px-4 py-3">${Number(c.standalone_count||0)}</td>
+        <td class="px-4 py-3 text-right"><button data-del="${c._id}" class="text-red-500 text-xs cat-del">Delete</button></td>
+      </tr>`).join('')||'<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">No categories yet.</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>`;
+    root.querySelector('#catAdd').onclick=async()=>{
+      const name=root.querySelector('#catName').value.trim();
+      if(!name){toast('Enter category name',false);return;}
+      try{
+        await post('/course-categories',{name});
+        toast('Category added successfully.',true);
+        setTimeout(()=>adminCategoriesPage(),400);
+      }catch(e){toast(e.response?.data?.message||e.message,false);}
+    };
+    root.querySelectorAll('.cat-del').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Delete this category?')) return;
+        try{
+          await del('/course-categories/'+btn.getAttribute('data-del'));
+          toast('Category deleted successfully.',true);
+          setTimeout(()=>adminCategoriesPage(),400);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
+  }
+
+  async function adminCourseLessonsPage(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){root.innerHTML='<div class="p-8 text-center text-gray-500">Missing course id. <a class="text-blue-600" href="/admin/courses.html">Back</a></div>';return;}
+    root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/courses/'+id+'/lessons');}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-500">${esc(e.message)}</div>`;return;}
+    const course=d.course||{};
+    const lessons=d.lessons||[];
+    function render(list){
+      root.innerHTML=`
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <a href="/admin/courses.html" class="text-sm text-gray-500 hover:text-gray-700">← Lessons</a>
+    <div class="text-xs text-gray-400">${esc(course.title||'')}</div>
+  </div>
+  <button id="btnNewLesson" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium">+ New Lesson</button>
+</div>
+<div class="bg-white border rounded-xl overflow-hidden">
+  <div class="px-4 py-3 border-b text-sm font-medium">Course Lessons (${list.length})</div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr>
+        <th class="px-4 py-3 text-left">#</th><th class="px-4 py-3 text-left">Thumbnail</th><th class="px-4 py-3 text-left">Title</th>
+        <th class="px-4 py-3 text-left">Duration</th><th class="px-4 py-3 text-left">Preview</th><th class="px-4 py-3 text-left">Order</th>
+        <th class="px-4 py-3 text-right">Actions</th>
+      </tr></thead>
+      <tbody>
+      ${list.map((l,i)=>{
+        const thumb=l.image||l.image_url||'';
+        return `<tr class="border-t">
+          <td class="px-4 py-3">${i+1}</td>
+          <td class="px-4 py-3">${thumb?`<img src="${esc(thumb)}" class="w-16 h-10 rounded object-cover">`:'—'}</td>
+          <td class="px-4 py-3"><div class="font-medium">${esc(l.title)}</div><div class="text-xs text-gray-400 line-clamp-1">${esc(l.description||'')}</div></td>
+          <td class="px-4 py-3 text-gray-500">${esc(l.duration||'—')}</td>
+          <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded-full ${l.is_preview?'bg-emerald-50 text-emerald-600':'bg-gray-100 text-gray-500'}">${l.is_preview?'Yes':'No'}</span></td>
+          <td class="px-4 py-3">
+            <div class="flex gap-1">
+              <button data-up="${l._id}" class="p-1 text-gray-400 hover:text-gray-700 lesson-up">▲</button>
+              <button data-down="${l._id}" class="p-1 text-gray-400 hover:text-gray-700 lesson-down">▼</button>
+            </div>
+          </td>
+          <td class="px-4 py-3 text-right">
+            <button data-edit="${l._id}" class="px-3 py-1 text-xs rounded-lg bg-gray-50 text-gray-600 lesson-edit">Edit</button>
+            <button data-del="${l._id}" class="px-3 py-1 text-xs rounded-lg bg-red-50 text-red-500 lesson-del">Delete</button>
+          </td>
+        </tr>`;
+      }).join('')||'<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No lessons yet.</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div id="lessonModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/50" data-close></div>
+  <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+    <h3 class="text-lg font-semibold mb-4" id="lessonModalTitle">New Lesson</h3>
+    <input type="hidden" id="lessonId"/>
+    <div class="space-y-3">
+      <div><label class="text-sm font-medium">Title</label><input id="lTitle" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"/></div>
+      <div><label class="text-sm font-medium">Description</label><textarea id="lDesc" rows="2" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"></textarea></div>
+      <div><label class="text-sm font-medium">Duration</label><input id="lDuration" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. 8:30"/></div>
+      <div><label class="text-sm font-medium">Video URL</label><input id="lVideo" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm" placeholder="YouTube/Vimeo/mp4 URL"/></div>
+      <div><label class="text-sm font-medium">Thumbnail URL</label><input id="lImage" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"/><div id="lImagePrev" class="mt-2"></div></div>
+      <div class="flex items-center gap-2"><input type="checkbox" id="lPreview"/><label for="lPreview" class="text-sm">Allow preview</label></div>
+    </div>
+    <div class="mt-5 flex justify-end gap-2">
+      <button data-close class="px-4 py-2 text-sm rounded-lg bg-gray-100">Cancel</button>
+      <button id="lSave" class="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white">Save</button>
+    </div>
+  </div>
+</div>`;
+      const modal=root.querySelector('#lessonModal');
+      const open=(lesson)=>{
+        modal.classList.remove('hidden');
+        root.querySelector('#lessonModalTitle').textContent=lesson?'Update Lesson':'New Lesson';
+        root.querySelector('#lessonId').value=lesson?lesson._id:'';
+        root.querySelector('#lTitle').value=lesson?lesson.title:'';
+        root.querySelector('#lDesc').value=lesson?lesson.description||'':'';
+        root.querySelector('#lDuration').value=lesson?lesson.duration||'':'';
+        root.querySelector('#lVideo').value=lesson?lesson.video_url||'':'';
+        root.querySelector('#lImage').value=lesson?(lesson.image||lesson.image_url||''):'';
+        root.querySelector('#lPreview').checked=!!(lesson&&lesson.is_preview);
+        const url=root.querySelector('#lImage').value;
+        root.querySelector('#lImagePrev').innerHTML=url?`<img src="${esc(url)}" class="h-20 rounded object-cover">`:'';
+      };
+      root.querySelector('#btnNewLesson').onclick=()=>open(null);
+      root.querySelector('#lImage').oninput=(e)=>{
+        const url=e.target.value.trim();
+        root.querySelector('#lImagePrev').innerHTML=url?`<img src="${esc(url)}" class="h-20 rounded object-cover">`:'';
+      };
+      modal.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>modal.classList.add('hidden'));
+      root.querySelector('#lSave').onclick=async()=>{
+        const lid=root.querySelector('#lessonId').value;
+        const body={
+          title:root.querySelector('#lTitle').value.trim(),
+          description:root.querySelector('#lDesc').value.trim(),
+          duration:root.querySelector('#lDuration').value.trim(),
+          video_url:root.querySelector('#lVideo').value.trim(),
+          image_url:root.querySelector('#lImage').value.trim(),
+          is_preview:root.querySelector('#lPreview').checked,
+          course_id:id
+        };
+        try{
+          if(lid) await put('/lessons/'+lid, body);
+          else await post('/lessons', body);
+          toast(lid?'Lesson updated successfully.':'Lesson created successfully.',true);
+          modal.classList.add('hidden');
+          setTimeout(()=>adminCourseLessonsPage(),400);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+      root.querySelectorAll('.lesson-edit').forEach(btn=>{
+        btn.onclick=()=>open(list.find(x=>String(x._id)===btn.getAttribute('data-edit')));
+      });
+      root.querySelectorAll('.lesson-del').forEach(btn=>{
+        btn.onclick=async()=>{
+          if(!confirm('Delete this lesson?')) return;
+          try{await del('/lessons/'+btn.getAttribute('data-del'));toast('Lesson deleted successfully.',true);setTimeout(()=>adminCourseLessonsPage(),400);}
+          catch(e){toast(e.response?.data?.message||e.message,false);}
+        };
+      });
+      root.querySelectorAll('.lesson-up').forEach(btn=>{
+        btn.onclick=async()=>{try{await patch('/lessons/'+btn.getAttribute('data-up')+'/reorder',{direction:'up'});adminCourseLessonsPage();}catch(e){toast(e.message,false);}};
+      });
+      root.querySelectorAll('.lesson-down').forEach(btn=>{
+        btn.onclick=async()=>{try{await patch('/lessons/'+btn.getAttribute('data-down')+'/reorder',{direction:'down'});adminCourseLessonsPage();}catch(e){toast(e.message,false);}};
+      });
+    }
+    render(lessons);
+  }
+
+  async function adminStandaloneLessonsPage(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d, cats;
+    try{
+      d=await get('/lessons-standalone');
+      cats=await get('/course-categories');
+    }catch(e){root.innerHTML=`<div class="p-8 text-center text-red-500">${esc(e.message)}</div>`;return;}
+    const lessons=d.lessons||[];
+    const categories=cats.categories||[];
+    root.innerHTML=`
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-xl font-semibold text-gray-900">Standalone Lessons</h1>
+    <p class="text-sm text-gray-500">Lessons with a category but no parent course</p>
+  </div>
+  <button id="btnNewStand" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium">+ New Standalone Lesson</button>
+</div>
+<div class="bg-white border rounded-xl overflow-hidden">
+  <div class="px-4 py-3 border-b text-sm font-medium">All Standalone Lessons (${lessons.length})</div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr>
+        <th class="px-4 py-3 text-left">#</th><th class="px-4 py-3 text-left">Thumbnail</th><th class="px-4 py-3 text-left">Title</th>
+        <th class="px-4 py-3 text-left">Category</th><th class="px-4 py-3 text-left">Duration</th><th class="px-4 py-3 text-left">Preview</th>
+        <th class="px-4 py-3 text-right">Actions</th>
+      </tr></thead>
+      <tbody>
+      ${lessons.map((l,i)=>{
+        const thumb=l.image||l.image_url||'';
+        return `<tr class="border-t">
+          <td class="px-4 py-3">${i+1}</td>
+          <td class="px-4 py-3">${thumb?`<img src="${esc(thumb)}" class="w-16 h-10 rounded object-cover">`:'—'}</td>
+          <td class="px-4 py-3"><div class="font-medium">${esc(l.title)}</div><div class="text-xs text-gray-400">${esc(l.description||'')}</div></td>
+          <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">${esc(l.category||'—')}</span></td>
+          <td class="px-4 py-3">${esc(l.duration||'—')}</td>
+          <td class="px-4 py-3"><span class="text-xs ${l.is_preview?'text-emerald-600':'text-gray-400'}">${l.is_preview?'Yes':'No'}</span></td>
+          <td class="px-4 py-3 text-right">
+            <button data-edit="${l._id}" class="px-3 py-1 text-xs rounded-lg bg-gray-50 text-gray-600 stand-edit">Edit</button>
+            <button data-del="${l._id}" class="px-3 py-1 text-xs rounded-lg bg-red-50 text-red-500 stand-del">Delete</button>
+          </td>
+        </tr>`;
+      }).join('')||'<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No standalone lessons.</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div id="standModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/50" data-close></div>
+  <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+    <h3 class="text-lg font-semibold mb-4" id="standModalTitle">New Standalone Lesson</h3>
+    <input type="hidden" id="sId"/>
+    <div class="space-y-3">
+      <div><label class="text-sm font-medium">Title</label><input id="sTitle" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"/></div>
+      <div><label class="text-sm font-medium">Category</label>
+        <select id="sCategory" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="">Select category</option>
+          ${categories.map(c=>`<option value="${esc(c.name)}" data-id="${c._id}">${esc(c.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div><label class="text-sm font-medium">Description</label><textarea id="sDesc" rows="2" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"></textarea></div>
+      <div><label class="text-sm font-medium">Duration</label><input id="sDuration" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"/></div>
+      <div><label class="text-sm font-medium">Video URL</label><input id="sVideo" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"/></div>
+      <div><label class="text-sm font-medium">Thumbnail URL</label><input id="sImage" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"/><div id="sImagePrev" class="mt-2"></div></div>
+      <div class="flex items-center gap-2"><input type="checkbox" id="sPreview"/><label for="sPreview" class="text-sm">Allow preview</label></div>
+    </div>
+    <div class="mt-5 flex justify-end gap-2">
+      <button data-close class="px-4 py-2 text-sm rounded-lg bg-gray-100">Cancel</button>
+      <button id="sSave" class="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white">Save</button>
+    </div>
+  </div>
+</div>`;
+    const modal=root.querySelector('#standModal');
+    const open=(lesson)=>{
+      modal.classList.remove('hidden');
+      root.querySelector('#standModalTitle').textContent=lesson?'Update Lesson':'New Standalone Lesson';
+      root.querySelector('#sId').value=lesson?lesson._id:'';
+      root.querySelector('#sTitle').value=lesson?lesson.title:'';
+      root.querySelector('#sCategory').value=lesson?lesson.category||'':'';
+      root.querySelector('#sDesc').value=lesson?lesson.description||'':'';
+      root.querySelector('#sDuration').value=lesson?lesson.duration||'':'';
+      root.querySelector('#sVideo').value=lesson?lesson.video_url||'':'';
+      root.querySelector('#sImage').value=lesson?(lesson.image||lesson.image_url||''):'';
+      root.querySelector('#sPreview').checked=!!(lesson&&lesson.is_preview);
+      const url=root.querySelector('#sImage').value;
+      root.querySelector('#sImagePrev').innerHTML=url?`<img src="${esc(url)}" class="h-20 rounded object-cover">`:'';
+    };
+    root.querySelector('#btnNewStand').onclick=()=>open(null);
+    root.querySelector('#sImage').oninput=(e)=>{
+      const url=e.target.value.trim();
+      root.querySelector('#sImagePrev').innerHTML=url?`<img src="${esc(url)}" class="h-20 rounded object-cover">`:'';
+    };
+    modal.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>modal.classList.add('hidden'));
+    root.querySelector('#sSave').onclick=async()=>{
+      const sid=root.querySelector('#sId').value;
+      const sel=root.querySelector('#sCategory');
+      const opt=sel.options[sel.selectedIndex];
+      const body={
+        title:root.querySelector('#sTitle').value.trim(),
+        category:sel.value,
+        category_id:opt&&opt.dataset.id?opt.dataset.id:null,
+        description:root.querySelector('#sDesc').value.trim(),
+        duration:root.querySelector('#sDuration').value.trim(),
+        video_url:root.querySelector('#sVideo').value.trim(),
+        image_url:root.querySelector('#sImage').value.trim(),
+        is_preview:root.querySelector('#sPreview').checked,
+        standalone:true,
+        course_id:null
+      };
+      try{
+        if(sid) await put('/lessons/'+sid, body);
+        else await post('/lessons', body);
+        toast(sid?'Standalone lesson updated successfully.':'Lesson created successfully.',true);
+        modal.classList.add('hidden');
+        setTimeout(()=>adminStandaloneLessonsPage(),400);
+      }catch(e){toast(e.response?.data?.message||e.message,false);}
+    };
+    root.querySelectorAll('.stand-edit').forEach(btn=>{
+      btn.onclick=()=>open(lessons.find(x=>String(x._id)===btn.getAttribute('data-edit')));
+    });
+    root.querySelectorAll('.stand-del').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Delete this lesson?')) return;
+        try{await del('/lessons/'+btn.getAttribute('data-del'));toast('Lesson deleted successfully.',true);setTimeout(()=>adminStandaloneLessonsPage(),400);}
+        catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
+  }
+
+
+document.addEventListener('DOMContentLoaded',async()=>{
     injectStyle();
     normalizeUserNav();
     hideDynamicMain();
