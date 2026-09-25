@@ -5247,8 +5247,16 @@ ${courses.length?`<div class="space-y-4">${courses.map(c=>{
     const root=document.getElementById('main-content')||document.querySelector('main');
     if(!root) return;
     root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
-    let d; try{d=await get('/courses');}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-500">${esc(e.message)}</div>`;return;}
+    let d, catData;
+    try{
+      d=await get('/courses');
+      try{catData=await get('/course-categories');}catch(_){catData={categories:[]};}
+    }catch(e){root.innerHTML=`<div class="p-8 text-center text-red-500">${esc(e.message)}</div>`;return;}
     const courses=d.courses||[];
+    const categories=catData.categories||[];
+    const catOptions=['<option value="">Select category</option>'].concat(
+      categories.map(c=>`<option value="${esc(c.name)}" data-id="${c._id}">${esc(c.name)}</option>`)
+    ).join('');
     root.innerHTML=`
 <div class="flex items-center justify-between mb-6">
   <div>
@@ -5292,7 +5300,9 @@ ${courses.map(c=>{
     <input type="hidden" id="courseId"/>
     <div class="space-y-3">
       <div><label class="text-sm font-medium text-gray-700">Title</label><input id="cTitle" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"/></div>
-      <div><label class="text-sm font-medium text-gray-700">Category</label><input id="cCategory" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Crypto Basics"/></div>
+      <div><label class="text-sm font-medium text-gray-700">Category</label>
+        <select id="cCategory" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm">${catOptions}</select>
+      </div>
       <div><label class="text-sm font-medium text-gray-700">Price (0 = Free)</label><input id="cPrice" type="number" step="0.01" min="0" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm" value="0"/></div>
       <div><label class="text-sm font-medium text-gray-700">Image URL</label><input id="cImage" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"/><div id="cImagePrev" class="mt-2"></div></div>
       <div><label class="text-sm font-medium text-gray-700">Description</label><textarea id="cDesc" rows="3" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"></textarea></div>
@@ -5329,9 +5339,12 @@ ${courses.map(c=>{
     modal.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>modal.classList.add('hidden'));
     root.querySelector('#cSave').onclick=async()=>{
       const id=root.querySelector('#courseId').value;
+      const catSel=root.querySelector('#cCategory');
+      const catOpt=catSel.options[catSel.selectedIndex];
       const body={
         title:root.querySelector('#cTitle').value.trim(),
-        category:root.querySelector('#cCategory').value.trim(),
+        category:catSel.value.trim(),
+        category_id:(catOpt&&catOpt.dataset.id)?catOpt.dataset.id:null,
         price:Number(root.querySelector('#cPrice').value||0),
         image_url:root.querySelector('#cImage').value.trim(),
         description:root.querySelector('#cDesc').value.trim(),
