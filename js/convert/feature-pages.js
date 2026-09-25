@@ -4406,7 +4406,7 @@ async function routeAdmin(){
       if(page==='signal-plans.html')return adminSignalPlansPage();
       if(page==='signal-plans-create.html')return adminSignalPlanForm(false);
       if(page==='signal-plans-edit.html')return adminSignalPlanForm(true);
-      if(page==='admin-signal.html')return adminSignalsPage();
+      if(page==='admin-signal.html'||page==='signal.html')return adminSignalsPage();
       if(page==='signal-create.html')return adminSignalForm(false);
       if(page==='admin-signal-edit.html')return adminSignalForm(true);
       if(page==='stock-shares-trades.html')return adminStockTrades();
@@ -6087,7 +6087,7 @@ ${active.length?`<div class="space-y-4">${active.map(s=>{
     root.innerHTML=`
 <div class="flex items-center justify-between mb-6">
   <h1 class="text-xl font-semibold text-gray-900">${isEdit?'Edit Signal':'Create Signal'}</h1>
-  <a href="/admin/admin-signal.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium">← Back to Signals</a>
+  <a href="/admin/signal.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium">← Back to Signals</a>
 </div>
 <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 max-w-2xl">
   <div class="space-y-4">
@@ -6137,7 +6137,7 @@ ${active.length?`<div class="space-y-4">${active.map(s=>{
         if(isEdit) await put('/signals/'+id, body);
         else await post('/signals', body);
         toast(isEdit?'Signal updated successfully.':'Signal created successfully.',true);
-        setTimeout(()=>{ location.href='/admin/admin-signal.html'; },600);
+        setTimeout(()=>{ location.href='/admin/signal.html'; },600);
       }catch(e){toast(e.response?.data?.message||e.message,false);}
     };
   }
