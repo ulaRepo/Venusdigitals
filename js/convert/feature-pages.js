@@ -4403,6 +4403,12 @@ async function routeAdmin(){
       if(page==='categories.html')return adminCategoriesPage();
       if(page==='admin-courses-lessons.html')return adminCourseLessonsPage();
       if(page==='lessons-without-course.html')return adminStandaloneLessonsPage();
+      if(page==='signal-plans.html')return adminSignalPlansPage();
+      if(page==='signal-plans-create.html')return adminSignalPlanForm(false);
+      if(page==='signal-plans-edit.html')return adminSignalPlanForm(true);
+      if(page==='admin-signal.html')return adminSignalsPage();
+      if(page==='signal-create.html')return adminSignalForm(false);
+      if(page==='admin-signal-edit.html')return adminSignalForm(true);
       if(page==='stock-shares-trades.html')return adminStockTrades();
       if(page==='stock-shares-user.html')return adminStockUser();
       if(page==='stock-shares-positions-edit.html')return adminStockPosEdit();
@@ -5058,6 +5064,9 @@ async function adminStockShares(){
       else if(page==='course-details.html')await courseDetailsPage();
       else if(page==='my-courses.html')await myCoursesPage();
       else if(page==='lesson-details.html')await lessonDetailsPage();
+      else if(page==='singalssubscriptions.html'||page==='subscribe-signals.html')await signalSubscribePage();
+      else if(page==='my-signals.html')await mySignalsPage();
+      else if(page==='signals-subscription.html')await liveSignalsPage();
     }
     catch(e){
       toast(e.message,false)
@@ -5706,6 +5715,431 @@ ${courses.map(c=>{
         catch(e){toast(e.response?.data?.message||e.message,false);}
       };
     });
+  }
+
+
+
+  // ===================== SIGNALS =====================
+  function parseFeatureLines(features){
+    return String(features||'').split(/[\n,|]+/).map(s=>s.trim()).filter(Boolean);
+  }
+
+  async function signalSubscribePage(){
+    showDynamicMain();
+    const root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page')||document.getElementById('main-content');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/signal-plans');}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-400">${esc(e.message)}</div>`;return;}
+    const plans=d.plans||[];
+    const bal=Number(d.balance||0);
+    root.innerHTML=`
+<div class="mb-4">
+  <div class="flex items-center gap-2 mb-3">
+    <a href="/user/dashboard.html" class="w-9 h-9 rounded-full bg-[#111] border border-[#1e1e1e] flex items-center justify-center text-[#888]"><i class="fa-solid fa-chevron-left text-xs"></i></a>
+    <h1 class="text-white text-lg font-medium">Signal Plans</h1>
+  </div>
+  <div class="flex gap-2 mb-4">
+    <a href="/user/my-signals.html" class="px-3 py-1.5 rounded-full border border-[#1e1e1e] text-[#888] text-[.78rem] hover:text-white">My Plans</a>
+    <a href="/user/signals-subscription.html" class="px-3 py-1.5 rounded-full border border-[#1e1e1e] text-[#888] text-[.78rem] hover:text-white">Live Signals</a>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-4 mb-4">
+    <div class="text-[#555] text-[.68rem] uppercase tracking-wide mb-1">Available Balance</div>
+    <div class="text-blue2 text-xl font-medium">${money(bal)}</div>
+  </div>
+</div>
+<div class="space-y-4">
+${plans.length?plans.map(p=>{
+  const feats=parseFeatureLines(p.features);
+  const weeks=Number(p.duration_weeks||1);
+  return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] overflow-hidden">
+    <div class="p-4 flex items-start justify-between gap-3">
+      <div>
+        <div class="text-white font-medium text-[1.05rem]">${esc(p.name)}</div>
+        <div class="text-[#555] text-[.72rem] mt-1 uppercase tracking-wide">${weeks} WEEK${weeks>1?'S':''} DURATION</div>
+      </div>
+      <div class="text-white font-medium text-lg">${money(p.price)}</div>
+    </div>
+    <div class="px-4 pb-3 space-y-2">
+      ${feats.map(f=>`<div class="flex items-center gap-2 text-[.85rem] text-[#aaa]"><i class="fa-solid fa-circle-check text-grn text-[.7rem]"></i>${esc(f)}</div>`).join('')||'<div class="text-[#555] text-sm">No features listed</div>'}
+      <div class="flex items-center gap-2 text-[.85rem] text-[#888]"><i class="fa-regular fa-clock text-[.7rem]"></i>Duration: ${weeks} Week${weeks>1?'s':''}</div>
+    </div>
+    <div class="p-4 pt-2">
+      <button data-id="${p._id}" data-name="${esc(p.name)}" data-price="${p.price}" class="signal-sub-btn w-full py-3 rounded-xl bg-brand-blue text-white font-medium text-[.9rem]">Subscribe Now</button>
+    </div>
+  </div>`;
+}).join(''):`<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-10 text-center text-[#555]">No signal plans available yet.</div>`}
+</div>`;
+    root.querySelectorAll('.signal-sub-btn').forEach(btn=>{
+      btn.onclick=async()=>{
+        const name=btn.getAttribute('data-name');
+        const price=btn.getAttribute('data-price');
+        if(!confirm(`Subscribe to ${name} for ${money(price)}?`)) return;
+        try{
+          const x=await post('/signal-plans/'+btn.getAttribute('data-id')+'/subscribe',{});
+          toast(x.message||'Signal bought successfully.',true);
+          setTimeout(()=>{ location.href='/user/my-signals.html'; },800);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
+  }
+
+  async function mySignalsPage(){
+    showDynamicMain();
+    const root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page')||document.getElementById('main-content');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/my-signals');}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-400">${esc(e.message)}</div>`;return;}
+    const subs=d.subscriptions||[];
+    const bal=Number(d.balance||0);
+    const active=subs.filter(s=>s.status==='active' && new Date(s.ends_at)>new Date());
+    root.innerHTML=`
+<div class="mb-4">
+  <div class="flex items-center gap-2 mb-3">
+    <a href="/user/singalssubscriptions.html" class="w-9 h-9 rounded-full bg-[#111] border border-[#1e1e1e] flex items-center justify-center text-[#888]"><i class="fa-solid fa-chevron-left text-xs"></i></a>
+    <h1 class="text-white text-lg font-medium">Signal Plans</h1>
+  </div>
+  <div class="flex items-start justify-between gap-3 mb-4">
+    <div>
+      <div class="text-white font-medium">My Signal Subscriptions</div>
+      <div class="text-[#555] text-[.78rem]">View your active signal plan subscriptions</div>
+    </div>
+    <a href="/user/singalssubscriptions.html" class="text-blue2 text-[.82rem] whitespace-nowrap">Browse Plans</a>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-4 mb-4">
+    <div class="text-[#555] text-[.68rem] uppercase tracking-wide mb-1">Available Balance</div>
+    <div class="text-blue2 text-xl font-medium">${money(bal)}</div>
+  </div>
+</div>
+${active.length?`<div class="space-y-4">${active.map(s=>{
+  const start=new Date(s.starts_at||s.createdAt).getTime();
+  const end=new Date(s.ends_at).getTime();
+  const now=Date.now();
+  const total=Math.max(1,end-start);
+  const done=Math.min(100,Math.max(0,((now-start)/total)*100));
+  const daysLeft=Math.max(0,Math.ceil((end-now)/(24*60*60*1000)));
+  const feats=parseFeatureLines(s.features);
+  return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] p-4">
+    <div class="flex items-start justify-between gap-3 mb-3">
+      <div>
+        <div class="text-white font-medium">${esc(s.plan_name||'Signal Plan')}</div>
+        <div class="text-[#555] text-[.75rem] mt-1">${Number(s.duration_weeks||1)} week(s) · Ends ${new Date(s.ends_at).toLocaleDateString()}</div>
+      </div>
+      <div class="text-right">
+        <div class="text-white font-medium">${money(s.price_paid)}</div>
+        <span class="text-[.7rem] px-2 py-0.5 rounded-full bg-emerald-500/10 text-grn">Active</span>
+      </div>
+    </div>
+    <div class="mb-3">
+      <div class="flex justify-between text-[.72rem] text-[#555] mb-1"><span>Progress</span><span>${daysLeft} day(s) left</span></div>
+      <div class="h-2 rounded-full bg-[#1a1a1a] overflow-hidden"><div class="h-full bg-brand-blue rounded-full" style="width:${done.toFixed(1)}%"></div></div>
+    </div>
+    ${feats.length?`<div class="space-y-1 mb-3">${feats.slice(0,4).map(f=>`<div class="text-[.8rem] text-[#888]">• ${esc(f)}</div>`).join('')}</div>`:''}
+    <button data-id="${s._id}" class="cancel-sub-btn w-full py-2.5 rounded-xl border border-red2/40 text-red2 text-[.85rem] font-medium">Cancel Subscription</button>
+  </div>`;
+}).join('')}</div>`:`
+<div class="rounded-xl bg-[#111] border border-[#1e1e1e] overflow-hidden">
+  <div class="p-8 text-center">
+    <div class="text-[#333] text-4xl mb-3"><i class="fa-solid fa-wifi"></i></div>
+    <p class="text-[#888] text-sm mb-4">You have no active subscriptions.</p>
+    <a href="/user/singalssubscriptions.html" class="inline-flex items-center px-4 py-2 rounded-lg bg-brand-blue text-white text-sm font-medium">Browse Plans</a>
+  </div>
+</div>`}`;
+    root.querySelectorAll('.cancel-sub-btn').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Cancel this signal subscription?')) return;
+        try{
+          const x=await post('/my-signals/'+btn.getAttribute('data-id')+'/cancel',{});
+          toast(x.message||'Signal subscription cancelled.',true);
+          setTimeout(()=>mySignalsPage(),500);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
+  }
+
+  async function liveSignalsPage(){
+    showDynamicMain();
+    const root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page')||document.getElementById('main-content');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/live-signals');}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-400">${esc(e.message)}</div>`;return;}
+    if(!d.has_active){
+      location.href='/user/singalssubscriptions.html';
+      return;
+    }
+    const signals=d.signals||[];
+    root.innerHTML=`
+<div class="mb-4">
+  <div class="flex items-center gap-2 mb-3">
+    <a href="/user/singalssubscriptions.html" class="w-9 h-9 rounded-full bg-[#111] border border-[#1e1e1e] flex items-center justify-center text-[#888]"><i class="fa-solid fa-chevron-left text-xs"></i></a>
+    <h1 class="text-white text-lg font-medium">Live Signals</h1>
+  </div>
+</div>
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[14px] overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead><tr class="text-[#555] text-[.72rem] uppercase border-b border-[#1a1a1a]">
+        <th class="px-4 py-3 text-left">#</th>
+        <th class="px-4 py-3 text-left">Name</th>
+        <th class="px-4 py-3 text-left">Entry</th>
+        <th class="px-4 py-3 text-left">TP</th>
+        <th class="px-4 py-3 text-left">SL</th>
+        <th class="px-4 py-3 text-left">Leverage</th>
+        <th class="px-4 py-3 text-left">Status</th>
+      </tr></thead>
+      <tbody>
+      ${signals.length?signals.map((s,i)=>`<tr class="border-b border-[#121212]">
+        <td class="px-4 py-3 text-[#888]">${i+1}</td>
+        <td class="px-4 py-3 text-white font-medium">${esc(s.name)}</td>
+        <td class="px-4 py-3">${Number(s.entry_price||0).toFixed(2)}</td>
+        <td class="px-4 py-3 text-grn">${Number(s.take_profit||0).toFixed(2)}</td>
+        <td class="px-4 py-3 text-red2">${Number(s.stop_loss||0).toFixed(2)}</td>
+        <td class="px-4 py-3">${Number(s.leverage||1)}x</td>
+        <td class="px-4 py-3"><span class="text-[.72rem] px-2 py-0.5 rounded-full ${s.status==='active'?'bg-emerald-500/10 text-grn':'bg-red-500/10 text-red2'}">${esc(s.status||'active')}</span></td>
+      </tr>`).join(''):`<tr><td colspan="7" class="px-4 py-10 text-center text-[#555]">No signals yet.</td></tr>`}
+      </tbody>
+    </table>
+  </div>
+</div>`;
+  }
+
+  async function adminSignalPlansPage(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/signal-plans');}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-500">${esc(e.message)}</div>`;return;}
+    const plans=d.plans||[];
+    root.innerHTML=`
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-xl font-semibold text-gray-900">Manage Signal Plans</h1>
+  </div>
+  <a href="/admin/signal-plans-create.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">+ Create New Plan</a>
+</div>
+<div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+  <div class="px-4 py-3 border-b text-sm font-medium text-gray-700">Signal Plans</div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+        <tr>
+          <th class="px-4 py-3 text-left">#</th>
+          <th class="px-4 py-3 text-left">Name</th>
+          <th class="px-4 py-3 text-left">Price ($)</th>
+          <th class="px-4 py-3 text-left">Duration</th>
+          <th class="px-4 py-3 text-left">Features</th>
+          <th class="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      ${plans.map((p,i)=>`<tr class="border-t hover:bg-gray-50">
+        <td class="px-4 py-3">${i+1}</td>
+        <td class="px-4 py-3 font-medium text-gray-900">${esc(p.name)}</td>
+        <td class="px-4 py-3">$${Number(p.price||0).toFixed(2)}</td>
+        <td class="px-4 py-3">${Number(p.duration_weeks||1)} Week(s)</td>
+        <td class="px-4 py-3 text-gray-500 max-w-xs truncate">${esc(p.features||'—')}</td>
+        <td class="px-4 py-3 text-right whitespace-nowrap">
+          <a href="/admin/signal-plans-edit.html?id=${encodeURIComponent(p._id)}" class="text-blue-600 text-xs font-medium mr-2">Edit</a>
+          <button data-del="${p._id}" class="text-red-500 text-xs font-medium plan-del">Delete</button>
+        </td>
+      </tr>`).join('')||'<tr><td colspan="6" class="px-4 py-10 text-center text-gray-400">No signal plans yet.</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>`;
+    root.querySelectorAll('.plan-del').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Delete this signal plan?')) return;
+        try{
+          await del('/signal-plans/'+btn.getAttribute('data-del'));
+          toast('Signal plan deleted successfully.',true);
+          setTimeout(()=>adminSignalPlansPage(),400);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
+  }
+
+  async function adminSignalPlanForm(isEdit){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    const id=new URLSearchParams(location.search).get('id');
+    let plan=null;
+    if(isEdit){
+      if(!id){root.innerHTML='<div class="p-8 text-center text-gray-500">Missing plan id.</div>';return;}
+      root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+      try{const d=await get('/signal-plans/'+id);plan=d.plan;}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-500">${esc(e.message)}</div>`;return;}
+    }
+    root.innerHTML=`
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-xl font-semibold text-gray-900">${isEdit?'Edit Signal Plan':'Create Signal Plan'}</h1>
+  <a href="/admin/signal-plans.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium">← Back to Plans</a>
+</div>
+<div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 max-w-2xl">
+  <div class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Plan Name <span class="text-red-500">*</span></label>
+      <input id="spName" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value="${esc(plan?plan.name:'')}" required/>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Price ($) <span class="text-red-500">*</span></label>
+      <input id="spPrice" type="number" step="0.01" min="0" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value="${plan?Number(plan.price||0):''}" required/>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Features <span class="text-red-500">*</span></label>
+      <input id="spFeatures" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value="${esc(plan?plan.features:'')}" placeholder="Comma-separated features" required/>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Duration (Weeks) <span class="text-red-500">*</span></label>
+      <input id="spDuration" type="number" min="1" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value="${plan?Number(plan.duration_weeks||1):''}" required/>
+    </div>
+    <button id="spSave" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
+      ${isEdit?'Update Plan':'＋ Create Plan'}
+    </button>
+  </div>
+</div>`;
+    root.querySelector('#spSave').onclick=async()=>{
+      const body={
+        name:root.querySelector('#spName').value.trim(),
+        price:Number(root.querySelector('#spPrice').value||0),
+        features:root.querySelector('#spFeatures').value.trim(),
+        duration_weeks:Number(root.querySelector('#spDuration').value||1),
+      };
+      if(!body.name){toast('Plan name is required',false);return;}
+      try{
+        if(isEdit) await put('/signal-plans/'+id, body);
+        else await post('/signal-plans', body);
+        toast(isEdit?'Signal plan updated successfully.':'Signal plan created successfully.',true);
+        setTimeout(()=>{ location.href='/admin/signal-plans.html'; },600);
+      }catch(e){toast(e.response?.data?.message||e.message,false);}
+    };
+  }
+
+  async function adminSignalsPage(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/signals');}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-500">${esc(e.message)}</div>`;return;}
+    const signals=d.signals||[];
+    root.innerHTML=`
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-xl font-semibold text-gray-900">Client Signals</h1>
+  <a href="/admin/signal-create.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">+ Create New Signal</a>
+</div>
+<div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+  <div class="px-4 py-3 border-b text-sm font-medium text-gray-700">Signal Plans</div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+        <tr>
+          <th class="px-4 py-3 text-left">#</th>
+          <th class="px-4 py-3 text-left">Name</th>
+          <th class="px-4 py-3 text-left">Entry Price</th>
+          <th class="px-4 py-3 text-left">Take Profit</th>
+          <th class="px-4 py-3 text-left">Stop Loss</th>
+          <th class="px-4 py-3 text-left">Leverage</th>
+          <th class="px-4 py-3 text-left">Status</th>
+          <th class="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      ${signals.map((s,i)=>`<tr class="border-t hover:bg-gray-50">
+        <td class="px-4 py-3">${i+1}</td>
+        <td class="px-4 py-3 font-medium">${esc(s.name)}</td>
+        <td class="px-4 py-3">${Number(s.entry_price||0).toFixed(2)}</td>
+        <td class="px-4 py-3">${Number(s.take_profit||0).toFixed(2)}</td>
+        <td class="px-4 py-3">${Number(s.stop_loss||0).toFixed(2)}</td>
+        <td class="px-4 py-3">${Number(s.leverage||1)}x</td>
+        <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded-full ${s.status==='active'?'bg-emerald-50 text-emerald-600':'bg-red-50 text-red-500'}">${esc(s.status||'active')}</span></td>
+        <td class="px-4 py-3 text-right whitespace-nowrap">
+          <a href="/admin/admin-signal-edit.html?id=${encodeURIComponent(s._id)}" class="text-blue-600 text-xs font-medium mr-2">Edit</a>
+          <button data-del="${s._id}" class="text-red-500 text-xs font-medium sig-del">Delete</button>
+        </td>
+      </tr>`).join('')||'<tr><td colspan="8" class="px-4 py-10 text-center text-gray-400">No signals yet.</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>`;
+    root.querySelectorAll('.sig-del').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Delete this signal?')) return;
+        try{
+          await del('/signals/'+btn.getAttribute('data-del'));
+          toast('Signal deleted successfully.',true);
+          setTimeout(()=>adminSignalsPage(),400);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
+  }
+
+  async function adminSignalForm(isEdit){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    const id=new URLSearchParams(location.search).get('id');
+    let signal=null;
+    if(isEdit){
+      if(!id){root.innerHTML='<div class="p-8 text-center text-gray-500">Missing signal id.</div>';return;}
+      root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+      try{const d=await get('/signals/'+id);signal=d.signal;}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-500">${esc(e.message)}</div>`;return;}
+    }
+    const st=signal?signal.status:'active';
+    root.innerHTML=`
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-xl font-semibold text-gray-900">${isEdit?'Edit Signal':'Create Signal'}</h1>
+  <a href="/admin/admin-signal.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium">← Back to Signals</a>
+</div>
+<div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 max-w-2xl">
+  <div class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Signal Name <span class="text-red-500">*</span></label>
+      <input id="sgName" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value="${esc(signal?signal.name:'')}" required/>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Entry Price <span class="text-red-500">*</span></label>
+      <input id="sgEntry" type="number" step="0.01" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value="${signal?Number(signal.entry_price||0):''}" required/>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Take Profit <span class="text-red-500">*</span></label>
+      <input id="sgTp" type="number" step="0.01" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value="${signal?Number(signal.take_profit||0):''}" required/>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Stop Loss <span class="text-red-500">*</span></label>
+      <input id="sgSl" type="number" step="0.01" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value="${signal?Number(signal.stop_loss||0):''}" required/>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Leverage <span class="text-red-500">*</span></label>
+      <input id="sgLev" type="number" min="1" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value="${signal?Number(signal.leverage||1):''}" required/>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Status <span class="text-red-500">*</span></label>
+      <select id="sgStatus" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+        <option value="active" ${st==='active'?'selected':''}>Active</option>
+        <option value="closed" ${st==='closed'?'selected':''}>Closed</option>
+      </select>
+    </div>
+    <button id="sgSave" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
+      ${isEdit?'Update Signal':'＋ Create Signal'}
+    </button>
+  </div>
+</div>`;
+    root.querySelector('#sgSave').onclick=async()=>{
+      const body={
+        name:root.querySelector('#sgName').value.trim(),
+        entry_price:Number(root.querySelector('#sgEntry').value||0),
+        take_profit:Number(root.querySelector('#sgTp').value||0),
+        stop_loss:Number(root.querySelector('#sgSl').value||0),
+        leverage:Number(root.querySelector('#sgLev').value||1),
+        status:root.querySelector('#sgStatus').value,
+      };
+      if(!body.name){toast('Signal name is required',false);return;}
+      try{
+        if(isEdit) await put('/signals/'+id, body);
+        else await post('/signals', body);
+        toast(isEdit?'Signal updated successfully.':'Signal created successfully.',true);
+        setTimeout(()=>{ location.href='/admin/admin-signal.html'; },600);
+      }catch(e){toast(e.response?.data?.message||e.message,false);}
+    };
   }
 
 
