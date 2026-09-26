@@ -7289,240 +7289,419 @@ ${rows.length?rows.map(r=>`<tr class="border-t border-[#161616]">
 
 
 
+  
   async function portfolioPage(){
     showDynamicMain();
-    const root=document.getElementById('main-content')||document.querySelector('main')||document.querySelector('.main');
+    const root = document.getElementById('main-content') || document.querySelector('main') || document.querySelector('.main');
     if(!root) return;
-    root.innerHTML=`<div class="px-4 py-10 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading portfolio...</div>`;
+    root.innerHTML = `<div class="px-4 py-10 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading portfolio...</div>`;
 
-    const money=(n,sym='$')=>{
-      const v=Number(n||0);
-      const sign=v<0?'-':'';
-      return sign+sym+Math.abs(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    const money = (n, sym='$') => {
+      const v = Number(n || 0);
+      const sign = v < 0 ? '-' : '';
+      return sign + sym + Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
-    const plColor=(n)=>Number(n||0)>=0?'text-[#00d47c]':'text-[#ff4560]';
-    const plStr=(n)=>{const v=Number(n||0);return (v>=0?'+':'')+money(v);};
-    const fmtDate=(d)=>{if(!d)return '—';try{return new Date(d).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});}catch(_){return '—';}};
+    const plTxt = (n) => {
+      const v = Number(n || 0);
+      return (v >= 0 ? '+' : '') + money(v);
+    };
+    const plClass = (n) => Number(n || 0) >= 0 ? 'text-grn' : 'text-red2';
+    const fmtDate = (d) => {
+      if (!d) return '—';
+      try {
+        return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      } catch (_) { return '—'; }
+    };
+    const ALLOC_COLORS = ['#6e8efb', '#333', '#00d47c', '#f5c542', '#a855f7', '#06b6d4', '#ff4560'];
 
     let data;
-    try{ data=await get('/portfolio'); }
-    catch(e){
-      root.innerHTML=`<div class="px-4 py-10 text-center text-red-400">${esc(e.response?.data?.message||e.message)}</div>`;
+    try {
+      data = await get('/portfolio');
+    } catch (e) {
+      root.innerHTML = `<div class="px-4 py-10 text-center text-red2">${esc(e.response?.data?.message || e.message)}</div>`;
       return;
     }
-    const s=data.summary||{};
-    const tabs=['overview','trading','investments','copy','bots','stocks','nfts','loans'];
-    let tab=(location.hash||'#overview').replace('#','').toLowerCase();
-    if(!tabs.includes(tab)) tab='overview';
 
-    const render=()=>{
-      const alloc=data.allocation||[];
-      const counts=data.counts||{};
-      root.innerHTML=`
-<div class="px-4 py-4 max-w-5xl mx-auto pb-16">
-  <div class="flex items-center gap-3 mb-4">
-    <button type="button" onclick="history.back()" class="w-9 h-9 rounded-xl bg-[#111] border border-[#1e1e1e] flex items-center justify-center text-[#888]"><i class="fa-solid fa-chevron-left"></i></button>
-    <div class="text-white font-medium text-lg">Portfolio</div>
+    const s = data.summary || {};
+    let tab = (location.hash || '#overview').replace('#', '').toLowerCase();
+    const valid = ['overview','trading','investments','copy','bots','stocks','nfts','loans'];
+    if (!valid.includes(tab)) tab = 'overview';
+
+    const tabBtn = (id, icon, label) => `
+      <button type="button" data-tab="${id}" class="pf-tab inline-flex items-center gap-1.5 px-0 py-[14px] mr-6 text-[.88rem] transition-colors whitespace-nowrap shrink-0 ${tab===id ? 'text-white border-b-2 border-blue2 font-medium' : 'text-[#444] border-b-2 border-transparent hover:text-[#aaa]'}" role="tab">
+        <i class="fa-solid ${icon} text-[.82rem]"></i>
+        ${label}
+      </button>`;
+
+    const emptyState = (icon, title, msg, href, cta) => `
+      <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[28px] text-center">
+        <div class="w-[60px] h-[60px] rounded-full bg-[#0d0d0d] border border-[#1e1e1e] flex items-center justify-center mx-auto mb-3">
+          <i class="fa-solid ${icon} text-[#333] text-[1.2rem]"></i>
+        </div>
+        <h3 class="font-sora font-semibold text-[.95rem] text-white mb-1">${title}</h3>
+        <p class="text-[.82rem] text-[#444] max-w-sm mb-4 mx-auto">${msg}</p>
+        ${href ? `<a href="${href}" class="inline-flex items-center gap-1.5 px-4 py-[10px] rounded-[12px] bg-[#4a6cf7] hover:opacity-[.88] text-white text-[.88rem] font-medium transition-opacity">${cta}</a>` : ''}
+      </div>`;
+
+    const paint = () => {
+      root.innerHTML = `
+<div class="inner-page px-4 pb-16 max-w-lg mx-auto">
+  <div class="flex items-center gap-3 py-3 mb-1">
+    <div class="inner-back cursor-pointer w-9 h-9 rounded-[10px] bg-[#111] border border-[#1e1e1e] flex items-center justify-center text-[#888]" onclick="history.back()"><i class="fa-solid fa-chevron-left"></i></div>
+    <div class="inner-title font-sora font-semibold text-white text-[1.05rem]">Portfolio</div>
   </div>
 
-  <div class="grid grid-cols-2 gap-3 mb-4">
-    <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4">
-      <div class="text-[11px] uppercase tracking-wide text-[#555] mb-1">Net Worth</div>
-      <div class="text-white text-2xl font-medium" style="font-family:Sora,sans-serif">${money(s.net_worth)}</div>
-      <div class="text-[11px] text-[#444] mt-1">All assets combined</div>
-      <div class="mt-3 text-[11px] uppercase tracking-wide text-[#555]">Total P/L</div>
-      <div class="${plColor(s.total_pl)} text-lg font-medium">${plStr(s.total_pl)}</div>
-      <div class="text-[11px] text-[#444]">Realized + unrealized</div>
-    </div>
-    <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4">
-      <div class="text-[11px] uppercase tracking-wide text-[#555] mb-1">Total Invested</div>
-      <div class="text-white text-2xl font-medium" style="font-family:Sora,sans-serif">${money(s.total_invested)}</div>
-      <div class="text-[11px] text-[#444] mt-1">Across all modules</div>
-      <div class="mt-3 text-[11px] uppercase tracking-wide text-[#555]">Account Balance</div>
-      <div class="text-[#3B7BFF] text-lg font-medium">${money(s.account_balance)}</div>
-      <div class="text-[11px] text-[#444]">Available cash</div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] mb-[9px]">
+    <div class="grid grid-cols-2 gap-[9px]">
+      <div>
+        <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Net Worth</div>
+        <div class="font-sora font-bold text-[1.6rem] text-white">${money(s.net_worth)}</div>
+        <div class="text-[.72rem] text-[#444] mt-0.5">All assets combined</div>
+      </div>
+      <div>
+        <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Total Invested</div>
+        <div class="font-sora font-bold text-[1.2rem] text-white">${money(s.total_invested)}</div>
+        <div class="text-[.72rem] text-[#444] mt-0.5">Across all modules</div>
+      </div>
+      <div>
+        <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Total P/L</div>
+        <div class="font-sora font-bold text-[1.2rem] ${plClass(s.total_pl)}">${plTxt(s.total_pl)}</div>
+        <div class="text-[.72rem] text-[#444] mt-0.5">Realized + unrealized</div>
+      </div>
+      <div>
+        <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Account Balance</div>
+        <div class="font-sora font-bold text-[1.2rem] text-blue2">${money(s.account_balance)}</div>
+        <div class="text-[.72rem] text-[#444] mt-0.5">Available cash</div>
+      </div>
     </div>
   </div>
 
-  <div class="flex gap-1 overflow-x-auto border-b border-[#1a1a1a] mb-4 scrollbar-none" id="pfTabs">
-    ${[
-      ['overview','Overview'],['trading','Trading'],['investments','Investments'],['copy','Copy Trading'],
-      ['bots','Bot Trading'],['stocks','Stocks'],['nfts','NFTs'],['loans','Loans']
-    ].map(([k,l])=>`<button data-tab="${k}" class="pf-tab shrink-0 px-3 py-2.5 text-[.78rem] whitespace-nowrap ${tab===k?'text-white border-b-2 border-[#3B7BFF] font-medium':'text-[#555]'}">${l}</button>`).join('')}
+  <div class="mb-[9px] overflow-x-auto scrollbar-none border-b border-[#111]">
+    <div class="flex items-center gap-0 min-w-max" role="tablist">
+      ${tabBtn('overview','fa-grip','Overview')}
+      ${tabBtn('trading','fa-chart-bar','Trading')}
+      ${tabBtn('investments','fa-money-bills','Investments')}
+      ${tabBtn('copy','fa-copy','Copy Trading')}
+      ${tabBtn('bots','fa-robot','Bot Trading')}
+      ${tabBtn('stocks','fa-chart-line','Stocks')}
+      ${tabBtn('nfts','fa-gem','NFTs')}
+      ${tabBtn('loans','fa-hand-holding-dollar','Loans')}
+    </div>
   </div>
   <div id="pfBody"></div>
 </div>`;
 
-      const body=root.querySelector('#pfBody');
-      const setTab=(t)=>{
-        tab=t;
-        history.replaceState(null,'','#'+t);
-        root.querySelectorAll('.pf-tab').forEach(b=>{
-          const on=b.getAttribute('data-tab')===t;
-          b.className='pf-tab shrink-0 px-3 py-2.5 text-[.78rem] whitespace-nowrap '+(on?'text-white border-b-2 border-[#3B7BFF] font-medium':'text-[#555]');
-        });
-        renderTab();
-      };
-      root.querySelectorAll('.pf-tab').forEach(b=>b.onclick=()=>setTab(b.getAttribute('data-tab')));
-
-      function renderTab(){
-        if(tab==='overview'){
-          const inv=data.investments||{}, st=data.stocks||{}, lo=data.loans||{};
-          body.innerHTML=`
-<div class="grid grid-cols-2 gap-3 mb-3">
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4">
-    <div class="text-[11px] uppercase text-[#555] mb-1">Account Balance</div>
-    <div class="text-white text-xl font-medium">${money(s.account_balance)}</div>
-    <div class="text-[11px] text-[#444]">Available cash</div>
-  </div>
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4">
-    <div class="text-[11px] uppercase text-[#555] mb-1">Outstanding Loans</div>
-    <div class="text-[#ff4560] text-xl font-medium">${money(s.outstanding_loans)}</div>
-    <div class="text-[11px] text-[#444]">${s.loans_active||0} active loan${(s.loans_active||0)===1?'':'s'}</div>
-  </div>
-</div>
-<div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4 mb-3">
-  <div class="text-[11px] uppercase text-[#555] mb-3">Portfolio Allocation</div>
-  <div class="h-2 rounded-full bg-[#161616] overflow-hidden flex mb-3">
-    ${alloc.map((a,i)=>{
-      const colors=['#3B7BFF','#00d47c','#f5c542','#a855f7','#ff4560','#06b6d4'];
-      return `<div style="width:${Math.max(2,a.pct)}%;background:${colors[i%colors.length]}"></div>`;
-    }).join('')||'<div class="w-full bg-[#222]"></div>'}
-  </div>
-  <div class="grid grid-cols-2 gap-2">
-    ${alloc.length?alloc.map((a,i)=>{
-      const colors=['#3B7BFF','#00d47c','#f5c542','#a855f7','#ff4560','#06b6d4'];
-      return `<div class="flex items-center gap-2 text-[.78rem]"><span class="w-2 h-2 rounded-full" style="background:${colors[i%colors.length]}"></span><span class="text-[#888]">${esc(a.label)}</span><span class="ml-auto text-white">${money(a.amount)} <span class="text-[#555]">(${a.pct.toFixed(1)}%)</span></span></div>`;
-    }).join(''):'<div class="text-[#444] text-sm col-span-2">No investments yet</div>'}
-  </div>
-</div>
-<div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl overflow-hidden">
-  <div class="px-4 py-3 text-[11px] uppercase text-[#555] border-b border-[#1a1a1a]">Active Positions</div>
-  ${[
-    ['fa-chart-line','Open Trades',counts.open_trades],
-    ['fa-layer-group','Active Plans',counts.active_plans],
-    ['fa-copy','Copy Positions',counts.copy_positions],
-    ['fa-robot','Active Bots',counts.active_bots],
-    ['fa-gem','NFTs Owned',counts.nfts_owned],
-  ].map(([ico,label,n])=>`<div class="flex items-center gap-3 px-4 py-3 border-b border-[#161616] last:border-0"><i class="fa-solid ${ico} text-[#555] w-5"></i><span class="text-sm text-[#aaa]">${label}</span><span class="ml-auto text-white font-medium">${Number(n||0)}</span></div>`).join('')}
-</div>`;
-        } else if(tab==='trading'){
-          const tr=data.trading||{};
-          const open=tr.open||[];
-          const recent=tr.recent||[];
-          body.innerHTML=`
-<div class="grid grid-cols-2 gap-3 mb-3">
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4"><div class="text-[11px] uppercase text-[#555]">Invested</div><div class="text-white text-lg font-medium">${money(tr.invested)}</div></div>
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4"><div class="text-[11px] uppercase text-[#555]">Unrealized P/L</div><div class="${plColor(tr.unrealized_pl)} text-lg font-medium">${plStr(tr.unrealized_pl)}</div></div>
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4"><div class="text-[11px] uppercase text-[#555]">Realized P/L</div><div class="${plColor(tr.realized_pl)} text-lg font-medium">${plStr(tr.realized_pl)}</div></div>
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4"><div class="text-[11px] uppercase text-[#555]">Open Positions</div><div class="text-white text-lg font-medium">${tr.open_positions||0}</div></div>
-</div>
-${open.length?`<div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl overflow-hidden mb-3"><div class="px-4 py-3 text-[11px] uppercase text-[#555] border-b border-[#1a1a1a]">Open Positions</div>
-${open.map(t=>`<div class="flex items-center justify-between px-4 py-3 border-b border-[#161616] last:border-0"><div><div class="text-white text-sm">${esc(t.asset_name||t.asset_type||'Trade')}</div><div class="text-[11px] text-[#555]">${esc(t.action||'')} · ${fmtDate(t.opened||t.createdAt)}</div></div><div class="text-right"><div class="text-white text-sm">${money(t.amount)}</div><div class="${plColor(t.profit_loss)} text-[11px]">${plStr(t.profit_loss)}</div></div></div>`).join('')}
-</div>`:`<div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-10 text-center mb-3"><div class="text-[#333] text-3xl mb-2"><i class="fa-solid fa-chart-line"></i></div><div class="text-white font-medium mb-1">No open trades</div><div class="text-[#555] text-sm mb-4">You have no open positions. Start trading to build your portfolio.</div><a href="/user/trade.html" class="inline-block px-5 py-2.5 rounded-xl bg-[#3B7BFF] text-white text-sm">Start Trading</a></div>`}
-${recent.length?`<div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl overflow-hidden"><div class="flex items-center justify-between px-4 py-3 border-b border-[#1a1a1a]"><span class="text-[11px] uppercase text-[#555]">Recent Activity</span><a href="/user/tradinghistory.html" class="text-[.78rem] text-[#3B7BFF]">View All</a></div>
-${recent.map(t=>`<div class="flex items-center justify-between px-4 py-3 border-b border-[#161616] last:border-0"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-[#161616] flex items-center justify-center text-xs text-[#888]">${esc(String(t.asset_name||'?').slice(0,2))}</div><div><div class="text-white text-sm">${esc(t.asset_name||'Trade')}</div><div class="text-[11px] text-[#555]">${fmtDate(t.settled_at||t.createdAt)}</div></div></div><div class="${plColor(t.profit_loss)} text-sm font-medium">${plStr(t.profit_loss)}</div></div>`).join('')}
-</div>`:''}`;
-        } else if(tab==='investments'){
-          const inv=data.investments||{};
-          const plans=inv.plans||[];
-          body.innerHTML=`
-<div class="grid grid-cols-2 gap-3 mb-3">
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4"><div class="text-[11px] uppercase text-[#555]">Active Plans</div><div class="text-white text-lg font-medium">${inv.active_plans||0}</div></div>
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4"><div class="text-[11px] uppercase text-[#555]">Total Invested</div><div class="text-[#3B7BFF] text-lg font-medium">${money(inv.total_invested)}</div></div>
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4 col-span-2"><div class="text-[11px] uppercase text-[#555]">Profit Earned</div><div class="${plColor(inv.profit_earned)} text-lg font-medium">${money(inv.profit_earned)}</div></div>
-</div>
-${plans.length?plans.map(p=>{
-  const name=(p.plan&&p.plan.name)||'Plan';
-  const active=String(p.active)==='yes';
-  return `<div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4 mb-2 flex items-start justify-between gap-3">
-  <div><div class="text-white font-medium">${esc(name)}</div>
-  <div class="text-[11px] text-[#555] mt-1">Invested <span class="text-white">${money(p.amount)}</span></div>
-  <div class="text-[11px] text-[#555]">Started ${fmtDate(p.activated_at||p.createdAt)}</div></div>
-  <div class="text-right"><span class="text-[10px] px-2 py-0.5 rounded-full ${active?'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20':'bg-white/5 text-[#888]'}">${active?'Active':esc(p.active||'—')}</span>
-  <div class="text-[11px] text-[#555] mt-2">Profit</div><div class="${plColor(p.profit_earned)} text-sm">${money(p.profit_earned)}</div>
-  <div class="text-[11px] text-[#f5c542] mt-1">Expires ${fmtDate(p.expire_date)}</div></div></div>`;
-}).join(''):`<div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-10 text-center"><div class="text-white mb-1">No investment plans</div><a href="/user/buy-plan.html" class="inline-block mt-3 px-5 py-2.5 rounded-xl bg-[#3B7BFF] text-white text-sm">Browse Plans</a></div>`}`;
-        } else if(tab==='copy'){
-          const c=data.copy||{};
-          body.innerHTML=`
-<div class="grid grid-cols-2 gap-3 mb-3">
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4"><div class="text-[11px] uppercase text-[#555]">Active Positions</div><div class="text-white text-lg">${c.active_positions||0}</div></div>
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4"><div class="text-[11px] uppercase text-[#555]">Total Invested</div><div class="text-[#3B7BFF] text-lg">${money(c.total_invested)}</div></div>
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4 col-span-2"><div class="text-[11px] uppercase text-[#555]">Accumulated Profit</div><div class="${plColor(c.accumulated_profit)} text-lg">${plStr(c.accumulated_profit)}</div></div>
-</div>
-${(c.positions||[]).length?(c.positions||[]).map(p=>{
-  const exp=(p.expert_id&&(p.expert_id.name||p.expert_id.fullname))||'Expert';
-  return `<div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4 mb-2 flex justify-between"><div><div class="text-white font-medium">${esc(exp)}</div><div class="text-[11px] text-[#555]">Invested ${money(p.invested_amount)}</div></div><div class="text-right"><div class="${plColor(p.accumulated_profit)}">${plStr(p.accumulated_profit)}</div><div class="text-[11px] text-[#555]">${esc(p.status||'active')}</div></div></div>`;
-}).join(''):`<div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-10 text-center"><div class="text-[#333] text-3xl mb-2"><i class="fa-solid fa-copy"></i></div><div class="text-white font-medium mb-1">No copy trading positions</div><div class="text-[#555] text-sm mb-4">You haven't started copying any experts yet.</div><a href="/user/copy-trading.html" class="inline-block px-5 py-2.5 rounded-xl bg-[#3B7BFF] text-white text-sm">Browse Experts</a></div>`}`;
-        } else if(tab==='bots'){
-          const b=data.bots||{};
-          body.innerHTML=`
-<div class="grid grid-cols-2 gap-3 mb-3">
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4"><div class="text-[11px] uppercase text-[#555]">Active Bots</div><div class="text-white text-lg">${b.active_bots||0}</div></div>
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4"><div class="text-[11px] uppercase text-[#555]">Total Invested</div><div class="text-[#3B7BFF] text-lg">${money(b.total_invested)}</div></div>
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4 col-span-2"><div class="text-[11px] uppercase text-[#555]">Accumulated Profit</div><div class="${plColor(b.accumulated_profit)} text-lg">${plStr(b.accumulated_profit)}</div></div>
-</div>
-${(b.subscriptions||[]).length?(b.subscriptions||[]).map(s=>{
-  const name=(s.bot_id&&s.bot_id.name)||'Bot';
-  const profit=Number(s.current_profit||0)+Number(s.admin_profit_adjustment||0);
-  return `<div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4 mb-2 flex justify-between"><div><div class="text-white font-medium">${esc(name)}</div><div class="text-[11px] text-[#555]">Invested ${money(s.invested_amount)}</div></div><div class="text-right"><div class="${plColor(profit)}">${plStr(profit)}</div><div class="text-[11px] text-[#555]">${esc(s.status||'active')}</div></div></div>`;
-}).join(''):`<div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-10 text-center"><div class="text-[#333] text-3xl mb-2"><i class="fa-solid fa-robot"></i></div><div class="text-white font-medium mb-1">No active bot subscriptions</div><div class="text-[#555] text-sm mb-4">You haven't subscribed to any trading bots yet.</div><a href="/user/bot-trading.html" class="inline-block px-5 py-2.5 rounded-xl bg-[#3B7BFF] text-white text-sm">Browse Bots</a></div>`}`;
-        } else if(tab==='stocks'){
-          const st=data.stocks||{};
-          const pos=st.positions||[];
-          body.innerHTML=`
-<div class="grid grid-cols-2 gap-3 mb-3">
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4"><div class="text-[11px] uppercase text-[#555]">Total Invested</div><div class="text-white text-lg">${money(st.total_invested)}</div></div>
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4"><div class="text-[11px] uppercase text-[#555]">Current Value</div><div class="text-[#3B7BFF] text-lg">${money(st.current_value)}</div></div>
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4 col-span-2"><div class="text-[11px] uppercase text-[#555]">Unrealized P/L</div><div class="${plColor(st.unrealized_pl)} text-lg">${plStr(st.unrealized_pl)}</div></div>
-</div>
-${pos.length?`<div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl overflow-hidden"><div class="flex justify-between px-4 py-3 border-b border-[#1a1a1a]"><span class="text-[11px] uppercase text-[#555]">Stock Holdings</span><a href="/user/stock-portfolio.html" class="text-[.78rem] text-[#3B7BFF]">Full Portfolio</a></div>
-${pos.map(p=>`<div class="flex items-center gap-3 px-4 py-3 border-b border-[#161616] last:border-0">
-  <div class="w-9 h-9 rounded-full bg-[#161616] overflow-hidden flex items-center justify-center text-xs text-white">${p.logo_url?`<img src="${esc(p.logo_url)}" class="w-full h-full object-cover"/>`:esc(String(p.symbol||'?').slice(0,1))}</div>
-  <div class="flex-1 min-w-0"><div class="text-white text-sm font-medium">${esc(p.symbol)}</div><div class="text-[11px] text-[#555]">${Number(p.shares||0).toFixed(4)} shares · $${Number(p.avg_cost||0).toFixed(2)} avg</div></div>
-  <div class="text-right"><div class="text-white text-sm">${money(p.current_value)}</div><div class="${plColor(p.unrealized_pl)} text-[11px]">${plStr(p.unrealized_pl)}</div></div>
-</div>`).join('')}
-</div>`:`<div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-10 text-center"><div class="text-white mb-1">No stock holdings</div><a href="/user/stocks.html" class="inline-block mt-3 px-5 py-2.5 rounded-xl bg-[#3B7BFF] text-white text-sm">Browse Stocks</a></div>`}`;
-        } else if(tab==='nfts'){
-          const n=data.nfts||{};
-          body.innerHTML=`
-<div class="grid grid-cols-2 gap-3 mb-3">
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4"><div class="text-[11px] uppercase text-[#555]">NFTs Owned</div><div class="text-white text-lg">${n.owned||0}</div></div>
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4"><div class="text-[11px] uppercase text-[#555]">Estimated Value</div><div class="text-[#3B7BFF] text-lg">${money(n.estimated_value)}</div></div>
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4 col-span-2"><div class="text-[11px] uppercase text-[#555]">Listed for Sale</div><div class="text-white text-lg">${n.listed||0}</div></div>
-</div>
-${(n.items||[]).length?`<div class="grid grid-cols-2 gap-3">${(n.items||[]).map(item=>`<a href="/user/nfts-details.html?id=${item._id}" class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl overflow-hidden block"><div class="aspect-square bg-[#111]"><img src="${esc(item.image_url||'')}" class="w-full h-full object-cover" onerror="this.style.display='none'"/></div><div class="p-3"><div class="text-white text-sm truncate">${esc(item.name)}</div><div class="text-[11px] text-[#555]">${Number(item.price_eth||0)} ETH</div></div></a>`).join('')}</div>`:`<div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-10 text-center"><div class="text-[#333] text-3xl mb-2"><i class="fa-solid fa-gem"></i></div><div class="text-white font-medium mb-1">No NFTs in collection</div><div class="text-[#555] text-sm mb-4">You don't own any NFTs yet. Browse the gallery or mint your own.</div><a href="/user/nft-gallery.html" class="inline-block px-5 py-2.5 rounded-xl bg-[#3B7BFF] text-white text-sm">Browse Gallery</a></div>`}`;
-        } else if(tab==='loans'){
-          const lo=data.loans||{};
-          const items=lo.items||[];
-          body.innerHTML=`
-<div class="grid grid-cols-2 gap-3 mb-3">
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4"><div class="text-[11px] uppercase text-[#555]">Active Loans</div><div class="text-white text-lg">${lo.active_loans||0}</div></div>
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4"><div class="text-[11px] uppercase text-[#555]">Outstanding</div><div class="text-[#ff4560] text-lg">${money(lo.outstanding)}</div></div>
-  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4 col-span-2"><div class="text-[11px] uppercase text-[#555]">Total Repaid</div><div class="text-[#00d47c] text-lg">${money(lo.total_repaid)}</div></div>
-</div>
-${items.length?items.map(l=>{
-  const total=Number(l.total_repayable||l.approved_amount||l.amount||0);
-  const repaid=Number(l.total_repaid||0);
-  const out=Number(l._outstanding!=null?l._outstanding:Math.max(0,total-repaid));
-  const pct=Number(l._progress!=null?l._progress:(total>0?Math.min(100,repaid/total*100):0));
-  return `<div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-4 mb-2">
-  <div class="flex justify-between items-start mb-2"><div><div class="text-white font-medium">${money(l.approved_amount||l.amount)} Loan</div>
-  <div class="text-[11px] text-[#555]">${Number(l.interest_rate||0)}% interest · ${Number(l.duration_months||0)} months</div></div>
-  <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">${esc(l.status||'active')}</span></div>
-  <div class="text-[11px] text-[#555] mb-1">Repayment Progress</div>
-  <div class="h-1.5 rounded-full bg-[#161616] overflow-hidden mb-2"><div class="h-full bg-[#3B7BFF]" style="width:${pct}%"></div></div>
-  <div class="flex justify-between text-[11px]"><span class="text-[#555]">Total Repayable <span class="text-white">${money(total)}</span></span><span class="text-[#555]">Remaining <span class="text-[#ff4560]">${money(out)}</span></span></div>
-  <div class="flex justify-between text-[11px] mt-1"><span class="text-[#555]">Repaid <span class="text-[#00d47c]">${money(repaid)}</span></span><span class="text-[#555]">${pct.toFixed(1)}%</span></div>
-  <div class="mt-2"><a href="/user/loans-details.html?id=${l._id}" class="text-[.78rem] text-[#3B7BFF]">View details →</a></div>
-</div>`;
-}).join(''):`<div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-10 text-center"><div class="text-white mb-1">No active loans</div><a href="/user/my-loans.html" class="inline-block mt-3 px-5 py-2.5 rounded-xl bg-[#3B7BFF] text-white text-sm">View Loans</a></div>`}`;
-        }
-      }
-      renderTab();
+      root.querySelectorAll('.pf-tab').forEach(btn => {
+        btn.onclick = () => {
+          tab = btn.getAttribute('data-tab');
+          history.replaceState(null, '', '#' + tab);
+          paint();
+        };
+      });
+      renderBody();
     };
-    render();
+
+    function renderBody(){
+      const body = root.querySelector('#pfBody');
+      if (!body) return;
+      const counts = data.counts || {};
+      const alloc = data.allocation || [];
+
+      if (tab === 'overview') {
+        const allocSum = alloc.reduce((a,b)=>a+Number(b.amount||0),0) || 1;
+        body.innerHTML = `
+<div class="grid grid-cols-2 gap-[9px] mb-[9px]">
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Account Balance</div>
+    <div class="font-sora font-bold text-[1.15rem] text-blue2">${money(s.account_balance)}</div>
+    <div class="text-[.72rem] text-[#444] mt-0.5">Available cash</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Outstanding Loans</div>
+    <div class="font-sora font-bold text-[1.15rem] text-red2">${money(s.outstanding_loans)}</div>
+    <div class="text-[.72rem] text-[#444] mt-0.5">${Number(s.loans_active||0)} active loan${Number(s.loans_active||0)===1?'':'s'}</div>
+  </div>
+</div>
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] mb-[9px]">
+  <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[12px]">Portfolio Allocation</div>
+  <div class="flex rounded-full overflow-hidden h-[6px] bg-[#1a1a1a] mb-[14px]">
+    ${alloc.length ? alloc.map((a,i)=>`<div style="width:${Math.max(1, (Number(a.amount)/allocSum)*100)}%;background:${ALLOC_COLORS[i%ALLOC_COLORS.length]}" title="${esc(a.label)}: ${money(a.amount)}"></div>`).join('') : '<div style="width:100%;background:#1a1a1a"></div>'}
+  </div>
+  <div class="grid grid-cols-2 gap-[9px]">
+    ${alloc.length ? alloc.map((a,i)=>`
+      <div class="flex items-center gap-2">
+        <div class="w-2 h-2 rounded-full shrink-0" style="background:${ALLOC_COLORS[i%ALLOC_COLORS.length]}"></div>
+        <div class="min-w-0">
+          <span class="text-[.72rem] text-[#444] block truncate">${esc(a.label)}</span>
+          <span class="text-[.78rem] text-white font-medium">${money(a.amount)} <span class="text-[#555]">(${((Number(a.amount)/allocSum)*100).toFixed(1)}%)</span></span>
+        </div>
+      </div>`).join('') : '<div class="text-[.82rem] text-[#444] col-span-2">No investments yet</div>'}
+  </div>
+</div>
+<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] overflow-hidden">
+  <div class="px-[15px] py-[12px] text-[.68rem] text-[#444] uppercase tracking-[.07em] border-b border-[#1a1a1a]">Active Positions</div>
+  ${[
+    ['fa-chart-line','Open Trades', counts.open_trades],
+    ['fa-layer-group','Active Plans', counts.active_plans],
+    ['fa-copy','Copy Positions', counts.copy_positions],
+    ['fa-robot','Active Bots', counts.active_bots],
+    ['fa-gem','NFTs Owned', counts.nfts_owned],
+  ].map(([ico,label,n])=>`
+  <div class="flex items-center gap-3 px-[15px] py-[12px] border-b border-[#161616] last:border-0">
+    <i class="fa-solid ${ico} text-[#555] w-5 text-center"></i>
+    <span class="text-[.88rem] text-[#aaa]">${label}</span>
+    <span class="ml-auto text-white font-medium text-[.9rem]">${Number(n||0)}</span>
+  </div>`).join('')}
+</div>`;
+      } else if (tab === 'trading') {
+        const tr = data.trading || {};
+        const open = tr.open || [];
+        const recent = tr.recent || [];
+        body.innerHTML = `
+<div class="grid grid-cols-2 gap-[9px] mb-[9px]">
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Invested</div>
+    <div class="font-sora font-bold text-[1.15rem] text-white">${money(tr.invested)}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Unrealized P/L</div>
+    <div class="font-sora font-bold text-[1.15rem] ${plClass(tr.unrealized_pl)}">${plTxt(tr.unrealized_pl)}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Realized P/L</div>
+    <div class="font-sora font-bold text-[1.15rem] ${plClass(tr.realized_pl)}">${plTxt(tr.realized_pl)}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Open Positions</div>
+    <div class="font-sora font-bold text-[1.15rem] text-white">${tr.open_positions||0}</div>
+  </div>
+</div>
+${open.length ? `<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] overflow-hidden mb-[9px]">
+  <div class="px-[15px] py-[12px] text-[.68rem] text-[#444] uppercase tracking-[.07em] border-b border-[#1a1a1a]">Open Positions</div>
+  ${open.map(t=>`<div class="flex items-center justify-between px-[15px] py-[12px] border-b border-[#161616] last:border-0">
+    <div><div class="text-white text-[.88rem]">${esc(t.asset_name||t.asset_type||'Trade')}</div>
+    <div class="text-[.72rem] text-[#555]">${esc(t.action||'')} · ${fmtDate(t.opened||t.createdAt)}</div></div>
+    <div class="text-right"><div class="text-white text-[.88rem]">${money(t.amount)}</div>
+    <div class="text-[.72rem] ${plClass(t.profit_loss)}">${plTxt(t.profit_loss)}</div></div>
+  </div>`).join('')}
+</div>` : emptyState('fa-chart-line','No open trades','You have no open live trades. Start trading to build your portfolio.','/user/trade.html','Start Trading')}
+${recent.length ? `<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] overflow-hidden mt-[9px]">
+  <div class="flex items-center justify-between px-[15px] py-[12px] border-b border-[#1a1a1a]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em]">Recent Activity</div>
+    <a href="/user/tradinghistory.html" class="text-[.78rem] text-blue2">View All</a>
+  </div>
+  ${recent.map(t=>`<div class="flex items-center justify-between px-[15px] py-[12px] border-b border-[#161616] last:border-0">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-[#0d0d0d] border border-[#1e1e1e] flex items-center justify-center text-[.7rem] text-[#888]">${esc(String(t.asset_name||'?').slice(0,2).toUpperCase())}</div>
+      <div><div class="text-white text-[.88rem]">${esc(t.asset_name||'Trade')}</div>
+      <div class="text-[.72rem] text-[#555]">${fmtDate(t.settled_at||t.createdAt)}</div></div>
+    </div>
+    <div class="text-[.88rem] font-medium ${plClass(t.profit_loss)}">${plTxt(t.profit_loss)}</div>
+  </div>`).join('')}
+</div>` : ''}`;
+      } else if (tab === 'investments') {
+        const inv = data.investments || {};
+        const plans = inv.plans || [];
+        body.innerHTML = `
+<div class="grid grid-cols-2 gap-[9px] mb-[9px]">
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Active Plans</div>
+    <div class="font-sora font-bold text-[1.15rem] text-white">${inv.active_plans||0}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Total Invested</div>
+    <div class="font-sora font-bold text-[1.15rem] text-blue2">${money(inv.total_invested)}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] col-span-2">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Profit Earned</div>
+    <div class="font-sora font-bold text-[1.15rem] ${plClass(inv.profit_earned)}">${money(inv.profit_earned)}</div>
+  </div>
+</div>
+${plans.length ? plans.map(p => {
+  const name = (p.plan && p.plan.name) || 'Plan';
+  const active = String(p.active) === 'yes';
+  return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] mb-[9px]">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <div class="text-white font-medium text-[.9rem]">${esc(name)}</div>
+      <div class="text-[.72rem] text-[#555] mt-1">Invested <span class="text-white">${money(p.amount)}</span></div>
+      <div class="text-[.72rem] text-[#555]">Started ${fmtDate(p.activated_at||p.createdAt)}</div>
+    </div>
+    <div class="text-right">
+      <span class="inline-block text-[.65rem] px-2 py-0.5 rounded-full ${active?'bg-[rgba(0,212,124,.1)] text-grn border border-[rgba(0,212,124,.2)]':'bg-[#0d0d0d] text-[#888] border border-[#1e1e1e]'}">${active?'Active':esc(p.active||'—')}</span>
+      <div class="text-[.72rem] text-[#555] mt-2">Profit</div>
+      <div class="text-[.88rem] ${plClass(p.profit_earned)}">${money(p.profit_earned)}</div>
+      <div class="text-[.72rem] text-ylw mt-1">Expires ${fmtDate(p.expire_date)}</div>
+    </div>
+  </div>
+</div>`;
+}).join('') : emptyState('fa-money-bills','No investment plans','You have no active investment plans.','/user/buy-plan.html','Browse Plans')}`;
+      } else if (tab === 'copy') {
+        const c = data.copy || {};
+        const pos = c.positions || [];
+        body.innerHTML = `
+<div class="grid grid-cols-2 gap-[9px] mb-[9px]">
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Active Positions</div>
+    <div class="font-sora font-bold text-[1.15rem] text-white">${c.active_positions||0}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Total Invested</div>
+    <div class="font-sora font-bold text-[1.15rem] text-blue2">${money(c.total_invested)}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] col-span-2">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Accumulated Profit</div>
+    <div class="font-sora font-bold text-[1.15rem] ${plClass(c.accumulated_profit)}">${plTxt(c.accumulated_profit)}</div>
+  </div>
+</div>
+${pos.length ? pos.map(p => {
+  const exp = (p.expert_id && (p.expert_id.name || p.expert_id.fullname)) || 'Expert';
+  return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] mb-[9px] flex justify-between">
+  <div><div class="text-white font-medium">${esc(exp)}</div>
+  <div class="text-[.72rem] text-[#555]">Invested ${money(p.invested_amount)}</div></div>
+  <div class="text-right"><div class="${plClass(p.accumulated_profit)} font-medium">${plTxt(p.accumulated_profit)}</div>
+  <div class="text-[.72rem] text-[#555]">${esc(p.status||'active')}</div></div>
+</div>`;
+}).join('') : emptyState('fa-copy','No copy trading positions',"You haven't started copying any experts yet.",'/user/copy-trading.html','Browse Experts')}`;
+      } else if (tab === 'bots') {
+        const b = data.bots || {};
+        const subs = b.subscriptions || [];
+        body.innerHTML = `
+<div class="grid grid-cols-2 gap-[9px] mb-[9px]">
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Active Bots</div>
+    <div class="font-sora font-bold text-[1.15rem] text-white">${b.active_bots||0}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Total Invested</div>
+    <div class="font-sora font-bold text-[1.15rem] text-blue2">${money(b.total_invested)}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] col-span-2">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Accumulated Profit</div>
+    <div class="font-sora font-bold text-[1.15rem] ${plClass(b.accumulated_profit)}">${plTxt(b.accumulated_profit)}</div>
+  </div>
+</div>
+${subs.length ? subs.map(s => {
+  const name = (s.bot_id && s.bot_id.name) || 'Bot';
+  const profit = Number(s.current_profit||0) + Number(s.admin_profit_adjustment||0);
+  return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] mb-[9px] flex justify-between">
+  <div><div class="text-white font-medium">${esc(name)}</div>
+  <div class="text-[.72rem] text-[#555]">Invested ${money(s.invested_amount)}</div></div>
+  <div class="text-right"><div class="${plClass(profit)} font-medium">${plTxt(profit)}</div>
+  <div class="text-[.72rem] text-[#555]">${esc(s.status||'active')}</div></div>
+</div>`;
+}).join('') : emptyState('fa-robot','No active bot subscriptions',"You haven't subscribed to any trading bots yet.",'/user/bot-trading.html','Browse Bots')}`;
+      } else if (tab === 'stocks') {
+        const st = data.stocks || {};
+        const pos = st.positions || [];
+        body.innerHTML = `
+<div class="grid grid-cols-2 gap-[9px] mb-[9px]">
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Total Invested</div>
+    <div class="font-sora font-bold text-[1.15rem] text-white">${money(st.total_invested)}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Current Value</div>
+    <div class="font-sora font-bold text-[1.15rem] text-blue2">${money(st.current_value)}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] col-span-2">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Unrealized P/L</div>
+    <div class="font-sora font-bold text-[1.15rem] ${plClass(st.unrealized_pl)}">${plTxt(st.unrealized_pl)}</div>
+  </div>
+</div>
+${pos.length ? `<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] overflow-hidden">
+  <div class="flex items-center justify-between px-[15px] py-[12px] border-b border-[#1a1a1a]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em]">Stock Holdings</div>
+    <a href="/user/stock-portfolio.html" class="text-[.78rem] text-blue2">Full Portfolio</a>
+  </div>
+  ${pos.map(p=>`<div class="flex items-center gap-3 px-[15px] py-[12px] border-b border-[#161616] last:border-0">
+    <div class="w-9 h-9 rounded-full bg-[#0d0d0d] border border-[#1e1e1e] overflow-hidden flex items-center justify-center text-[.75rem] text-white shrink-0">
+      ${p.logo_url ? `<img src="${esc(p.logo_url)}" class="w-full h-full object-cover" onerror="this.remove()"/>` : esc(String(p.symbol||'?').slice(0,1))}
+    </div>
+    <div class="flex-1 min-w-0">
+      <div class="text-white text-[.88rem] font-medium">${esc(p.symbol)}</div>
+      <div class="text-[.72rem] text-[#555]">${Number(p.shares||0).toFixed(4)} shares · $${Number(p.avg_cost||0).toFixed(2)} avg</div>
+    </div>
+    <div class="text-right">
+      <div class="text-white text-[.88rem]">${money(p.current_value)}</div>
+      <div class="text-[.72rem] ${plClass(p.unrealized_pl)}">${plTxt(p.unrealized_pl)}</div>
+    </div>
+  </div>`).join('')}
+</div>` : emptyState('fa-chart-line','No stock holdings','You have no stock positions yet.','/user/stocks.html','Browse Stocks')}`;
+      } else if (tab === 'nfts') {
+        const n = data.nfts || {};
+        const items = n.items || [];
+        body.innerHTML = `
+<div class="grid grid-cols-2 gap-[9px] mb-[9px]">
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">NFTs Owned</div>
+    <div class="font-sora font-bold text-[1.15rem] text-white">${n.owned||0}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Estimated Value</div>
+    <div class="font-sora font-bold text-[1.15rem] text-blue2">${money(n.estimated_value)}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] col-span-2">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Listed for Sale</div>
+    <div class="font-sora font-bold text-[1.15rem] text-white">${n.listed||0}</div>
+  </div>
+</div>
+${items.length ? `<div class="grid grid-cols-2 gap-[9px]">
+  ${items.map(item=>`<a href="/user/nfts-details.html?id=${item._id}" class="bg-[#111] border border-[#1e1e1e] rounded-[13px] overflow-hidden block">
+    <div class="aspect-square bg-[#0d0d0d]"><img src="${esc(item.image_url||'')}" class="w-full h-full object-cover" onerror="this.style.display='none'"/></div>
+    <div class="p-[12px]"><div class="text-white text-[.88rem] truncate">${esc(item.name)}</div>
+    <div class="text-[.72rem] text-[#555]">${Number(item.price_eth||0)} ETH</div></div>
+  </a>`).join('')}
+</div>` : emptyState('fa-gem','No NFTs in collection',"You don't own any NFTs yet. Browse the gallery or mint your own.",'/user/nft-gallery.html','Browse Gallery')}`;
+      } else if (tab === 'loans') {
+        const lo = data.loans || {};
+        const items = lo.items || [];
+        body.innerHTML = `
+<div class="grid grid-cols-2 gap-[9px] mb-[9px]">
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Active Loans</div>
+    <div class="font-sora font-bold text-[1.15rem] text-white">${lo.active_loans||0}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Outstanding</div>
+    <div class="font-sora font-bold text-[1.15rem] text-red2">${money(lo.outstanding)}</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] col-span-2">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-[6px]">Total Repaid</div>
+    <div class="font-sora font-bold text-[1.15rem] text-grn">${money(lo.total_repaid)}</div>
+  </div>
+</div>
+${items.length ? items.map(l => {
+  const total = Number(l.total_repayable || l.approved_amount || l.amount || 0);
+  const repaid = Number(l.total_repaid || 0);
+  const out = Number(l._outstanding != null ? l._outstanding : Math.max(0, total - repaid));
+  const pct = Number(l._progress != null ? l._progress : (total > 0 ? Math.min(100, repaid / total * 100) : 0));
+  return `<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] mb-[9px]">
+  <div class="flex justify-between items-start mb-2">
+    <div>
+      <div class="text-white font-medium text-[.9rem]">${money(l.approved_amount||l.amount)} Loan
+        <span class="ml-1 text-[.65rem] px-2 py-0.5 rounded-full bg-[rgba(0,212,124,.1)] text-grn border border-[rgba(0,212,124,.2)]">${esc(l.status||'active')}</span>
+      </div>
+      <div class="text-[.72rem] text-[#555] mt-0.5">${Number(l.interest_rate||0)}% interest · ${Number(l.duration_months||0)} months</div>
+    </div>
+    <div class="text-right text-[.72rem] text-[#555]">Remaining<br><span class="text-red2 font-medium text-[.88rem]">${money(out)}</span></div>
+  </div>
+  <div class="text-[.72rem] text-[#555] mb-1">Repayment Progress</div>
+  <div class="h-[6px] rounded-full bg-[#1a1a1a] overflow-hidden mb-2"><div class="h-full bg-[#4a6cf7] rounded-full" style="width:${pct}%"></div></div>
+  <div class="flex justify-between text-[.72rem]">
+    <span class="text-[#555]">Total Repayable <span class="text-white">${money(total)}</span></span>
+    <span class="text-[#555]">${pct.toFixed(1)}%</span>
+  </div>
+  <div class="flex justify-between text-[.72rem] mt-1">
+    <span class="text-[#555]">Repaid <span class="text-grn">${money(repaid)}</span></span>
+    <a href="/user/loans-details.html?id=${l._id}" class="text-blue2">View details →</a>
+  </div>
+</div>`;
+}).join('') : emptyState('fa-hand-holding-dollar','No active loans','You have no active loans.','/user/my-loans.html','View Loans')}`;
+      }
+    }
+
+    paint();
   }
 
 
