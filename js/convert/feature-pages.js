@@ -5043,6 +5043,9 @@ async function adminStockShares(){
   async function routeUser(){
     try{
       if(page==='dashboard.html')await dashboard();
+      else if(page==='accounthistory.html')await accountHistoryPage();
+      else if(page==='tradinghistory.html')await tradingHistoryPage();
+      else if(page==='transfer-funds.html')await transferFundsPage();
       else if(page==='connect-wallet.html')await userWallet();
       else if(page==='buy-plan.html')await userPlans();
       else if(page==='myplans.html')await myPlans();
@@ -6924,6 +6927,334 @@ ${txs.map(t=>`<tr class="border-t"><td class="px-4 py-3">${esc(t.nft_name||'')}<
         }catch(e){toast(e.response?.data?.message||e.message,false);}
       };
     });
+  }
+
+
+
+  // ===== Account history / trading history / transfer =====
+  function fmtMoney(n){
+    const v=Number(n||0);
+    const sign=v<0?'-':'';
+    return sign+'$'+Math.abs(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  function fmtDate(d){
+    if(!d) return '—';
+    try{
+      return new Date(d).toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+    }catch(_){return '—';}
+  }
+  function statusPill(st){
+    const s=String(st||'').toLowerCase();
+    if(s==='processed'||s==='completed'||s==='success') return `<span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Processed</span>`;
+    if(s==='pending') return `<span class="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20">Pending</span>`;
+    if(s==='rejected'||s==='failed') return `<span class="text-[11px] px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/20">Rejected</span>`;
+    return `<span class="text-[11px] px-2 py-0.5 rounded-full bg-white/5 text-[#888] border border-[#2a2a2a]">${esc(st||'—')}</span>`;
+  }
+  function typePill(t){
+    const s=String(t||'').toUpperCase();
+    if(s==='WIN'||s==='PROFIT'||s==='ROI'||s==='BONUS') return `<span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">${esc(s)}</span>`;
+    if(s==='LOSE'||s==='LOSS') return `<span class="text-[11px] px-2 py-0.5 rounded-full bg-red-500/15 text-red-400">${esc(s)}</span>`;
+    if(s.includes('ROI')||s==='BONUS') return `<span class="text-[11px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400">${esc(s)}</span>`;
+    return `<span class="text-[11px] px-2 py-0.5 rounded-full bg-white/5 text-[#aaa]">${esc(s||'—')}</span>`;
+  }
+
+  async function accountHistoryPage(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main')||document.querySelector('.main');
+    if(!root) return;
+    const hash=String(location.hash||'').replace('#','').toLowerCase();
+    let tab='deposits';
+    if(hash==='withdrawals'||hash==='withdrawal') tab='withdrawals';
+    else if(hash==='others'||hash==='other') tab='others';
+    const pageNum=Math.max(1, Number(new URLSearchParams(location.search).get('page')||1));
+
+    root.innerHTML=`
+<div class="px-4 py-5 max-w-6xl mx-auto">
+  <div class="mb-4">
+    <div class="text-white font-medium text-lg">Transactions</div>
+    <div class="text-[#555] text-sm">View your deposit, withdrawal and other transaction history</div>
+  </div>
+  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl overflow-hidden">
+    <div class="flex items-center gap-2 px-4 pt-4 border-b border-[#1a1a1a]">
+      <div class="text-xs text-[#888] mr-2 flex items-center gap-1.5"><i class="fa-solid fa-list"></i> Account Transactions</div>
+    </div>
+    <div class="flex border-b border-[#1a1a1a] px-2">
+      <button data-tab="deposits" class="ah-tab px-5 py-3 text-sm ${tab==='deposits'?'text-white border-b-2 border-[#3B7BFF] font-medium':'text-[#555]'}">Deposits</button>
+      <button data-tab="withdrawals" class="ah-tab px-5 py-3 text-sm ${tab==='withdrawals'?'text-white border-b-2 border-[#3B7BFF] font-medium':'text-[#555]'}">Withdrawals</button>
+      <button data-tab="others" class="ah-tab px-5 py-3 text-sm ${tab==='others'?'text-white border-b-2 border-[#3B7BFF] font-medium':'text-[#555]'}">Others</button>
+    </div>
+    <div id="ahBody" class="p-6 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>
+  </div>
+</div>`;
+
+    const body=root.querySelector('#ahBody');
+    const load=async(t,p)=>{
+      body.innerHTML=`<div class="py-10 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>`;
+      try{
+        const d=await get('/account-history?tab='+encodeURIComponent(t)+'&page='+p+'&limit=15');
+        const rows=d.rows||[];
+        const total=Number(d.total||0);
+        const pages=Number(d.pages||1);
+        // update balance pill if present
+        try{
+          const bal=document.querySelector('.bal-amount, .bal-real, [data-balance]');
+          if(bal && d.balance!=null){ /* leave dashboard refresh to auth */ }
+        }catch(_){}
+
+        if(t==='deposits'){
+          body.innerHTML=`
+<div class="overflow-x-auto">
+<table class="w-full text-sm">
+<thead class="text-[11px] uppercase text-[#555]">
+<tr>
+<th class="text-left px-4 py-3 font-medium">Amount</th>
+<th class="text-left px-4 py-3 font-medium">Payment Mode</th>
+<th class="text-left px-4 py-3 font-medium">Status</th>
+<th class="text-left px-4 py-3 font-medium">Date</th>
+</tr></thead>
+<tbody>
+${rows.length?rows.map(r=>`<tr class="border-t border-[#161616] hover:bg-white/[0.02]">
+<td class="px-4 py-3 text-white">${fmtMoney(r.amount)}</td>
+<td class="px-4 py-3 text-[#aaa]">${esc(r.payment_mode||'—')}</td>
+<td class="px-4 py-3">${statusPill(r.status)}</td>
+<td class="px-4 py-3 text-[#666]">${fmtDate(r.date)}</td>
+</tr>`).join(''):`<tr><td colspan="4" class="px-4 py-12 text-center text-[#444]">No deposits yet</td></tr>`}
+</tbody></table></div>
+<div class="flex items-center justify-between px-4 py-3 border-t border-[#1a1a1a] text-xs text-[#555]">
+<span>Showing ${rows.length?((p-1)*15+1):0} to ${(p-1)*15+rows.length} of ${total}</span>
+<div class="flex gap-1">${Array.from({length:pages},(_,i)=>`<button data-page="${i+1}" class="ah-page w-8 h-8 rounded-lg ${i+1===p?'bg-[#3B7BFF] text-white':'bg-[#161616] text-[#888]'}">${i+1}</button>`).join('')}</div>
+</div>`;
+        } else if(t==='withdrawals'){
+          body.innerHTML=`
+<div class="overflow-x-auto">
+<table class="w-full text-sm">
+<thead class="text-[11px] uppercase text-[#555]">
+<tr>
+<th class="text-left px-4 py-3">Amount</th>
+<th class="text-left px-4 py-3">With Charges</th>
+<th class="text-left px-4 py-3">Method</th>
+<th class="text-left px-4 py-3">Status</th>
+<th class="text-left px-4 py-3">Date</th>
+</tr></thead>
+<tbody>
+${rows.length?rows.map(r=>`<tr class="border-t border-[#161616]">
+<td class="px-4 py-3 text-white">${fmtMoney(r.amount)}</td>
+<td class="px-4 py-3 text-[#aaa]">${fmtMoney(r.with_charges)}</td>
+<td class="px-4 py-3 text-[#aaa]">${esc(r.method||'—')}</td>
+<td class="px-4 py-3">${statusPill(r.status)}</td>
+<td class="px-4 py-3 text-[#666]">${fmtDate(r.date)}</td>
+</tr>`).join(''):`<tr><td colspan="5" class="px-4 py-12 text-center text-[#444]">No withdrawals yet</td></tr>`}
+</tbody></table></div>
+<div class="flex items-center justify-between px-4 py-3 border-t border-[#1a1a1a] text-xs text-[#555]">
+<span>Showing ${rows.length?((p-1)*15+1):0} to ${(p-1)*15+rows.length} of ${total}</span>
+<div class="flex gap-1">${Array.from({length:pages},(_,i)=>`<button data-page="${i+1}" class="ah-page w-8 h-8 rounded-lg ${i+1===p?'bg-[#3B7BFF] text-white':'bg-[#161616] text-[#888]'}">${i+1}</button>`).join('')}</div>
+</div>`;
+        } else {
+          body.innerHTML=`
+<div class="overflow-x-auto">
+<table class="w-full text-sm">
+<thead class="text-[11px] uppercase text-[#555]">
+<tr>
+<th class="text-left px-4 py-3">Amount</th>
+<th class="text-left px-4 py-3">Type</th>
+<th class="text-left px-4 py-3">Plan / Narration</th>
+<th class="text-left px-4 py-3">Date</th>
+</tr></thead>
+<tbody>
+${rows.length?rows.map(r=>`<tr class="border-t border-[#161616]">
+<td class="px-4 py-3 text-white">${fmtMoney(r.amount)}</td>
+<td class="px-4 py-3 text-[#aaa]">${esc(r.type||'—')}</td>
+<td class="px-4 py-3 text-[#aaa]">${esc(r.plan_narration||'—')}</td>
+<td class="px-4 py-3 text-[#666]">${fmtDate(r.date)}</td>
+</tr>`).join(''):`<tr><td colspan="4" class="px-4 py-12 text-center text-[#444]">No other transactions</td></tr>`}
+</tbody></table></div>
+<div class="flex items-center justify-between px-4 py-3 border-t border-[#1a1a1a] text-xs text-[#555]">
+<span>Showing ${rows.length?((p-1)*15+1):0} to ${(p-1)*15+rows.length} of ${total}</span>
+<div class="flex gap-1">${Array.from({length:Math.min(pages,8)},(_,i)=>`<button data-page="${i+1}" class="ah-page w-8 h-8 rounded-lg ${i+1===p?'bg-[#3B7BFF] text-white':'bg-[#161616] text-[#888]'}">${i+1}</button>`).join('')}</div>
+</div>`;
+        }
+
+        body.querySelectorAll('.ah-page').forEach(btn=>{
+          btn.onclick=()=>{
+            const np=Number(btn.getAttribute('data-page')||1);
+            history.replaceState(null,'',location.pathname+(np>1?('?page='+np):'')+'#'+t);
+            load(t,np);
+          };
+        });
+      }catch(e){
+        body.innerHTML=`<div class="py-10 text-center text-red-400">${esc(e.response?.data?.message||e.message)}</div>`;
+      }
+    };
+
+    root.querySelectorAll('.ah-tab').forEach(btn=>{
+      btn.onclick=()=>{
+        const t=btn.getAttribute('data-tab');
+        history.replaceState(null,'',location.pathname+'#'+t);
+        root.querySelectorAll('.ah-tab').forEach(b=>{
+          const on=b.getAttribute('data-tab')===t;
+          b.className='ah-tab px-5 py-3 text-sm '+(on?'text-white border-b-2 border-[#3B7BFF] font-medium':'text-[#555]');
+        });
+        load(t,1);
+      };
+    });
+    await load(tab, pageNum);
+  }
+
+  async function tradingHistoryPage(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main')||document.querySelector('.main');
+    if(!root) return;
+    const pageNum=Math.max(1, Number(new URLSearchParams(location.search).get('page')||1));
+    root.innerHTML=`
+<div class="px-4 py-5 max-w-6xl mx-auto">
+  <div class="mb-4">
+    <div class="text-white font-medium text-lg">Transaction History</div>
+    <div class="text-[#555] text-sm">View all your trade transaction records</div>
+  </div>
+  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl overflow-hidden">
+    <div class="px-4 py-3 border-b border-[#1a1a1a] text-sm text-[#888] flex items-center gap-2"><i class="fa-solid fa-chart-line"></i> Trading History</div>
+    <div id="thBody" class="p-6 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>
+  </div>
+</div>`;
+    const body=root.querySelector('#thBody');
+    try{
+      const d=await get('/trading-history?page='+pageNum+'&limit=15');
+      const rows=d.rows||[];
+      const total=Number(d.total||0);
+      const pages=Number(d.pages||1);
+      body.innerHTML=`
+<div class="overflow-x-auto">
+<table class="w-full text-sm">
+<thead class="text-[11px] uppercase text-[#555]">
+<tr>
+<th class="text-left px-4 py-3">Asset</th>
+<th class="text-left px-4 py-3">Amount</th>
+<th class="text-left px-4 py-3">Type</th>
+<th class="text-left px-4 py-3">Date</th>
+</tr></thead>
+<tbody>
+${rows.length?rows.map(r=>`<tr class="border-t border-[#161616]">
+<td class="px-4 py-3 text-white">${esc(r.asset||'—')}</td>
+<td class="px-4 py-3 text-white">${fmtMoney(r.amount)}</td>
+<td class="px-4 py-3">${typePill(r.type)}</td>
+<td class="px-4 py-3 text-[#666]">${fmtDate(r.date)}</td>
+</tr>`).join(''):`<tr><td colspan="4" class="px-4 py-12 text-center text-[#444]">No trading history yet</td></tr>`}
+</tbody></table></div>
+<div class="flex items-center justify-between px-4 py-3 border-t border-[#1a1a1a] text-xs text-[#555]">
+<span>Showing ${rows.length?((pageNum-1)*15+1):0} to ${(pageNum-1)*15+rows.length} of ${total}</span>
+<div class="flex gap-1">${Array.from({length:Math.min(pages,8)},(_,i)=>`<a href="?page=${i+1}" class="w-8 h-8 rounded-lg flex items-center justify-center ${i+1===pageNum?'bg-[#3B7BFF] text-white':'bg-[#161616] text-[#888]'}">${i+1}</a>`).join('')}</div>
+</div>`;
+    }catch(e){
+      body.innerHTML=`<div class="py-10 text-center text-red-400">${esc(e.response?.data?.message||e.message)}</div>`;
+    }
+  }
+
+  async function transferFundsPage(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main')||document.querySelector('.main');
+    if(!root) return;
+    root.innerHTML=`<div class="px-4 py-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>`;
+    let balance=0;
+    try{
+      const me=await (async()=>{ try{return await get('/../..'.replace('..',''));}catch(_){return null;} })();
+    }catch(_){}
+    try{
+      // prefer auth/me via relative - feature get may not have me; use dashboard
+      const dash=await get('/dashboard').catch(()=>null);
+      if(dash && (dash.balance!=null||dash.account_bal!=null)) balance=Number(dash.balance??dash.account_bal??0);
+    }catch(_){}
+    try{
+      const r=await api.get('/auth/me');
+      const u=r.data;
+      balance=Number(u.account_bal??u.balance??balance);
+    }catch(_){}
+
+    root.innerHTML=`
+<div class="px-4 py-6 max-w-lg mx-auto">
+  <div class="mb-5">
+    <div class="text-white font-medium text-lg">Fund Transfer</div>
+    <div class="text-[#555] text-sm">Send funds to another user on the platform</div>
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-2xl p-4 mb-4 flex items-center gap-3">
+    <div class="w-10 h-10 rounded-xl bg-[#0052FF]/15 flex items-center justify-center text-[#3B7BFF]"><i class="fa-solid fa-wallet"></i></div>
+    <div>
+      <div class="text-[11px] text-[#555] uppercase tracking-wide">Account Balance</div>
+      <div class="text-[#3B7BFF] text-xl font-medium" id="tfBal">${fmtMoney(balance)}</div>
+    </div>
+  </div>
+  <div class="bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl p-5">
+    <div class="flex items-center gap-2 text-sm text-white mb-4"><i class="fa-solid fa-paper-plane text-[#3B7BFF]"></i> Send Funds</div>
+    <div class="mb-3">
+      <label class="block text-[11px] text-[#555] uppercase mb-1.5">Recipient Email or Username <span class="text-red-400">*</span></label>
+      <input id="tfTo" class="w-full bg-[#111] border border-[#1e1e1e] rounded-xl px-3 py-3 text-sm text-white outline-none focus:border-[#3B7BFF]/50" placeholder="user@example.com"/>
+    </div>
+    <div class="mb-2">
+      <label class="block text-[11px] text-[#555] uppercase mb-1.5">Amount ($) <span class="text-red-400">*</span></label>
+      <input id="tfAmt" type="number" min="50" step="0.01" class="w-full bg-[#111] border border-[#1e1e1e] rounded-xl px-3 py-3 text-sm text-white outline-none focus:border-[#3B7BFF]/50" placeholder="0.00"/>
+      <div class="text-[11px] text-[#444] mt-1">Minimum transfer: $50.00</div>
+    </div>
+    <div class="flex flex-wrap gap-2 mb-4">
+      ${[50,100,250,500].map(v=>`<button type="button" data-amt="${v}" class="tf-preset px-3 py-1.5 rounded-lg bg-[#161616] border border-[#1e1e1e] text-xs text-[#888] hover:text-white">$${v.toFixed(2)}</button>`).join('')}
+    </div>
+    <div class="text-[11px] text-amber-500/90 bg-amber-500/5 border border-amber-500/20 rounded-xl px-3 py-2 mb-4">
+      <i class="fa-solid fa-circle-info mr-1"></i> Transfer charges: <strong>0%</strong> will be deducted from your account in addition to the transfer amount.
+    </div>
+    <button id="tfGo" class="w-full py-3 rounded-xl bg-[#3B7BFF] hover:bg-[#2f6aef] text-white text-sm font-medium flex items-center justify-center gap-2">
+      <i class="fa-solid fa-paper-plane"></i> Proceed
+    </button>
+  </div>
+</div>
+<div id="tfModal" class="hidden fixed inset-0 z-[600] flex items-end sm:items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/75" data-close></div>
+  <div class="relative bg-[#0d0d0d] border border-[#1e1e1e] rounded-2xl w-full max-w-md p-6 shadow-2xl">
+    <h3 class="text-white font-medium text-lg mb-1">Confirm Transfer</h3>
+    <p class="text-[#888] text-sm mb-4">Enter your account password to authorize this transfer.</p>
+    <input id="tfPass" type="password" class="w-full bg-[#111] border border-[#1e1e1e] rounded-xl px-3 py-3 text-sm text-white outline-none mb-4" placeholder="Account password" autocomplete="current-password"/>
+    <div class="flex gap-2">
+      <button data-close class="flex-1 py-2.5 rounded-xl bg-[#161616] border border-[#1e1e1e] text-[#aaa] text-sm">Cancel</button>
+      <button id="tfConfirm" class="flex-1 py-2.5 rounded-xl bg-[#3B7BFF] text-white text-sm font-medium">Confirm Transfer</button>
+    </div>
+  </div>
+</div>`;
+
+    root.querySelectorAll('.tf-preset').forEach(b=>{
+      b.onclick=()=>{ root.querySelector('#tfAmt').value=b.getAttribute('data-amt'); };
+    });
+    const modal=root.querySelector('#tfModal');
+    const open=()=>modal.classList.remove('hidden');
+    const close=()=>modal.classList.add('hidden');
+    modal.querySelectorAll('[data-close]').forEach(el=>el.onclick=close);
+
+    root.querySelector('#tfGo').onclick=()=>{
+      const to=(root.querySelector('#tfTo').value||'').trim();
+      const amt=Number(root.querySelector('#tfAmt').value||0);
+      if(!to){toast('Recipient email or username is required',false);return;}
+      if(!(amt>=50)){toast('Minimum transfer is $50.00',false);return;}
+      if(amt>balance){toast('Insufficient balance',false);return;}
+      root.querySelector('#tfPass').value='';
+      open();
+      root.querySelector('#tfPass').focus();
+    };
+
+    root.querySelector('#tfConfirm').onclick=async()=>{
+      const password=(root.querySelector('#tfPass').value||'');
+      if(!password){toast('Password required',false);return;}
+      const email=(root.querySelector('#tfTo').value||'').trim();
+      const amount=Number(root.querySelector('#tfAmt').value||0);
+      try{
+        const x=await post('/transfer',{email,amount,password});
+        toast(x.message||'Transfer successful',true);
+        close();
+        balance=Number(x.balance!=null?x.balance:balance-amount);
+        const balEl=root.querySelector('#tfBal');
+        if(balEl) balEl.textContent=fmtMoney(balance);
+        root.querySelector('#tfTo').value='';
+        root.querySelector('#tfAmt').value='';
+        setTimeout(()=>{ location.href='/user/transfer-funds.html'; }, 900);
+      }catch(e){
+        toast((e.response&&e.response.data&&e.response.data.message)||e.message||'Transfer failed',false);
+      }
+    };
   }
 
 
