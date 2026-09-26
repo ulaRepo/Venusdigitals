@@ -483,6 +483,43 @@
     </div>
 </div>
 
+<div x-data="{ expanded: false }">
+    
+    <button @click="expanded = !expanded" class="mx-3 w-[calc(100%-1.5rem)] flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-sidebar-text hover:bg-sidebar-hover">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3"></path></svg>
+                <span class="flex-1 text-left">NFT</span>
+                <svg class="w-4 h-4 transition-transform duration-200" :class="expanded &amp;&amp; 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg>
+    </button>
+    
+    <div x-show="expanded" x-collapse="" class="mt-0.5" style="display: none;">
+        <a href="/admin/nfts.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+        <span class="flex-1">All NFTs</span>
+    </a>
+            <a href="/admin/nfts-create.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+        <span class="flex-1">Create NFT</span>
+    </a>
+            <a href="/admin/nft-categories.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+        <span class="flex-1">NFT Categories</span>
+    </a>
+            <a href="/admin/nft-collections.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+        <span class="flex-1">Collections</span>
+    </a>
+            <a href="/admin/nft-bids.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+        <span class="flex-1">Bids</span>
+    </a>
+            <a href="/admin/nft-transactions.html" class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+                   text-content-inverse">
+        <span class="flex-1">Transactions</span>
+    </a>
+    </div>
+</div>
+
         <a href="https://digital-grownt.com/admin/admin/loan-plans"
    class="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
           text-sidebar-text hover:bg-sidebar-hover">
