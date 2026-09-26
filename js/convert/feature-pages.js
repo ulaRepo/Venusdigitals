@@ -4407,6 +4407,13 @@ async function routeAdmin(){
       if(page==='signal-plans-create.html')return adminSignalPlanForm(false);
       if(page==='signal-plans-edit.html')return adminSignalPlanForm(true);
       if(page==='admin-signal.html'||page==='signal.html')return adminSignalsPage();
+      if(page==='nfts.html')return adminNftsPage();
+      if(page==='nfts-create.html')return adminNftForm(false);
+      if(page==='nfts-edit.html')return adminNftForm(true);
+      if(page==='nft-categories.html')return adminNftCategoriesPage();
+      if(page==='nft-collections.html')return adminNftCollectionsPage();
+      if(page==='nft-transactions.html')return adminNftTransactionsPage();
+      if(page==='nft-bids.html'||page==='bids.html')return adminNftBidsPage();
       if(page==='signal-create.html')return adminSignalForm(false);
       if(page==='admin-signal-edit.html')return adminSignalForm(true);
       if(page==='stock-shares-trades.html')return adminStockTrades();
@@ -5067,6 +5074,11 @@ async function adminStockShares(){
       else if(page==='singalssubscriptions.html'||page==='subscribe-signals.html')await signalSubscribePage();
       else if(page==='my-signals.html')await mySignalsPage();
       else if(page==='signals-subscription.html')await liveSignalsPage();
+      else if(page==='nft-gallery.html')await nftGalleryPage();
+      else if(page==='nfts-create.html')await nftCreatePage();
+      else if(page==='my-nfts.html')await myNftsPage();
+      else if(page==='nfts-details.html')await nftDetailsPage();
+      else if(page==='nfts-collection.html')await nftCollectionPage();
     }
     catch(e){
       toast(e.message,false)
@@ -6140,6 +6152,778 @@ ${active.length?`<div class="space-y-4">${active.map(s=>{
         setTimeout(()=>{ location.href='/admin/signal.html'; },600);
       }catch(e){toast(e.response?.data?.message||e.message,false);}
     };
+  }
+
+
+
+  // ===================== NFT MARKETPLACE =====================
+  function nftCard(n){
+    const img=n.image_url||n.image||'';
+    const status=n.status||'available';
+    const col=n.collection_name||n.category||'';
+    return `<div class="bg-[#111] border border-[#1e1e1e] rounded-xl overflow-hidden flex flex-col">
+      <div class="relative aspect-square bg-[#0a0a0a]">
+        ${img?`<img src="${esc(img)}" class="w-full h-full object-cover" alt="">`:`<div class="w-full h-full flex items-center justify-center text-[#333]"><i class="fa-solid fa-image text-3xl"></i></div>`}
+        <span class="absolute top-2 left-2 text-[.65rem] px-2 py-0.5 rounded bg-black/60 text-white">${esc(n.name||'')}</span>
+      </div>
+      <div class="p-3 flex-1 flex flex-col">
+        <div class="flex items-start justify-between gap-2 mb-1">
+          <div class="min-w-0">
+            <div class="text-white text-sm font-medium truncate">${esc(n.name||'')}</div>
+            <div class="text-[#555] text-[.72rem] truncate">${esc(col)}</div>
+          </div>
+          <button data-like="${n._id}" class="nft-like text-[#555] hover:text-red2 shrink-0"><i class="fa-${(n.liked_by||[]).length?'solid':'regular'} fa-heart"></i></button>
+        </div>
+        <div class="flex items-center justify-between text-sm mb-2">
+          <span class="text-white font-medium">${Number(n.price_eth||0).toFixed(8)} ETH</span>
+          <span class="text-[#555] text-[.72rem]"><i class="fa-regular fa-eye mr-1"></i>${Number(n.views||0)}</span>
+        </div>
+        <div class="flex items-center justify-between mt-auto">
+          <span class="text-[.68rem] px-2 py-0.5 rounded ${status==='sold'?'bg-red-500/10 text-red2':'bg-emerald-500/10 text-grn'}">${status==='sold'?'Sold':'Available'}</span>
+          <a href="/user/nfts-details.html?id=${encodeURIComponent(n._id)}" class="text-blue2 text-xs font-medium">View</a>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  async function nftGalleryPage(){
+    showDynamicMain();
+    const root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page')||document.getElementById('main-content');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    const params=new URLSearchParams(location.search);
+    const cat=params.get('category')||'';
+    const q=params.get('q')||'';
+    let d;
+    try{
+      const qs=[];
+      if(cat) qs.push('category='+encodeURIComponent(cat));
+      if(q) qs.push('search='+encodeURIComponent(q));
+      d=await get('/nfts'+(qs.length?'?'+qs.join('&'):''));
+    }catch(e){root.innerHTML=`<div class="p-8 text-center text-red-400">${esc(e.message)}</div>`;return;}
+    const nfts=d.nfts||[];
+    const featured=d.featured||[];
+    const categories=d.categories||[];
+    const collections=d.collections||[];
+    root.innerHTML=`
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+  <div>
+    <h1 class="text-white text-xl font-medium">NFT Marketplace</h1>
+    <p class="text-[#555] text-sm">Discover, collect, and trade unique digital assets</p>
+  </div>
+  <div class="flex gap-2">
+    <a href="/user/nfts-create.html" class="px-3 py-2 rounded-lg border border-[#2a2a2a] text-white text-sm">+ Mint NFT</a>
+    <a href="/user/my-nfts.html" class="px-3 py-2 rounded-lg border border-[#2a2a2a] text-white text-sm">My NFTs</a>
+  </div>
+</div>
+<div class="mb-5">
+  <div class="text-[#888] text-sm mb-2 flex items-center gap-2"><i class="fa-regular fa-star"></i> Featured</div>
+  <div class="flex gap-3 overflow-x-auto pb-2">${featured.map(n=>`<a href="/user/nfts-details.html?id=${encodeURIComponent(n._id)}" class="min-w-[160px] max-w-[180px] bg-[#111] border border-[#1e1e1e] rounded-xl overflow-hidden shrink-0">
+    <div class="h-28 bg-[#0a0a0a]">${n.image_url?`<img src="${esc(n.image_url)}" class="w-full h-full object-cover">`:''}</div>
+    <div class="p-2"><div class="text-white text-xs font-medium truncate">${esc(n.name)}</div><div class="text-[#555] text-[.7rem]">${Number(n.price_eth||0).toFixed(8)} ETH</div></div>
+  </a>`).join('')||'<div class="text-[#444] text-sm">No featured NFTs</div>'}</div>
+</div>
+<div class="mb-5">
+  <div class="text-[#888] text-sm mb-2 flex items-center gap-2"><i class="fa-regular fa-folder"></i> Collections</div>
+  <div class="flex flex-wrap gap-2">${collections.map(c=>`<a href="/user/nfts-collection.html?id=${encodeURIComponent(c._id)}" class="px-3 py-2 rounded-xl border border-[#1e1e1e] bg-[#111] text-center min-w-[110px]">
+    <div class="text-white text-xs font-medium">${esc(c.name)}</div>
+    <div class="text-[#555] text-[.68rem]">${Number(c.items_count||0)} items</div>
+  </a>`).join('')||'<div class="text-[#444] text-sm">No collections</div>'}</div>
+</div>
+<div class="mb-3 flex flex-wrap gap-2 items-center">
+  <a href="/user/nft-gallery.html" class="px-3 py-1.5 rounded-full border text-[.78rem] ${!cat?'bg-brand-blue border-brand-blue text-white':'border-[#1e1e1e] text-[#888]'}">All</a>
+  ${categories.map(c=>`<a href="/user/nft-gallery.html?category=${encodeURIComponent(c.name)}" class="px-3 py-1.5 rounded-full border text-[.78rem] ${cat===c.name?'bg-brand-blue border-brand-blue text-white':'border-[#1e1e1e] text-[#888]'}">${esc(c.name)}</a>`).join('')}
+</div>
+<div class="mb-4 flex gap-2">
+  <input id="nftSearch" value="${esc(q)}" placeholder="Search by name, description, or token ID..." class="flex-1 bg-[#111] border border-[#1e1e1e] rounded-xl px-4 py-2.5 text-sm text-white outline-none"/>
+  <button id="nftSearchBtn" class="px-4 py-2 rounded-xl bg-brand-blue text-white text-sm">Search</button>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3" id="nftGrid">
+  ${nfts.map(nftCard).join('')||'<div class="col-span-full text-center text-[#555] py-12">No NFTs found.</div>'}
+</div>`;
+    root.querySelector('#nftSearchBtn').onclick=()=>{
+      const v=root.querySelector('#nftSearch').value.trim();
+      const url=new URL(location.href);
+      if(v) url.searchParams.set('q',v); else url.searchParams.delete('q');
+      location.href=url.toString();
+    };
+    root.querySelector('#nftSearch').onkeydown=e=>{if(e.key==='Enter')root.querySelector('#nftSearchBtn').click();};
+    root.querySelectorAll('.nft-like').forEach(btn=>{
+      btn.onclick=async e=>{e.preventDefault();try{await post('/nfts/'+btn.getAttribute('data-like')+'/like',{});toast('Updated',true);}catch(err){toast(err.response?.data?.message||err.message,false);}};
+    });
+  }
+
+  async function nftCreatePage(){
+    showDynamicMain();
+    const root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page')||document.getElementById('main-content');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let meta; try{meta=await get('/nfts/meta');}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-400">${esc(e.message)}</div>`;return;}
+    const cats=meta.categories||[];
+    const cols=meta.collections||[];
+    const ethUsd=Number(meta.eth_usd||0);
+    const bal=Number(meta.balance||0);
+    root.innerHTML=`
+<div class="flex items-center justify-between mb-5">
+  <div>
+    <h1 class="text-white text-xl font-medium">Mint NFT</h1>
+    <p class="text-[#555] text-sm">Create a new digital asset on the blockchain</p>
+  </div>
+  <a href="/user/nft-gallery.html" class="px-3 py-2 rounded-lg border border-[#2a2a2a] text-white text-sm">Back to Gallery</a>
+</div>
+<div class="max-w-lg bg-[#111] border border-[#1e1e1e] rounded-xl p-5 space-y-3">
+  <div><label class="text-[.72rem] text-[#555] uppercase">NFT Name *</label><input id="nName" class="mt-1 w-full bg-[#0a0a0a] border border-[#1e1e1e] rounded-lg px-3 py-2.5 text-sm text-white" placeholder="e.g. Cosmic Explorer #42"/></div>
+  <div><label class="text-[.72rem] text-[#555] uppercase">Description</label><textarea id="nDesc" rows="2" class="mt-1 w-full bg-[#0a0a0a] border border-[#1e1e1e] rounded-lg px-3 py-2.5 text-sm text-white" placeholder="Describe your NFT..."></textarea></div>
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="text-[.72rem] text-[#555] uppercase">Price (ETH) *</label><input id="nPrice" type="number" step="0.01" min="0.05" value="0.05" class="mt-1 w-full bg-[#0a0a0a] border border-[#1e1e1e] rounded-lg px-3 py-2.5 text-sm text-white"/></div>
+    <div><label class="text-[.72rem] text-[#555] uppercase">Category *</label>
+      <select id="nCat" class="mt-1 w-full bg-[#0a0a0a] border border-[#1e1e1e] rounded-lg px-3 py-2.5 text-sm text-white">
+        <option value="">Select</option>
+        ${cats.map(c=>`<option value="${esc(c.name)}" data-id="${c._id}">${esc(c.name)}</option>`).join('')}
+      </select>
+    </div>
+  </div>
+  <div><label class="text-[.72rem] text-[#555] uppercase">Collection (optional)</label>
+    <select id="nCol" class="mt-1 w-full bg-[#0a0a0a] border border-[#1e1e1e] rounded-lg px-3 py-2.5 text-sm text-white">
+      <option value="">None</option>
+      ${cols.map(c=>`<option value="${esc(c.name)}" data-id="${c._id}">${esc(c.name)}</option>`).join('')}
+    </select>
+  </div>
+  <div><label class="text-[.72rem] text-[#555] uppercase">Properties (optional JSON)</label><textarea id="nProps" rows="2" class="mt-1 w-full bg-[#0a0a0a] border border-[#1e1e1e] rounded-lg px-3 py-2.5 text-sm text-white" placeholder='{"trait":"value"}'></textarea></div>
+  <div>
+    <label class="text-[.72rem] text-[#555] uppercase">NFT Image *</label>
+    <div class="mt-1 border border-dashed border-[#2a2a2a] rounded-xl p-4 text-center">
+      <input type="file" id="nImg" accept="image/*" class="text-sm text-[#888]"/>
+      <div id="nImgPrev" class="mt-3"></div>
+    </div>
+  </div>
+  <div class="text-[.75rem] text-[#555]">Balance: $${bal.toFixed(2)} · ETH ≈ $${ethUsd.toFixed(2)} · Min price 0.05 ETH</div>
+  <button id="nMint" class="w-full py-3 rounded-xl bg-brand-blue text-white font-medium">Mint NFT</button>
+</div>`;
+    root.querySelector('#nImg').onchange=e=>{
+      const f=e.target.files&&e.target.files[0];
+      const prev=root.querySelector('#nImgPrev');
+      if(!f){prev.innerHTML='';return;}
+      const url=URL.createObjectURL(f);
+      prev.innerHTML=`<img src="${url}" class="max-h-40 mx-auto rounded-lg">`;
+    };
+    root.querySelector('#nMint').onclick=async()=>{
+      const name=root.querySelector('#nName').value.trim();
+      const price=Number(root.querySelector('#nPrice').value||0);
+      const cat=root.querySelector('#nCat').value;
+      if(!name||!cat){toast('Name and category required',false);return;}
+      if(price<0.05){toast('Minimum price is 0.05 ETH',false);return;}
+      const file=root.querySelector('#nImg').files&&root.querySelector('#nImg').files[0];
+      if(!file){toast('Image is required',false);return;}
+      try{
+        // upload via cloudinary endpoint if available, else send as base64 data url is not ideal; use FormData to feature post if backend accepts URL
+        // Prefer: convert to data URL is heavy; use existing cloudinary upload pattern from other features
+        let image_url='';
+        if(window.cloudinaryUpload){
+          image_url=await window.cloudinaryUpload(file);
+        } else {
+          // try admin-style upload endpoint
+          const fd=new FormData();
+          fd.append('file',file);
+          fd.append('upload_preset', (window.CLOUDINARY_UPLOAD_PRESET||'digital_grownt'));
+          try{
+            const cloudName=window.CLOUDINARY_CLOUD_NAME||'';
+            if(cloudName){
+              const up=await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,{method:'POST',body:fd});
+              const uj=await up.json();
+              image_url=uj.secure_url||uj.url||'';
+            }
+          }catch(_){}
+          if(!image_url){
+            // fallback read as data URL (works for small images)
+            image_url=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});
+          }
+        }
+        const catSel=root.querySelector('#nCat');
+        const colSel=root.querySelector('#nCol');
+        const body={
+          name,
+          description:root.querySelector('#nDesc').value.trim(),
+          price_eth:price,
+          category:cat,
+          category_id:catSel.options[catSel.selectedIndex]?.dataset?.id||null,
+          collection_name:colSel.value||'',
+          collection_id:colSel.options[colSel.selectedIndex]?.dataset?.id||null,
+          properties:root.querySelector('#nProps').value.trim()||'{}',
+          image_url,
+        };
+        const x=await post('/nfts',body);
+        toast(x.message||'NFT listed successfully',true);
+        setTimeout(()=>{location.href='/user/nft-gallery.html';},700);
+      }catch(e){toast(e.response?.data?.message||e.message,false);}
+    };
+  }
+
+  async function myNftsPage(){
+    showDynamicMain();
+    const root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page')||document.getElementById('main-content');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/nfts/mine');}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-400">${esc(e.message)}</div>`;return;}
+    const st=d.stats||{};
+    let tab='owned';
+    const render=()=>{
+      const list=tab==='owned'?(d.owned||[]):tab==='created'?(d.created||[]):(d.favorites||[]);
+      root.querySelector('#myNftGrid').innerHTML=list.map(nftCard).join('')||'<div class="col-span-full text-center text-[#555] py-10">No items</div>';
+      root.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('text-white',b.getAttribute('data-tab')===tab));
+      root.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('border-b-2',b.getAttribute('data-tab')===tab));
+    };
+    root.innerHTML=`
+<div class="flex items-center justify-between mb-5">
+  <div>
+    <h1 class="text-white text-xl font-medium">My NFTs</h1>
+    <p class="text-[#555] text-sm">Manage your digital collection</p>
+  </div>
+  <div class="flex gap-2">
+    <a href="/user/nfts-create.html" class="px-3 py-2 rounded-lg border border-[#2a2a2a] text-white text-sm">+ Mint NFT</a>
+    <a href="/user/nft-gallery.html" class="px-3 py-2 rounded-lg border border-[#2a2a2a] text-white text-sm">Gallery</a>
+  </div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-xl p-4"><div class="text-[#555] text-[.68rem] uppercase">Owned</div><div class="text-white text-xl font-medium">${st.owned||0}</div></div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-xl p-4"><div class="text-[#555] text-[.68rem] uppercase">Created</div><div class="text-white text-xl font-medium">${st.created||0}</div></div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-xl p-4"><div class="text-[#555] text-[.68rem] uppercase">Favorites</div><div class="text-white text-xl font-medium">${st.favorites||0}</div></div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-xl p-4"><div class="text-[#555] text-[.68rem] uppercase">Total Value</div><div class="text-white text-xl font-medium">${Number(st.total_value_eth||0).toFixed(4)} ETH</div></div>
+</div>
+<div class="flex gap-4 border-b border-[#1a1a1a] mb-4 text-sm text-[#555]">
+  <button data-tab="owned" class="pb-2">Owned (${st.owned||0})</button>
+  <button data-tab="created" class="pb-2">Created (${st.created||0})</button>
+  <button data-tab="favorites" class="pb-2">Favorites (${st.favorites||0})</button>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3" id="myNftGrid"></div>`;
+    root.querySelectorAll('[data-tab]').forEach(b=>{b.onclick=()=>{tab=b.getAttribute('data-tab');render();};});
+    render();
+  }
+
+  async function nftDetailsPage(){
+    showDynamicMain();
+    const root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page')||document.getElementById('main-content');
+    if(!root) return;
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){root.innerHTML='<div class="p-8 text-center text-[#555]">Missing NFT id</div>';return;}
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/nfts/'+id);}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-400">${esc(e.message)}</div>`;return;}
+    const n=d.nft||d;
+    const bids=d.bids||[];
+    const history=d.history||d.transactions||[];
+    const isOwner=!!d.is_owner;
+    const props=n.properties&&typeof n.properties==='object'?n.properties:{};
+    root.innerHTML=`
+<div class="mb-4 flex items-center gap-2">
+  <a href="/user/nft-gallery.html" class="text-[#888]"><i class="fa-solid fa-chevron-left"></i></a>
+  <div>
+    <div class="text-white font-medium">${esc(n.name)}</div>
+    <div class="text-[#555] text-xs">${esc(n.token_id||'')}</div>
+  </div>
+</div>
+<div class="grid lg:grid-cols-2 gap-4">
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-xl overflow-hidden min-h-[280px]">
+    ${n.image_url?`<img src="${esc(n.image_url)}" class="w-full h-full object-cover">`:`<div class="h-72 flex items-center justify-center text-[#333]"><i class="fa-solid fa-image text-4xl"></i></div>`}
+  </div>
+  <div class="space-y-3">
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-xl p-4">
+      <div class="flex justify-between items-start mb-3">
+        <div>
+          <div class="text-[#555] text-xs">Current Price</div>
+          <div class="text-white text-xl font-medium">${Number(n.price_eth||0).toFixed(8)} ETH</div>
+        </div>
+        <div class="text-right text-xs text-[#555]">Blockchain<br><span class="text-white">Ethereum</span></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 text-sm mb-3">
+        <div><div class="text-[#555] text-xs">Owner</div><div class="text-white">${esc(n.owner_name||'—')}</div></div>
+        <div><div class="text-[#555] text-xs">Creator</div><div class="text-white">${esc(n.creator_name||'—')}</div></div>
+        <div><div class="text-[#555] text-xs">Views</div><div class="text-white">${Number(n.views||0)}</div></div>
+        <div><div class="text-[#555] text-xs">Likes</div><div class="text-white">${Number(n.likes||0)}</div></div>
+      </div>
+      <div class="text-xs mb-2 ${n.status==='sold'?'text-amber-400':'text-grn'}">Status: ${esc((n.status||'available').toUpperCase())}</div>
+      ${isOwner?`<div class="text-sm text-grn mb-2">You own this NFT — you can accept or reject pending bids below.</div>`:`
+      <div class="flex gap-2">
+        <button id="buyNft" class="flex-1 py-2.5 rounded-xl bg-brand-blue text-white text-sm font-medium">Buy Now</button>
+        <button id="bidNft" class="flex-1 py-2.5 rounded-xl border border-[#2a2a2a] text-white text-sm">Place Bid</button>
+      </div>
+      <div class="text-[11px] text-[#555] mt-1">You can place a bid even if this NFT is already sold; the current owner (or admin) can accept it.</div>`}
+    </div>
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-xl p-4">
+      <div class="text-white text-sm font-medium mb-2">Description</div>
+      <p class="text-[#888] text-sm">${esc(n.description||'—')}</p>
+    </div>
+    <div class="bg-[#111] border border-[#1e1e1e] rounded-xl p-4 text-sm space-y-2">
+      <div class="flex justify-between"><span class="text-[#555]">Category</span><span>${esc(n.category||'—')}</span></div>
+      <div class="flex justify-between"><span class="text-[#555]">Collection</span><span>${esc(n.collection_name||'—')}</span></div>
+      <div class="flex justify-between"><span class="text-[#555]">Royalty</span><span>${Number(n.royalty||2.5)}%</span></div>
+      <div class="flex justify-between"><span class="text-[#555]">Minted</span><span>${n.createdAt?new Date(n.createdAt).toLocaleDateString():'—'}</span></div>
+    </div>
+  </div>
+</div>
+${Object.keys(props).length?`<div class="mt-4"><div class="text-white text-sm mb-2">Properties</div><div class="grid grid-cols-2 md:grid-cols-3 gap-2">${Object.entries(props).map(([k,v])=>`<div class="bg-[#111] border border-[#1e1e1e] rounded-xl p-3 text-center"><div class="text-[#555] text-[.65rem] uppercase">${esc(k)}</div><div class="text-white text-sm">${esc(String(v))}</div></div>`).join('')}</div></div>`:''}
+<div class="grid md:grid-cols-2 gap-4 mt-4">
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-xl p-4">
+    <div class="text-white text-sm font-medium mb-3">Bid History</div>
+    ${bids.length?bids.map(b=>{
+      const st=b.status||'pending';
+      const canAct=isOwner && st==='pending';
+      return `<div class="flex flex-col gap-2 py-2 border-b border-[#161616]">
+        <div class="flex justify-between text-sm gap-2">
+          <span class="text-[#888]">${esc(b.user_name||'User')}</span>
+          <span class="text-right">${Number(b.amount_eth||0).toFixed(8)} ETH · <span class="${st==='accepted'?'text-grn':st==='rejected'?'text-red2':'text-[#555]'}">${esc(st)}</span></span>
+        </div>
+        ${canAct?`<div class="flex gap-2">
+          <button data-accept="${b._id}" class="bid-accept flex-1 py-1.5 rounded-lg bg-grn text-black text-xs font-medium">Accept</button>
+          <button data-reject="${b._id}" class="bid-reject flex-1 py-1.5 rounded-lg border border-red2/40 text-red2 text-xs font-medium">Reject</button>
+        </div>`:''}
+      </div>`;
+    }).join(''):'<div class="text-[#555] text-sm">No bids yet</div>'}
+  </div>
+  <div class="bg-[#111] border border-[#1e1e1e] rounded-xl p-4">
+    <div class="text-white text-sm font-medium mb-3">Ownership History</div>
+    ${history.length?history.map(h=>`<div class="flex justify-between text-sm py-2 border-b border-[#161616]"><span class="text-[#888]">${esc(h.type||'Transfer')} · ${esc(h.from_name||'')} → ${esc(h.to_name||'')}</span><span class="text-[#555]">${h.createdAt?new Date(h.createdAt).toLocaleDateString():''}</span></div>`).join(''):'<div class="text-[#555] text-sm">No history</div>'}
+  </div>
+</div>`;
+    const buy=root.querySelector('#buyNft');
+    if(buy) buy.onclick=async()=>{
+      const ethAmt=Number(n.price_eth||0);
+      if(!confirm(`Buy this NFT for ${ethAmt} ETH?\n\nYour account balance will be charged the USD equivalent of this ETH amount using the live ETH price from assets.`)) return;
+      try{
+        const x=await post('/nfts/'+id+'/buy',{});
+        toast(x.message||'Purchased',true);
+        setTimeout(()=>nftDetailsPage(),500);
+      }catch(e){
+        const msg=(e.response&&e.response.data&&e.response.data.message)||e.message||'Purchase failed';
+        toast(msg,false);
+      }
+    };
+    const bid=root.querySelector('#bidNft');
+    if(bid) bid.onclick=async()=>{
+      const amount=prompt('Bid amount in ETH');
+      if(!amount) return;
+      try{const x=await post('/nfts/'+id+'/bid',{amount_eth:Number(amount)});toast(x.message||'Bid placed',true);setTimeout(()=>nftDetailsPage(),500);}catch(e){toast(e.response?.data?.message||e.message,false);}
+    };
+    root.querySelectorAll('.bid-accept').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Accept this bid? The bidder will be charged and ownership will transfer.')) return;
+        try{
+          const x=await post('/nfts/bids/'+btn.getAttribute('data-accept')+'/accept',{});
+          toast(x.message||'Bid accepted. Ownership transferred.',true);
+          setTimeout(()=>nftDetailsPage(),600);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
+    root.querySelectorAll('.bid-reject').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Reject this bid?')) return;
+        try{
+          const x=await post('/nfts/bids/'+btn.getAttribute('data-reject')+'/reject',{});
+          toast(x.message||'Bid rejected.',true);
+          setTimeout(()=>nftDetailsPage(),500);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
+  }
+
+  async function nftCollectionPage(){
+    showDynamicMain();
+    const root=document.querySelector('#main-content .inner-page')||document.querySelector('.inner-page')||document.getElementById('main-content');
+    if(!root) return;
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){root.innerHTML='<div class="p-8 text-center text-[#555]">Missing collection</div>';return;}
+    root.innerHTML='<div class="p-8 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let d; try{d=await get('/nfts/collection/'+encodeURIComponent(id));}catch(e){root.innerHTML=`<div class="p-8 text-center text-red-400">${esc(e.message)}</div>`;return;}
+    const col=d.collection||{};
+    const nfts=d.nfts||[];
+    root.innerHTML=`
+<div class="bg-[#111] border border-[#1e1e1e] rounded-xl p-5 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+  <div class="flex items-start gap-3">
+    <div class="w-12 h-12 rounded-xl bg-[#1a1a1a] flex items-center justify-center text-[#555]"><i class="fa-regular fa-folder"></i></div>
+    <div>
+      <div class="text-white font-medium">${esc(col.name||'')}</div>
+      <div class="text-[#555] text-xs">${esc(col.category||'')}</div>
+      <div class="text-[#888] text-sm mt-1">${esc(col.description||'')}</div>
+      <div class="flex gap-4 mt-2 text-[.75rem] text-[#555]">
+        <span>Items ${nfts.length}</span>
+        <span>Floor ${Number(d.floor_price||0).toFixed(8)} ETH</span>
+      </div>
+    </div>
+  </div>
+  <a href="/user/nft-gallery.html" class="px-3 py-2 rounded-lg border border-[#2a2a2a] text-white text-sm self-start">← Gallery</a>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">${nfts.map(nftCard).join('')||'<div class="col-span-full text-center text-[#555] py-10">No NFTs in this collection</div>'}</div>`;
+  }
+
+  // Admin NFT
+  async function adminNftsPage(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>';
+    let d; try{d=await get('/nfts');}catch(e){root.innerHTML=`<div class="p-8 text-red-500">${esc(e.message)}</div>`;return;}
+    const nfts=d.nfts||[];
+    root.innerHTML=`
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-xl font-semibold text-gray-900">NFTs</h1>
+  <a href="/admin/nfts-create.html" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm">+ Create NFT</a>
+</div>
+<div class="bg-white border rounded-xl overflow-hidden">
+<table class="w-full text-sm">
+<thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr>
+<th class="px-4 py-3 text-left">#</th><th class="px-4 py-3 text-left">Name</th><th class="px-4 py-3 text-left">Price</th><th class="px-4 py-3 text-left">Status</th><th class="px-4 py-3 text-left">Featured</th><th class="px-4 py-3 text-right">Actions</th>
+</tr></thead>
+<tbody>${nfts.map((n,i)=>`<tr class="border-t">
+<td class="px-4 py-3">${i+1}</td>
+<td class="px-4 py-3 font-medium">${esc(n.name)}</td>
+<td class="px-4 py-3">${Number(n.price_eth||0).toFixed(4)} ETH</td>
+<td class="px-4 py-3">${esc(n.status||'')}</td>
+<td class="px-4 py-3">${n.featured?'Yes':'No'}</td>
+<td class="px-4 py-3 text-right">
+<a href="/admin/nfts-edit.html?id=${n._id}" class="text-blue-600 text-xs mr-2">Edit</a>
+<button data-del="${n._id}" class="text-red-500 text-xs nft-del">Delete</button>
+</td></tr>`).join('')||'<tr><td colspan="6" class="px-4 py-10 text-center text-gray-400">No NFTs</td></tr>'}
+</tbody></table></div>`;
+    root.querySelectorAll('.nft-del').forEach(b=>b.onclick=async()=>{
+      if(!confirm('Delete NFT?'))return;
+      try{await del('/nfts/'+b.getAttribute('data-del'));toast('Deleted',true);adminNftsPage();}catch(e){toast(e.message,false);}
+    });
+  }
+
+  async function adminNftForm(isEdit){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    const id=new URLSearchParams(location.search).get('id');
+    let nft=null;
+    if(isEdit){
+      if(!id){root.innerHTML='<div class="p-8 text-center text-gray-500">Missing id</div>';return;}
+      root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>';
+      try{const d=await get('/nfts/'+id);nft=d.nft||d;}catch(e){root.innerHTML=`<div class="p-8 text-red-500">${esc(e.message)}</div>`;return;}
+    } else {
+      root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>';
+    }
+    let cats=[], cols=[];
+    try{const c=await get('/nft-categories');cats=c.categories||[];}catch(_){}
+    try{const c=await get('/nft-collections');cols=c.collections||[];}catch(_){}
+    const curCat=nft?(nft.category||''):'';
+    const curCol=nft?(nft.collection_name||''):'';
+    const catOpts=['<option value="">Select category</option>'].concat(
+      cats.map(c=>`<option value="${esc(c.name)}" data-id="${c._id}" ${c.name===curCat?'selected':''}>${esc(c.name)}</option>`)
+    ).join('');
+    const colOpts=['<option value="">Select collection (optional)</option>'].concat(
+      cols.map(c=>`<option value="${esc(c.name)}" data-id="${c._id}" ${c.name===curCol?'selected':''}>${esc(c.name)}</option>`)
+    ).join('');
+    const imgVal=nft?(nft.image_url||''):'';
+    root.innerHTML=`
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-xl font-semibold text-gray-900">${isEdit?'Edit':'Create'} NFT</h1>
+  <a href="/admin/nfts.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium">← Back</a>
+</div>
+<div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 max-w-2xl space-y-4">
+  <div>
+    <label class="block text-sm font-medium text-gray-700 mb-1.5">Name <span class="text-red-500">*</span></label>
+    <input id="aName" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value="${esc(nft?nft.name:'')}" placeholder="NFT name"/>
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+    <textarea id="aDesc" rows="2" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Description">${esc(nft?nft.description||'':'')}</textarea>
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700 mb-1.5">Price (ETH)</label>
+    <input id="aPrice" type="number" step="0.01" min="0.05" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value="${nft?Number(nft.price_eth||0.05):0.05}"/>
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700 mb-1.5">Image URL</label>
+    <input id="aImage" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value="${esc(imgVal)}" placeholder="https://..."/>
+    <div id="aImagePrev" class="mt-3">${imgVal?`<img src="${esc(imgVal)}" class="max-h-40 rounded-lg border border-gray-100" alt="preview" onerror="this.style.display='none'">`:''}</div>
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700 mb-1.5">Category</label>
+    <select id="aCat" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">${catOpts}</select>
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700 mb-1.5">Collection</label>
+    <select id="aCol" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">${colOpts}</select>
+  </div>
+  <label class="flex items-center gap-2 text-sm text-gray-700">
+    <input type="checkbox" id="aFeat" class="rounded border-gray-300" ${nft&&nft.featured?'checked':''}/> Featured
+  </label>
+  <button id="aSave" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">${isEdit?'Update':'Create'} NFT</button>
+</div>`;
+    const imgInput=root.querySelector('#aImage');
+    const imgPrev=root.querySelector('#aImagePrev');
+    const renderPrev=()=>{
+      const url=(imgInput.value||'').trim();
+      if(!url){imgPrev.innerHTML='';return;}
+      imgPrev.innerHTML=`<img src="${esc(url)}" class="max-h-40 rounded-lg border border-gray-100" alt="preview" onerror="this.parentNode.innerHTML='<span class=\\'text-xs text-red-400\\'>Could not load image</span>'">`;
+    };
+    imgInput.addEventListener('input', renderPrev);
+    imgInput.addEventListener('change', renderPrev);
+    imgInput.addEventListener('paste', ()=>setTimeout(renderPrev, 50));
+    root.querySelector('#aSave').onclick=async()=>{
+      const catSel=root.querySelector('#aCat');
+      const colSel=root.querySelector('#aCol');
+      const body={
+        name:root.querySelector('#aName').value.trim(),
+        description:root.querySelector('#aDesc').value.trim(),
+        price_eth:Number(root.querySelector('#aPrice').value||0.05),
+        image_url:root.querySelector('#aImage').value.trim(),
+        category:catSel.value.trim(),
+        category_id:(catSel.options[catSel.selectedIndex]&&catSel.options[catSel.selectedIndex].dataset.id)||null,
+        collection_name:colSel.value.trim(),
+        collection_id:(colSel.options[colSel.selectedIndex]&&colSel.options[colSel.selectedIndex].dataset.id)||null,
+        featured:root.querySelector('#aFeat').checked
+      };
+      if(!body.name){toast('Name is required',false);return;}
+      try{
+        if(isEdit) await put('/nfts/'+id, body);
+        else await post('/nfts', body);
+        toast(isEdit?'NFT updated successfully':'NFT created successfully',true);
+        setTimeout(()=>{location.href='/admin/nfts.html';},500);
+      }catch(e){toast(e.response?.data?.message||e.message,false);}
+    };
+  }
+
+  async function adminNftCategoriesPage(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>';
+    let d; try{d=await get('/nft-categories');}catch(e){root.innerHTML=`<div class="p-8 text-red-500">${esc(e.message)}</div>`;return;}
+    const cats=d.categories||[];
+    root.innerHTML=`
+<div class="flex justify-between items-center mb-6">
+  <h1 class="text-xl font-semibold text-gray-900">NFT Categories</h1>
+  <button id="addCat" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">+ Add Category</button>
+</div>
+<div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+      <tr><th class="px-4 py-3 text-left">#</th><th class="px-4 py-3 text-left">Name</th><th class="px-4 py-3 text-left">Slug</th><th class="px-4 py-3 text-right">Actions</th></tr>
+    </thead>
+    <tbody>
+      ${cats.map((c,i)=>`<tr class="border-t hover:bg-gray-50">
+        <td class="px-4 py-3 text-gray-500">${i+1}</td>
+        <td class="px-4 py-3 font-medium text-gray-900">${esc(c.name)}</td>
+        <td class="px-4 py-3 text-gray-500">${esc(c.slug||'')}</td>
+        <td class="px-4 py-3 text-right"><button data-del="${c._id}" class="text-red-500 text-xs font-medium cat-del">Delete</button></td>
+      </tr>`).join('')||'<tr><td colspan="4" class="px-4 py-10 text-center text-gray-400">No categories yet.</td></tr>'}
+    </tbody>
+  </table>
+</div>
+<div id="catModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/50" data-close></div>
+  <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Add Category</h3>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Category Name <span class="text-red-500">*</span></label>
+        <input id="catName" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" placeholder="e.g. Digital Art" />
+      </div>
+    </div>
+    <div class="mt-5 flex justify-end gap-2">
+      <button data-close class="px-4 py-2 text-sm rounded-lg bg-gray-100 text-gray-600">Cancel</button>
+      <button id="catSave" class="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white font-medium">Save Category</button>
+    </div>
+  </div>
+</div>`;
+    const modal=root.querySelector('#catModal');
+    const open=()=>{modal.classList.remove('hidden');root.querySelector('#catName').value='';root.querySelector('#catName').focus();};
+    const close=()=>modal.classList.add('hidden');
+    root.querySelector('#addCat').onclick=open;
+    modal.querySelectorAll('[data-close]').forEach(el=>el.onclick=close);
+    root.querySelector('#catSave').onclick=async()=>{
+      const name=root.querySelector('#catName').value.trim();
+      if(!name){toast('Category name is required',false);return;}
+      try{
+        await post('/nft-categories',{name});
+        toast('Category added successfully',true);
+        close();
+        adminNftCategoriesPage();
+      }catch(e){toast(e.response?.data?.message||e.message,false);}
+    };
+    root.querySelectorAll('.cat-del').forEach(b=>b.onclick=async()=>{
+      if(!confirm('Delete this category?')) return;
+      try{await del('/nft-categories/'+b.getAttribute('data-del'));toast('Category deleted',true);adminNftCategoriesPage();}
+      catch(e){toast(e.response?.data?.message||e.message,false);}
+    });
+  }
+
+  async function adminNftCollectionsPage(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>';
+    let d, catData;
+    try{
+      d=await get('/nft-collections');
+      try{catData=await get('/nft-categories');}catch(_){catData={categories:[]};}
+    }catch(e){root.innerHTML=`<div class="p-8 text-red-500">${esc(e.message)}</div>`;return;}
+    const cols=d.collections||[];
+    const cats=catData.categories||[];
+    const catOpts=['<option value="">Select category (optional)</option>'].concat(
+      cats.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`)
+    ).join('');
+    root.innerHTML=`
+<div class="flex justify-between items-center mb-6">
+  <h1 class="text-xl font-semibold text-gray-900">NFT Collections</h1>
+  <button id="addCol" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">+ Add Collection</button>
+</div>
+<div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+      <tr><th class="px-4 py-3 text-left">#</th><th class="px-4 py-3 text-left">Name</th><th class="px-4 py-3 text-left">Category</th><th class="px-4 py-3 text-left">Description</th><th class="px-4 py-3 text-right">Actions</th></tr>
+    </thead>
+    <tbody>
+      ${cols.map((c,i)=>`<tr class="border-t hover:bg-gray-50">
+        <td class="px-4 py-3 text-gray-500">${i+1}</td>
+        <td class="px-4 py-3 font-medium text-gray-900">${esc(c.name)}</td>
+        <td class="px-4 py-3 text-gray-500">${esc(c.category||'—')}</td>
+        <td class="px-4 py-3 text-gray-500 max-w-xs truncate">${esc(c.description||'—')}</td>
+        <td class="px-4 py-3 text-right"><button data-del="${c._id}" class="text-red-500 text-xs font-medium col-del">Delete</button></td>
+      </tr>`).join('')||'<tr><td colspan="5" class="px-4 py-10 text-center text-gray-400">No collections yet.</td></tr>'}
+    </tbody>
+  </table>
+</div>
+<div id="colModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/50" data-close></div>
+  <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Add Collection</h3>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Collection Name <span class="text-red-500">*</span></label>
+        <input id="colName" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" placeholder="e.g. Cosmic Explorers" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Category</label>
+        <select id="colCat" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">${catOpts}</select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+        <textarea id="colDesc" rows="2" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" placeholder="Optional description"></textarea>
+      </div>
+    </div>
+    <div class="mt-5 flex justify-end gap-2">
+      <button data-close class="px-4 py-2 text-sm rounded-lg bg-gray-100 text-gray-600">Cancel</button>
+      <button id="colSave" class="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white font-medium">Save Collection</button>
+    </div>
+  </div>
+</div>`;
+    const modal=root.querySelector('#colModal');
+    const open=()=>{
+      modal.classList.remove('hidden');
+      root.querySelector('#colName').value='';
+      root.querySelector('#colCat').value='';
+      root.querySelector('#colDesc').value='';
+      root.querySelector('#colName').focus();
+    };
+    const close=()=>modal.classList.add('hidden');
+    root.querySelector('#addCol').onclick=open;
+    modal.querySelectorAll('[data-close]').forEach(el=>el.onclick=close);
+    root.querySelector('#colSave').onclick=async()=>{
+      const name=root.querySelector('#colName').value.trim();
+      if(!name){toast('Collection name is required',false);return;}
+      try{
+        await post('/nft-collections',{
+          name,
+          category:root.querySelector('#colCat').value.trim(),
+          description:root.querySelector('#colDesc').value.trim()
+        });
+        toast('Collection added successfully',true);
+        close();
+        adminNftCollectionsPage();
+      }catch(e){toast(e.response?.data?.message||e.message,false);}
+    };
+    root.querySelectorAll('.col-del').forEach(b=>b.onclick=async()=>{
+      if(!confirm('Delete this collection?')) return;
+      try{await del('/nft-collections/'+b.getAttribute('data-del'));toast('Collection deleted',true);adminNftCollectionsPage();}
+      catch(e){toast(e.response?.data?.message||e.message,false);}
+    });
+  }
+
+  async function adminNftTransactionsPage(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    root.innerHTML='Loading...';
+    let d; try{d=await get('/nft-transactions');}catch(e){root.innerHTML=esc(e.message);return;}
+    const txs=d.transactions||d.txs||[];
+    root.innerHTML=`
+<h1 class="text-xl font-semibold mb-6">NFT Transactions</h1>
+<div class="bg-white border rounded-xl overflow-hidden"><table class="w-full text-sm"><thead class="bg-gray-50 text-xs uppercase"><tr>
+<th class="px-4 py-3 text-left">NFT</th><th class="px-4 py-3 text-left">Type</th><th class="px-4 py-3 text-left">From</th><th class="px-4 py-3 text-left">To</th><th class="px-4 py-3 text-left">Amount</th><th class="px-4 py-3 text-left">Date</th>
+</tr></thead><tbody>
+${txs.map(t=>`<tr class="border-t"><td class="px-4 py-3">${esc(t.nft_name||'')}</td><td class="px-4 py-3">${esc(t.type||'')}</td><td class="px-4 py-3">${esc(t.from_name||'')}</td><td class="px-4 py-3">${esc(t.to_name||'')}</td><td class="px-4 py-3">${Number(t.amount_eth||0).toFixed(4)} ETH</td><td class="px-4 py-3">${t.createdAt?new Date(t.createdAt).toLocaleString():''}</td></tr>`).join('')||'<tr><td colspan="6" class="px-4 py-10 text-center text-gray-400">No transactions</td></tr>'}
+</tbody></table></div>`;
+  }
+
+
+
+  async function adminNftBidsPage(){
+    showDynamicMain();
+    const root=document.getElementById('main-content')||document.querySelector('main');
+    if(!root) return;
+    root.innerHTML='<div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>';
+    let d; try{d=await get('/nft-bids');}catch(e){root.innerHTML=`<div class="p-8 text-red-500">${esc(e.message)}</div>`;return;}
+    const bids=d.bids||[];
+    root.innerHTML=`
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-xl font-semibold text-gray-900">NFT Bids</h1>
+</div>
+<div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+      <tr>
+        <th class="px-4 py-3 text-left">#</th>
+        <th class="px-4 py-3 text-left">NFT</th>
+        <th class="px-4 py-3 text-left">Bidder</th>
+        <th class="px-4 py-3 text-left">Amount</th>
+        <th class="px-4 py-3 text-left">Status</th>
+        <th class="px-4 py-3 text-left">Date</th>
+        <th class="px-4 py-3 text-right">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    ${bids.map((b,i)=>{
+      const st=b.status||'pending';
+      return `<tr class="border-t hover:bg-gray-50">
+        <td class="px-4 py-3">${i+1}</td>
+        <td class="px-4 py-3 font-medium">${esc(b.nft_name||'')}</td>
+        <td class="px-4 py-3">${esc(b.user_name||'')}</td>
+        <td class="px-4 py-3">${Number(b.amount_eth||0).toFixed(8)} ETH</td>
+        <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded-full ${st==='accepted'?'bg-emerald-50 text-emerald-600':st==='rejected'?'bg-red-50 text-red-500':'bg-amber-50 text-amber-600'}">${esc(st)}</span></td>
+        <td class="px-4 py-3 text-gray-500">${b.createdAt?new Date(b.createdAt).toLocaleString():''}</td>
+        <td class="px-4 py-3 text-right whitespace-nowrap">
+          ${st==='pending'?`
+            <button data-accept="${b._id}" class="text-emerald-600 text-xs font-medium mr-2 adm-bid-accept">Accept</button>
+            <button data-reject="${b._id}" class="text-red-500 text-xs font-medium adm-bid-reject">Reject</button>
+          `:'—'}
+        </td>
+      </tr>`;
+    }).join('')||'<tr><td colspan="7" class="px-4 py-10 text-center text-gray-400">No bids yet.</td></tr>'}
+    </tbody>
+  </table>
+</div>`;
+    root.querySelectorAll('.adm-bid-accept').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Accept this bid? Bidder will be charged and ownership transferred.')) return;
+        try{
+          const x=await post('/nft-bids/'+btn.getAttribute('data-accept')+'/accept',{});
+          toast(x.message||'Bid accepted',true);
+          setTimeout(()=>adminNftBidsPage(),400);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
+    root.querySelectorAll('.adm-bid-reject').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Reject this bid?')) return;
+        try{
+          const x=await post('/nft-bids/'+btn.getAttribute('data-reject')+'/reject',{});
+          toast(x.message||'Bid rejected',true);
+          setTimeout(()=>adminNftBidsPage(),400);
+        }catch(e){toast(e.response?.data?.message||e.message,false);}
+      };
+    });
   }
 
 
