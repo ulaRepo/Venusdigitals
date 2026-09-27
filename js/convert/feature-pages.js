@@ -4393,6 +4393,9 @@ async function adminLoanPlans(){
 
 async function routeAdmin(){
     try{
+      if(page==='support-tickets.html')return adminSupportTicketsPage();
+      if(page==='support-tickets-view.html')return adminSupportTicketViewPage();
+      if(page==='email-services.html')return adminEmailServicesPage();
       if(page==='plans.html')return adminPlans();
       if(page==='new-plan.html')return adminPlanForm(false);
       if(page==='edit-plan.html')return adminPlanForm(true);
@@ -5077,6 +5080,9 @@ async function adminStockShares(){
     try{
       if(page==='dashboard.html')await dashboard();
       else if(page==='account-settings.html')await accountSettingsPage();
+      else if(page==='support.html')await supportPage();
+      else if(page==='support-create.html')await supportCreatePage();
+      else if(page==='support-details.html')await supportDetailsPage();
       else if(page==='portfolio.html')await portfolioPage();
       else if(page==='accounthistory.html')await accountHistoryPage();
       else if(page==='tradinghistory.html')await tradingHistoryPage();
@@ -8048,6 +8054,389 @@ ${items.length ? items.map(l => {
     }
 
     paint();
+  }
+
+
+
+  // ===================== SUPPORT TICKETS + EMAIL (merged from support-pages) =====================
+  function supportAgo(v) {
+    const d = new Date(v); if (Number.isNaN(d.getTime())) return '';
+    const s = Math.max(0, Math.floor((Date.now() - d.getTime()) / 1000));
+    if (s < 60) return s + 's ago';
+    const m = Math.floor(s / 60); if (m < 60) return m + 'm ago';
+    const h = Math.floor(m / 60); if (h < 24) return h + 'h ago';
+    const day = Math.floor(h / 24); if (day < 30) return day + (day === 1 ? ' day ago' : ' days ago');
+    if (day < 365) { const mo = Math.floor(day / 30); return mo + (mo === 1 ? ' month ago' : ' months ago'); }
+    return d.toLocaleDateString();
+  }
+  function supportStatusBadge(st) {
+    const s = String(st || 'Open');
+    if (s === 'Answered') return '<span class="px-2 py-0.5 rounded-full bg-[rgba(0,212,124,.1)] text-grn" style="font-size:.72rem;font-weight:500;">Answered</span>';
+    if (s === 'Closed') return '<span class="px-2 py-0.5 rounded-full bg-[rgba(255,69,96,.1)] text-red2" style="font-size:.72rem;font-weight:500;">Closed</span>';
+    return '<span class="px-2 py-0.5 rounded-full bg-[rgba(245,197,66,.1)] text-ylw" style="font-size:.72rem;font-weight:500;">Open</span>';
+  }
+
+  async function supportPage() {
+    showDynamicMain();
+    const root = document.getElementById('main-content') || document.querySelector('main') || document.querySelector('.main');
+    if (!root) return;
+    root.innerHTML = '<div class="px-4 py-10 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading support tickets...</div>';
+    let tickets = [];
+    try {
+      const data = await get('/support');
+      tickets = data.tickets || data.data || [];
+    } catch (e) {
+      root.innerHTML = '<div class="px-4 py-10 text-center text-red2">' + esc(e.response && e.response.data && e.response.data.message || e.message) + '</div>';
+      return;
+    }
+    const empty = '<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-8 text-center">' +
+      '<div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:50%;background:rgba(74,108,247,.1);margin-bottom:16px;"><i class="fa-regular fa-comments" style="font-size:1.3rem;color:#6e8efb;"></i></div>' +
+      '<h3 style="font-size:1rem;font-weight:500;color:#fff;margin-bottom:8px;">No Support Tickets</h3>' +
+      '<p style="font-size:.82rem;color:#aaa;margin-bottom:16px;">You haven\'t created any support tickets yet.</p>' +
+      '<a href="/user/support-create.html" style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;background:#4a6cf7;color:#fff;font-size:.82rem;font-weight:500;text-decoration:none;"><i class="fa-solid fa-plus" style="font-size:.75rem;"></i> Create Your First Ticket</a></div>';
+    const list = tickets.map(function (t) {
+      return '<a href="/user/support-details.html?ticket=' + encodeURIComponent(t.ticket_id) + '" class="block bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px] transition-all" style="text-decoration:none;" onmouseover="this.style.borderColor=\'rgba(74,108,247,.4)\'" onmouseout="this.style.borderColor=\'#1e1e1e\'">' +
+        '<div class="flex items-start justify-between gap-4"><div class="min-w-0 flex-1">' +
+        '<div class="flex items-center gap-2 mb-1"><span style="font-size:.72rem;font-family:monospace;color:#555;">' + esc(t.ticket_id) + '</span>' + supportStatusBadge(t.status) + '</div>' +
+        '<h3 style="font-size:.88rem;font-weight:500;color:#fff;" class="truncate">' + esc(t.subject) + '</h3>' +
+        (t.last_message ? '<p class="truncate mt-1 text-[#555]" style="font-size:.78rem;">' + esc(t.last_message) + '</p>' : '') +
+        '</div><div class="text-right shrink-0"><p style="font-size:.72rem;color:#555;">' + supportAgo(t.updatedAt || t.createdAt) + '</p>' +
+        '<p style="font-size:.72rem;color:#555;margin-top:2px;">' + (t.message_count || 0) + ' message' + ((t.message_count || 0) === 1 ? '' : 's') + '</p></div></div></a>';
+    }).join('');
+    root.innerHTML = '<div class="px-4 pb-16 max-w-lg mx-auto lg:max-w-3xl">' +
+      '<div class="flex items-center justify-between gap-3 py-4 mb-2"><div><div class="text-white font-medium text-[1.1rem]">Support Tickets</div>' +
+      '<div class="text-[.78rem] text-[#555]">View and manage your support conversations</div></div>' +
+      '<a href="/user/support-create.html" class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[10px] bg-[#4a6cf7] text-white text-[.82rem] font-medium"><i class="fa-solid fa-plus text-[.7rem]"></i> New Ticket</a></div>' +
+      (tickets.length ? '<div class="space-y-3">' + list + '</div>' : empty) + '</div>';
+  }
+
+  async function supportCreatePage() {
+    showDynamicMain();
+    const root = document.getElementById('main-content') || document.querySelector('main') || document.querySelector('.main');
+    if (!root) return;
+    root.innerHTML = '<div class="px-4 pb-16 max-w-lg mx-auto">' +
+      '<div class="flex items-center gap-3 py-3 mb-4"><a href="/user/support.html" class="w-9 h-9 rounded-[10px] bg-[#111] border border-[#1e1e1e] flex items-center justify-center text-[#888]"><i class="fa-solid fa-chevron-left"></i></a>' +
+      '<div><div class="text-white font-medium">New Support Ticket</div><div class="text-[.75rem] text-[#555]">Describe your issue and we\'ll get back to you</div></div></div>' +
+      '<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[18px]">' +
+      '<div class="mb-3"><label class="block text-[.72rem] text-[#444] uppercase tracking-wide mb-1.5">Subject <span class="text-red2">*</span></label>' +
+      '<input id="sp_subject" class="w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] px-3.5 py-3 text-white text-[.88rem] outline-none" placeholder="Brief summary of your issue"/></div>' +
+      '<div class="mb-3"><label class="block text-[.72rem] text-[#444] uppercase tracking-wide mb-1.5">Priority</label>' +
+      '<select id="sp_priority" class="w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] px-3.5 py-3 text-white text-[.88rem] outline-none"><option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High</option></select></div>' +
+      '<div class="mb-4"><label class="block text-[.72rem] text-[#444] uppercase tracking-wide mb-1.5">Message <span class="text-red2">*</span></label>' +
+      '<textarea id="sp_message" rows="5" class="w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] px-3.5 py-3 text-white text-[.88rem] outline-none resize-y" placeholder="Describe your issue in detail..."></textarea></div>' +
+      '<button type="button" id="sp_submit" class="w-full py-3 rounded-[12px] bg-[#4a6cf7] text-white font-medium text-[.9rem]">Submit Ticket</button></div></div>';
+    root.querySelector('#sp_submit').onclick = async function () {
+      const subject = root.querySelector('#sp_subject').value.trim();
+      const message = root.querySelector('#sp_message').value.trim();
+      const priority = root.querySelector('#sp_priority').value;
+      if (!subject || !message) return toast('Subject and message are required', false);
+      const btn = root.querySelector('#sp_submit');
+      btn.disabled = true; btn.textContent = 'Submitting...';
+      try {
+        const res = await post('/support', { subject: subject, message: message, priority: priority });
+        toast(res.message || 'Your support ticket has been created successfully!', true);
+        const tid = res.ticket && res.ticket.ticket_id;
+        setTimeout(function () { location.href = tid ? '/user/support-details.html?ticket=' + encodeURIComponent(tid) : '/user/support.html'; }, 800);
+      } catch (e) {
+        toast(e.response && e.response.data && e.response.data.message || e.message, false);
+        btn.disabled = false; btn.textContent = 'Submit Ticket';
+      }
+    };
+  }
+
+  async function supportDetailsPage() {
+    showDynamicMain();
+    const root = document.getElementById('main-content') || document.querySelector('main') || document.querySelector('.main');
+    if (!root) return;
+    const ticketKey = new URLSearchParams(location.search).get('ticket') || new URLSearchParams(location.search).get('id') || '';
+    if (!ticketKey) { root.innerHTML = '<div class="px-4 py-10 text-center text-red2">Ticket not specified.</div>'; return; }
+    root.innerHTML = '<div class="px-4 py-10 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading ticket...</div>';
+    let ticket;
+    try {
+      const data = await get('/support/' + encodeURIComponent(ticketKey));
+      ticket = data.ticket;
+    } catch (e) {
+      root.innerHTML = '<div class="px-4 py-10 text-center text-red2">' + esc(e.response && e.response.data && e.response.data.message || e.message) + '</div>';
+      return;
+    }
+    const fmt = function (v) { try { return new Date(v).toLocaleString(undefined, { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (_) { return ''; } };
+    const chat = (ticket.messages || []).map(function (m) {
+      if (m.sender === 'user') {
+        return '<div class="flex justify-end mb-3"><div class="max-w-[85%] bg-[rgba(74,108,247,.15)] border border-[rgba(74,108,247,.25)] rounded-[12px] rounded-tr-sm px-3.5 py-2.5">' +
+          '<div class="flex items-center gap-2 mb-1 text-[.7rem] text-[#888]"><i class="fa-solid fa-user-circle"></i> <span class="text-blue2 font-medium">You</span> <span>' + fmt(m.createdAt) + '</span></div>' +
+          '<div class="text-[.85rem] text-white whitespace-pre-wrap">' + esc(m.body) + '</div></div></div>';
+      }
+      return '<div class="flex justify-start mb-3"><div class="max-w-[85%] bg-[#161616] border border-[#1e1e1e] rounded-[12px] rounded-tl-sm px-3.5 py-2.5">' +
+        '<div class="flex items-center gap-2 mb-1 text-[.7rem] text-[#888]"><i class="fa-solid fa-shield-halved text-grn"></i> <span class="text-grn font-medium">Support Team</span> <span>' + fmt(m.createdAt) + '</span></div>' +
+        '<div class="text-[.85rem] text-white whitespace-pre-wrap">' + esc(m.body) + '</div></div></div>';
+    }).join('');
+    const closed = ticket.status === 'Closed';
+    const replyBox = closed
+      ? '<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-5 text-center"><p style="font-size:.82rem;color:#555;">This ticket has been closed. If you need further assistance, please create a new ticket.</p></div>'
+      : '<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] p-[15px]"><div class="text-[.72rem] text-[#444] uppercase tracking-wide mb-2">Reply</div>' +
+        '<textarea id="sp_reply" rows="3" class="w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-[10px] px-3.5 py-3 text-white text-[.88rem] outline-none resize-y mb-3" placeholder="Type your reply..."></textarea>' +
+        '<div class="flex justify-end"><button type="button" id="sp_send_reply" class="px-5 py-2.5 rounded-[10px] bg-[#4a6cf7] text-white text-[.85rem] font-medium">Send Reply</button></div></div>';
+    root.innerHTML = '<div class="px-4 pb-16 max-w-lg mx-auto lg:max-w-3xl">' +
+      '<div class="flex items-center gap-3 py-3 mb-3"><a href="/user/support.html" class="w-9 h-9 rounded-[10px] bg-[#111] border border-[#1e1e1e] flex items-center justify-center text-[#888]"><i class="fa-solid fa-chevron-left"></i></a>' +
+      '<div class="min-w-0"><div class="text-white font-medium truncate uppercase">' + esc(ticket.subject) + '</div><div class="text-[.72rem] text-[#555]">Ticket ' + esc(ticket.ticket_id) + '</div></div></div>' +
+      '<div class="bg-[#111] border border-[#1e1e1e] rounded-[13px] px-4 py-3 mb-4 flex flex-wrap gap-4 text-[.78rem] text-[#888]">' +
+      '<span>Status: ' + supportStatusBadge(ticket.status) + '</span><span>Priority: <strong class="text-white">' + esc(ticket.priority || 'Medium') + '</strong></span>' +
+      '<span>Created: <strong class="text-white">' + fmt(ticket.createdAt) + '</strong></span></div>' +
+      '<div class="mb-4">' + (chat || '<div class="text-center text-[#555] py-6">No messages yet</div>') + '</div>' + replyBox + '</div>';
+    if (!closed) {
+      root.querySelector('#sp_send_reply').onclick = async function () {
+        const body = root.querySelector('#sp_reply').value.trim();
+        if (!body) return toast('Type a reply first', false);
+        try {
+          await post('/support/' + encodeURIComponent(ticket.ticket_id) + '/reply', { message: body });
+          toast('Your reply has been sent.', true);
+          setTimeout(function () { location.reload(); }, 600);
+        } catch (e) { toast(e.response && e.response.data && e.response.data.message || e.message, false); }
+      };
+    }
+  }
+
+  async function adminSupportTicketsPage() {
+    showDynamicMain();
+    document.title = 'Support Tickets — Admin';
+    let root = document.getElementById('main-content');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'main-content';
+      const host = document.querySelector('main') || document.querySelector('.flex-1') || document.querySelector('.content') || document.body;
+      host.insertBefore(root, host.firstChild);
+    }
+    // Hide every sibling section that still shows Manage Users UI
+    try {
+      const host = root.parentElement;
+      if (host) {
+        Array.from(host.children).forEach(function(ch){
+          if (ch !== root && ch.id !== 'sidebar' && !ch.classList.contains('sidebar')) {
+            const t = (ch.textContent || '').slice(0, 200);
+            if (/Manage Users|fetchusers|Username|pagenum/i.test(t) || ch.querySelector('table')) {
+              ch.style.display = 'none';
+            }
+          }
+        });
+      }
+      document.querySelectorAll('table').forEach(function(tb){ if (!root.contains(tb)) tb.style.display = 'none'; });
+    } catch (_) {}
+    root.style.display = 'block';
+    root.innerHTML = '<div class="p-8 text-center text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading tickets...</div>';
+    let filter = 'all', search = '';
+    const load = async function () {
+      try {
+        const data = await get('/support-tickets?status=' + encodeURIComponent(filter) + '&search=' + encodeURIComponent(search));
+        const stats = data.stats || {};
+        const tickets = data.tickets || [];
+        const badge = function (st) {
+          if (st === 'Answered') return '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Answered</span>';
+          if (st === 'Closed') return '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Closed</span>';
+          return '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Open</span>';
+        };
+        const pBadge = function (p) {
+          if (p === 'High') return '<span class="text-red-600 text-xs font-medium">High</span>';
+          if (p === 'Low') return '<span class="text-gray-500 text-xs">Low</span>';
+          return '<span class="text-amber-600 text-xs font-medium">Medium</span>';
+        };
+        const rows = tickets.length ? tickets.map(function (t) {
+          return '<tr class="border-t border-gray-100 hover:bg-gray-50">' +
+            '<td class="px-4 py-3 font-mono text-xs text-gray-600">' + esc(t.ticket_id) + '</td>' +
+            '<td class="px-4 py-3"><div class="font-medium text-gray-900">' + esc(t.user && t.user.name || '') + '</div><div class="text-xs text-gray-400">' + esc(t.user && t.user.email || '') + '</div></td>' +
+            '<td class="px-4 py-3 text-gray-800 max-w-[200px] truncate">' + esc(t.subject) + '</td>' +
+            '<td class="px-4 py-3">' + badge(t.status) + '</td><td class="px-4 py-3">' + pBadge(t.priority) + '</td>' +
+            '<td class="px-4 py-3 text-gray-500 whitespace-nowrap">' + supportAgo(t.updatedAt) + '</td>' +
+            '<td class="px-4 py-3"><a href="/admin/support-tickets-view.html?ticket=' + encodeURIComponent(t.ticket_id) + '" class="inline-flex items-center gap-1 text-blue-600 text-xs font-medium"><i class="fa-regular fa-eye"></i> View</a></td></tr>';
+        }).join('') : '<tr><td colspan="7" class="px-4 py-10 text-center text-gray-400">No tickets found.</td></tr>';
+        const filters = ['all', 'open', 'answered', 'closed'].map(function (f) {
+          return '<button type="button" data-f="' + f + '" class="px-3 py-1.5 rounded-lg text-sm font-medium ' + (filter === f ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600') + '">' + (f.charAt(0).toUpperCase() + f.slice(1)) + '</button>';
+        }).join('');
+        root.innerHTML = '<div class="p-4 md:p-6 max-w-6xl mx-auto"><div class="mb-6"><h1 class="text-xl font-semibold text-gray-900">Support Tickets</h1><p class="text-sm text-gray-500">Manage and respond to user support requests</p></div>' +
+          '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">' +
+          '<div class="bg-white rounded-xl border border-gray-200 p-4"><div class="text-xs text-gray-400 uppercase">Total Tickets</div><div class="text-2xl font-semibold mt-1">' + (stats.total || 0) + '</div></div>' +
+          '<div class="bg-white rounded-xl border border-gray-200 p-4"><div class="text-xs text-gray-400 uppercase">Open</div><div class="text-2xl font-semibold mt-1 text-amber-600">' + (stats.open || 0) + '</div></div>' +
+          '<div class="bg-white rounded-xl border border-gray-200 p-4"><div class="text-xs text-gray-400 uppercase">Answered</div><div class="text-2xl font-semibold mt-1 text-green-600">' + (stats.answered || 0) + '</div></div>' +
+          '<div class="bg-white rounded-xl border border-gray-200 p-4"><div class="text-xs text-gray-400 uppercase">Closed</div><div class="text-2xl font-semibold mt-1">' + (stats.closed || 0) + '</div></div></div>' +
+          '<div class="flex flex-wrap items-center gap-2 mb-4">' + filters +
+          '<input id="st_search" type="search" placeholder="Search tickets, users..." value="' + esc(search) + '" class="flex-1 min-w-[160px] border border-gray-200 rounded-lg px-3 py-1.5 text-sm"/>' +
+          '<button type="button" id="st_search_btn" class="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium">Search</button></div>' +
+          '<div class="bg-white rounded-xl border border-gray-200 overflow-x-auto"><table class="w-full text-sm"><thead class="bg-gray-50 text-gray-500 text-xs uppercase"><tr>' +
+          '<th class="px-4 py-3 text-left">Ticket</th><th class="px-4 py-3 text-left">User</th><th class="px-4 py-3 text-left">Subject</th><th class="px-4 py-3 text-left">Status</th><th class="px-4 py-3 text-left">Priority</th><th class="px-4 py-3 text-left">Last Update</th><th class="px-4 py-3 text-left">Action</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+        root.querySelectorAll('[data-f]').forEach(function (b) { b.onclick = function () { filter = b.getAttribute('data-f'); load(); }; });
+        root.querySelector('#st_search_btn').onclick = function () { search = root.querySelector('#st_search').value.trim(); load(); };
+        root.querySelector('#st_search').onkeydown = function (e) { if (e.key === 'Enter') { search = e.target.value.trim(); load(); } };
+        try { document.querySelectorAll('table').forEach(function(tb){ if (!root.contains(tb)) tb.remove(); }); } catch(_){}
+      } catch (e) {
+        root.innerHTML = '<div class="p-8 text-center text-red-600">' + esc(e.response && e.response.data && e.response.data.message || e.message) + '</div>';
+      }
+    };
+    load();
+  }
+
+  async function adminSupportTicketViewPage() {
+    showDynamicMain();
+    document.title = 'Ticket — Admin';
+    let root = document.getElementById('main-content');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'main-content';
+      const host = document.querySelector('main') || document.querySelector('.flex-1') || document.querySelector('.content') || document.body;
+      host.insertBefore(root, host.firstChild);
+    }
+    try {
+      document.querySelectorAll('table').forEach(function(tb){ if (!root.contains(tb)) tb.style.display = 'none'; });
+    } catch (_) {}
+    root.style.display = 'block';
+    const key = new URLSearchParams(location.search).get('ticket') || new URLSearchParams(location.search).get('id') || '';
+    if (!key) { root.innerHTML = '<div class="p-8 text-red-600">Ticket not specified</div>'; return; }
+    root.innerHTML = '<div class="p-8 text-center text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let ticket, user;
+    try {
+      const data = await get('/support-tickets/' + encodeURIComponent(key));
+      ticket = data.ticket; user = data.user || {};
+    } catch (e) {
+      root.innerHTML = '<div class="p-8 text-center text-red-600">' + esc(e.response && e.response.data && e.response.data.message || e.message) + '</div>';
+      return;
+    }
+    const fmt = function (v) { try { return new Date(v).toLocaleString(undefined, { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (_) { return ''; } };
+    const badge = function (st) { return st === 'Answered' ? '<span class="text-green-600 font-medium">Answered</span>' : st === 'Closed' ? '<span class="text-gray-500 font-medium">Closed</span>' : '<span class="text-amber-600 font-medium">Open</span>'; };
+    const msgs = (ticket.messages || []).map(function (m) {
+      const isAdmin = m.sender === 'admin';
+      return '<div class="mb-3"><div class="inline-block max-w-[90%] rounded-xl px-3.5 py-2.5 ' + (isAdmin ? 'bg-blue-50 border border-blue-100' : 'bg-gray-100 border border-gray-200') + '">' +
+        '<div class="text-xs text-gray-500 mb-1"><span class="font-medium ' + (isAdmin ? 'text-blue-600' : 'text-amber-600') + '">' + esc(isAdmin ? (m.sender_name || 'Support Team') : (m.sender_name || user.name || 'User')) + '</span> · ' + fmt(m.createdAt) + '</div>' +
+        '<div class="text-sm text-gray-800 whitespace-pre-wrap">' + esc(m.body) + '</div></div></div>';
+    }).join('');
+    const closed = ticket.status === 'Closed';
+    root.innerHTML = '<div class="p-4 md:p-6 max-w-5xl mx-auto"><a href="/admin/support-tickets.html" class="text-sm text-blue-600 mb-4 inline-block">← Back to Tickets</a>' +
+      '<h1 class="text-xl font-semibold text-gray-900 mb-4">Ticket ' + esc(ticket.ticket_id) + '</h1>' +
+      '<div class="grid md:grid-cols-3 gap-4"><div class="md:col-span-2"><div class="bg-white rounded-xl border border-gray-200 p-4">' +
+      '<h2 class="font-medium text-gray-900 mb-3 pb-3 border-b border-gray-100">' + esc(ticket.subject) + '</h2>' +
+      '<div class="mb-4">' + (msgs || '<p class="text-gray-400 text-sm">No messages</p>') + '</div>' +
+      (closed ? '<p class="text-sm text-gray-500 text-center py-3">Ticket is closed.</p>' :
+        '<div class="border-t border-gray-100 pt-3"><textarea id="adm_reply" rows="3" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-2" placeholder="Type your reply to the user..."></textarea>' +
+        '<div class="flex justify-end"><button type="button" id="adm_send" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium">Send Reply</button></div></div>') +
+      '</div></div><div class="space-y-4"><div class="bg-white rounded-xl border border-gray-200 p-4 text-sm"><div class="font-medium text-gray-900 mb-3">Ticket Details</div><div class="space-y-2 text-gray-600">' +
+      '<div class="flex justify-between"><span>Ticket ID</span><span class="font-mono text-xs">' + esc(ticket.ticket_id) + '</span></div>' +
+      '<div class="flex justify-between"><span>Status</span>' + badge(ticket.status) + '</div>' +
+      '<div class="flex justify-between"><span>Priority</span><span class="font-medium">' + esc(ticket.priority) + '</span></div>' +
+      '<div class="flex justify-between"><span>Created</span><span>' + fmt(ticket.createdAt) + '</span></div>' +
+      '<div class="flex justify-between"><span>Updated</span><span>' + supportAgo(ticket.updatedAt) + '</span></div>' +
+      '<div class="flex justify-between"><span>Messages</span><span>' + ((ticket.messages || []).length) + '</span></div></div></div>' +
+      '<div class="bg-white rounded-xl border border-gray-200 p-4 text-sm"><div class="font-medium text-gray-900 mb-3">User Info</div><div class="space-y-2 text-gray-600">' +
+      '<div class="flex justify-between"><span>Name</span><span class="font-medium text-gray-900">' + esc(user.name || '') + '</span></div>' +
+      '<div class="flex justify-between"><span>Email</span><span>' + esc(user.email || '') + '</span></div>' +
+      (user._id ? '<a href="/admin/user-details.html?id=' + user._id + '" class="text-blue-600 text-xs">View User Profile →</a>' : '') +
+      '</div></div><div class="bg-white rounded-xl border border-gray-200 p-4"><div class="font-medium text-gray-900 mb-3 text-sm">Actions</div>' +
+      '<button type="button" id="adm_status_btn" class="w-full py-2.5 rounded-lg text-sm font-medium ' + (closed ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-red-50 text-red-600 border border-red-200') + '">' + (closed ? 'Reopen Ticket' : 'Close Ticket') + '</button></div></div></div></div>';
+    if (!closed) {
+      root.querySelector('#adm_send').onclick = async function () {
+        const body = root.querySelector('#adm_reply').value.trim();
+        if (!body) return toast('Type a reply first', false);
+        try {
+          await post('/support-tickets/' + encodeURIComponent(ticket.ticket_id) + '/reply', { message: body });
+          toast('Reply sent successfully', true);
+          setTimeout(function () { location.reload(); }, 600);
+        } catch (e) { toast(e.response && e.response.data && e.response.data.message || e.message, false); }
+      };
+    }
+    root.querySelector('#adm_status_btn').onclick = async function () {
+      const next = closed ? 'Open' : 'Closed';
+      try {
+        const res = await put('/support-tickets/' + encodeURIComponent(ticket.ticket_id) + '/status', { status: next });
+        toast(res.message || ('Ticket status updated to ' + next.toLowerCase() + '.'), true);
+        setTimeout(function () { location.reload(); }, 600);
+      } catch (e) { toast(e.response && e.response.data && e.response.data.message || e.message, false); }
+    };
+  }
+
+  async function adminEmailServicesPage() {
+    showDynamicMain();
+    document.title = 'Send Email — Admin';
+    let root = document.getElementById('main-content');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'main-content';
+      const host = document.querySelector('main') || document.querySelector('.flex-1') || document.querySelector('.content') || document.body;
+      host.insertBefore(root, host.firstChild);
+    }
+    try {
+      const host = root.parentElement;
+      if (host) {
+        Array.from(host.children).forEach(function(ch){
+          if (ch !== root && ch.querySelector && ch.querySelector('table')) ch.style.display = 'none';
+        });
+      }
+      document.querySelectorAll('table').forEach(function(tb){ if (!root.contains(tb)) tb.style.display = 'none'; });
+    } catch (_) {}
+    root.style.display = 'block';
+    root.innerHTML = '<div class="p-8 text-center text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</div>';
+    let users = [];
+    try { const data = await get('/email-services/users?category=all'); users = data.users || []; } catch (_) {}
+    const userOpts = users.map(function (u) { return '<option value="' + u._id + '">' + esc(u.name) + ' (' + esc(u.email) + ')</option>'; }).join('');
+    root.innerHTML = '<div class="p-4 md:p-6 max-w-2xl mx-auto"><h1 class="text-xl font-semibold text-gray-900 mb-1">Send Email to Users</h1>' +
+      '<p class="text-sm text-gray-500 mb-6">Compose and send bulk or targeted emails to users.</p>' +
+      '<div class="bg-white rounded-xl border border-gray-200 p-5 space-y-4">' +
+      '<div><label class="block text-sm font-medium text-gray-700 mb-1">Category <span class="text-red-500">*</span></label>' +
+      '<select id="em_category" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">' +
+      '<option value="all">All Users</option><option value="active">Active Users</option><option value="verified">Verified Users</option>' +
+      '<option value="unverified">Unverified Users</option><option value="blocked">Blocked Users</option><option value="single">Single User</option></select></div>' +
+      '<div id="em_user_wrap" class="hidden"><label class="block text-sm font-medium text-gray-700 mb-1">Select User</label>' +
+      '<select id="em_user" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">' + userOpts + '</select></div>' +
+      '<div><label class="block text-sm font-medium text-gray-700 mb-1">Email Template</label><div class="grid grid-cols-3 gap-2">' +
+      '<label class="cursor-pointer border-2 border-blue-500 rounded-lg p-3 text-center bg-slate-900 text-white text-xs font-medium"><input type="radio" name="em_tpl" value="blue" checked class="sr-only"/> Blue</label>' +
+      '<label class="cursor-pointer border-2 border-transparent rounded-lg p-3 text-center bg-emerald-950 text-white text-xs font-medium"><input type="radio" name="em_tpl" value="green" class="sr-only"/> Green</label>' +
+      '<label class="cursor-pointer border-2 border-transparent rounded-lg p-3 text-center bg-purple-950 text-white text-xs font-medium"><input type="radio" name="em_tpl" value="purple" class="sr-only"/> Purple</label></div></div>' +
+      '<div class="grid grid-cols-2 gap-3"><div><label class="block text-sm font-medium text-gray-700 mb-1">Greeting</label><input id="em_greeting" value="Hello" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"/></div>' +
+      '<div><label class="block text-sm font-medium text-gray-700 mb-1">Title</label><input id="em_title" value="Investor" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"/></div></div>' +
+      '<div><label class="block text-sm font-medium text-gray-700 mb-1">Subject <span class="text-red-500">*</span></label><input id="em_subject" placeholder="Email subject line" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"/></div>' +
+      '<div><label class="block text-sm font-medium text-gray-700 mb-1">Message <span class="text-red-500">*</span></label><textarea id="em_message" rows="6" placeholder="Type your message here" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"></textarea></div>' +
+      '<button type="button" id="em_send" class="px-5 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium inline-flex items-center gap-2"><i class="fa-solid fa-paper-plane"></i> Send Email</button></div></div>';
+    root.querySelectorAll('input[name="em_tpl"]').forEach(function (inp) {
+      inp.closest('label').addEventListener('click', function () {
+        root.querySelectorAll('input[name="em_tpl"]').forEach(function (x) { x.closest('label').classList.remove('border-blue-500'); });
+        inp.checked = true; inp.closest('label').classList.add('border-blue-500');
+      });
+    });
+    root.querySelector('#em_category').onchange = async function (e) {
+      const v = e.target.value;
+      const wrap = root.querySelector('#em_user_wrap');
+      if (v === 'single') {
+        wrap.classList.remove('hidden');
+        try {
+          const data = await get('/email-services/users?category=all');
+          root.querySelector('#em_user').innerHTML = (data.users || []).map(function (u) { return '<option value="' + u._id + '">' + esc(u.name) + ' (' + esc(u.email) + ')</option>'; }).join('');
+        } catch (_) {}
+      } else wrap.classList.add('hidden');
+    };
+    root.querySelector('#em_send').onclick = async function () {
+      const category = root.querySelector('#em_category').value;
+      const subject = root.querySelector('#em_subject').value.trim();
+      const message = root.querySelector('#em_message').value.trim();
+      const greeting = root.querySelector('#em_greeting').value.trim();
+      const title = root.querySelector('#em_title').value.trim();
+      const template = (root.querySelector('input[name="em_tpl"]:checked') || {}).value || 'blue';
+      if (!subject || !message) return toast('Subject and message required', false);
+      const payload = { category: category === 'single' ? 'all' : category, subject: subject, message: message, greeting: greeting, title: title, template: template };
+      if (category === 'single') payload.user_id = root.querySelector('#em_user').value;
+      const btn = root.querySelector('#em_send');
+      btn.disabled = true; btn.textContent = 'Sending...';
+      try {
+        const res = await post('/email-services/send', payload);
+        toast(res.message || 'Emails sent', true);
+        // Clear form fields after successful send
+        try {
+          root.querySelector('#em_subject').value = '';
+          root.querySelector('#em_message').value = '';
+          root.querySelector('#em_greeting').value = 'Hello';
+          root.querySelector('#em_title').value = 'Investor';
+          root.querySelector('#em_category').value = 'all';
+          const uw = root.querySelector('#em_user_wrap');
+          if (uw) uw.classList.add('hidden');
+          root.querySelectorAll('input[name="em_tpl"]').forEach(function(x){ x.checked = (x.value === 'blue'); x.closest('label').classList.toggle('border-blue-500', x.value === 'blue'); });
+        } catch (_) {}
+      } catch (e) { toast(e.response && e.response.data && e.response.data.message || e.message, false); }
+      btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send Email';
+    };
   }
 
 
