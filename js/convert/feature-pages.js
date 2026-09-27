@@ -17,11 +17,15 @@
   }):'—';
     const daysLeft=v=>Math.max(0,Math.ceil((new Date(v).getTime()-Date.now())/86400000));
     async function get(path) {
-        const response = await api.get(API + path);
+        const client = (typeof api !== 'undefined' && api) || window.api;
+        if (!client) throw new Error('API client not ready (axios/config not loaded)');
+        const response = await client.get(API + path);
         return response.data;
     }
     async function post(path, body) {
-        const response = await api.post(API + path, body);
+        const client = (typeof api !== 'undefined' && api) || window.api;
+        if (!client) throw new Error('API client not ready (axios/config not loaded)');
+        const response = await client.post(API + path, body);
         return response.data;
     }
     async function put(path, body) {
@@ -5072,6 +5076,7 @@ async function adminStockShares(){
   async function routeUser(){
     try{
       if(page==='dashboard.html')await dashboard();
+      else if(page==='account-settings.html')await accountSettingsPage();
       else if(page==='portfolio.html')await portfolioPage();
       else if(page==='accounthistory.html')await accountHistoryPage();
       else if(page==='tradinghistory.html')await tradingHistoryPage();
@@ -7345,7 +7350,21 @@ ${rows.length?rows.map(r=>`<tr class="border-t border-[#161616]">
 
     const paint = () => {
       root.innerHTML = `
-<div class="inner-page px-4 pb-16 max-w-lg mx-auto">
+<style>
+.pf-page-wrap{width:100%;max-width:32rem;margin-left:auto;margin-right:auto;padding-left:1rem;padding-right:1rem;padding-bottom:4rem;box-sizing:border-box}
+@media (min-width:768px){.pf-page-wrap{max-width:42rem}}
+@media (min-width:1024px){.pf-page-wrap{max-width:72rem;padding-left:1.5rem;padding-right:1.5rem}}
+@media (min-width:1280px){.pf-page-wrap{max-width:80rem}}
+.pf-tabs-row{display:flex;align-items:center;gap:0;min-width:max-content}
+@media (min-width:1024px){.pf-tabs-row{min-width:0;width:100%;justify-content:flex-start;flex-wrap:nowrap}
+.pf-tabs-row .pf-tab{margin-right:1.25rem}
+.pf-tabs-scroll{overflow-x:visible}
+}
+@media (max-width:1023px){.pf-tabs-scroll{overflow-x:auto}
+.pf-tabs-row{min-width:max-content}
+}
+</style>
+<div class="inner-page pf-page-wrap">
   <div class="flex items-center gap-3 py-3 mb-1">
     <div class="inner-back cursor-pointer w-9 h-9 rounded-[10px] bg-[#111] border border-[#1e1e1e] flex items-center justify-center text-[#888]" onclick="history.back()"><i class="fa-solid fa-chevron-left"></i></div>
     <div class="inner-title font-sora font-semibold text-white text-[1.05rem]">Portfolio</div>
@@ -7376,8 +7395,8 @@ ${rows.length?rows.map(r=>`<tr class="border-t border-[#161616]">
     </div>
   </div>
 
-  <div class="mb-[9px] overflow-x-auto scrollbar-none border-b border-[#111]">
-    <div class="flex items-center gap-0 min-w-max" role="tablist">
+  <div class="mb-[9px] pf-tabs-scroll scrollbar-none border-b border-[#111]">
+    <div class="pf-tabs-row flex items-center gap-0" role="tablist">
       ${tabBtn('overview','fa-grip','Overview')}
       ${tabBtn('trading','fa-chart-bar','Trading')}
       ${tabBtn('investments','fa-money-bills','Investments')}
@@ -7698,6 +7717,333 @@ ${items.length ? items.map(l => {
   </div>
 </div>`;
 }).join('') : emptyState('fa-hand-holding-dollar','No active loans','You have no active loans.','/user/my-loans.html','View Loans')}`;
+      }
+    }
+
+    paint();
+  }
+
+
+
+  async function accountSettingsPage(){
+    showDynamicMain();
+    const root = document.getElementById('main-content') || document.querySelector('main') || document.querySelector('.main');
+    if (!root) return;
+    root.innerHTML = `<div class="px-4 py-10 text-center text-[#555]"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading account...</div>`;
+
+    const money = (n, sym='$') => {
+      const v = Number(n || 0);
+      const sign = v < 0 ? '-' : '';
+      return sign + sym + Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+    const plTxt = (n) => { const v = Number(n || 0); return (v >= 0 ? '+' : '') + money(v); };
+    const initials = (name) => String(name || 'U').trim().split(/\s+/).map(x => x[0]).join('').slice(0, 2).toUpperCase() || 'U';
+
+    let data;
+    try { data = await get('/account-settings'); }
+    catch (e) {
+      root.innerHTML = `<div class="px-4 py-10 text-center text-red2">${esc(e.response?.data?.message || e.message)}</div>`;
+      return;
+    }
+    const p = data.profile || {};
+    const r = data.records || {};
+    let tab = (location.hash || '#profile').replace('#', '').toLowerCase();
+    if (!['profile', 'records', 'settings'].includes(tab)) tab = 'profile';
+    let allocChart = null;
+    let photoFile = null;
+
+    const verified = p.isVerified || String(p.account_verify).toLowerCase() === 'verified' || p.verificationStatus === 'verified';
+    const verifyBadge = verified
+      ? `<span class="inline-flex items-center gap-1 text-[.65rem] px-2 py-0.5 rounded-md bg-[rgba(0,212,124,.1)] text-grn border border-[rgba(0,212,124,.2)]"><i class="fa-solid fa-check"></i> Verified</span>`
+      : `<span class="inline-flex items-center gap-1 text-[.65rem] px-2 py-0.5 rounded-md bg-[rgba(245,197,66,.1)] text-ylw border border-[rgba(245,197,66,.25)]"><i class="fa-solid fa-triangle-exclamation"></i> Not Verified</span>`;
+
+    const paint = () => {
+      root.innerHTML = `
+<style>
+.as-wrap{width:100%;max-width:32rem;margin:0 auto;padding:0 1rem 4rem;box-sizing:border-box}
+@media(min-width:768px){.as-wrap{max-width:42rem}}
+@media(min-width:1024px){.as-wrap{max-width:72rem;padding-left:1.5rem;padding-right:1.5rem}}
+.as-card{background:#111;border:1px solid #1e1e1e;border-radius:13px}
+.as-inp{width:100%;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:10px;padding:12px 14px;color:#fff;font-size:.88rem;outline:none}
+.as-inp:focus{border-color:#2a2a2a}
+.as-lbl{font-size:.68rem;color:#444;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;display:block}
+.as-tab{padding:14px 0;margin-right:22px;font-size:.88rem;color:#444;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none}
+.as-tab.on{color:#fff;border-bottom-color:#3B7BFF;font-weight:500}
+</style>
+<div class="as-wrap">
+  <div class="flex items-center gap-3 py-3 mb-2">
+    <button type="button" onclick="history.back()" class="w-9 h-9 rounded-[10px] bg-[#111] border border-[#1e1e1e] flex items-center justify-center text-[#888]"><i class="fa-solid fa-chevron-left"></i></button>
+    <div class="text-white font-medium text-[1.05rem]">Account</div>
+  </div>
+
+  <div class="as-card p-[15px] mb-[9px]">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-[#0052FF] to-[#3B7BFF] flex items-center justify-center text-white font-bold text-sm shrink-0" id="asAvatar">
+        ${p.image ? `<img src="${esc(p.image)}" class="w-full h-full object-cover" alt=""/>` : initials(p.name)}
+      </div>
+      <div class="min-w-0">
+        <div class="text-white font-medium truncate">${esc(p.name || 'User')}</div>
+        <div class="text-[.72rem] text-[#555]">email protected</div>
+        <div class="mt-1">${verifyBadge}</div>
+      </div>
+    </div>
+    <div class="grid grid-cols-3 gap-2 text-center">
+      <div><div class="text-[.65rem] text-[#555] uppercase tracking-wide mb-1">Balance</div><div class="text-blue2 font-medium text-[.95rem]">${money(p.balance)}</div></div>
+      <div><div class="text-[.65rem] text-[#555] uppercase tracking-wide mb-1">Profit</div><div class="text-grn font-medium text-[.95rem]">${money(p.profit)}</div></div>
+      <div><div class="text-[.65rem] text-[#555] uppercase tracking-wide mb-1">Bonus</div><div class="text-ylw font-medium text-[.95rem]">${money(p.bonus)}</div></div>
+    </div>
+  </div>
+
+  <div class="flex border-b border-[#111] mb-[12px] overflow-x-auto">
+    <button type="button" data-tab="profile" class="as-tab ${tab==='profile'?'on':''}">Profile</button>
+    <button type="button" data-tab="records" class="as-tab ${tab==='records'?'on':''}">Records</button>
+    <button type="button" data-tab="settings" class="as-tab ${tab==='settings'?'on':''}">Settings</button>
+  </div>
+  <div id="asBody"></div>
+</div>`;
+
+      root.querySelectorAll('.as-tab').forEach(btn => {
+        btn.onclick = () => { tab = btn.getAttribute('data-tab'); history.replaceState(null,'','#'+tab); paint(); };
+      });
+      renderBody();
+    };
+
+    function renderBody(){
+      const body = root.querySelector('#asBody');
+      if (!body) return;
+
+      if (tab === 'profile') {
+        body.innerHTML = `
+<div class="as-card p-[15px]">
+  <div class="flex items-center justify-between mb-4">
+    <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em]">Personal Information</div>
+    <a href="/user/verify-account.html" class="text-[.78rem] text-blue2">Verify →</a>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div class="md:col-span-2"><label class="as-lbl">Full Name</label><input id="as_name" class="as-inp" value="${esc(p.name||'')}"/></div>
+    <div><label class="as-lbl">Username</label><input id="as_username" class="as-inp" value="${esc(p.username||'')}"/></div>
+    <div><label class="as-lbl">Phone</label><input id="as_phone" class="as-inp" value="${esc(p.phone||'')}"/></div>
+    <div class="md:col-span-2"><label class="as-lbl">Email</label><input class="as-inp" value="${esc(p.email||'')}" disabled style="opacity:.7"/></div>
+    <div class="md:col-span-2"><label class="as-lbl">Country</label><input id="as_country" class="as-inp" value="${esc(p.country||'')}"/></div>
+    <div class="md:col-span-2"><label class="as-lbl">Preferred Currency</label>
+      <select id="as_currency" class="as-inp">
+        ${['USD','EUR','GBP','NGN','CAD','AUD','JPY','INR','ZAR'].map(c=>`<option value="${c}" ${String(p.currency_code||'USD').toUpperCase()===c?'selected':''}>${c}</option>`).join('')}
+      </select>
+    </div>
+    <div><label class="as-lbl">State</label><input id="as_state" class="as-inp" value="${esc(p.state||'')}"/></div>
+    <div><label class="as-lbl">Zip Code</label><input id="as_zip" class="as-inp" value="${esc(p.zip_code||'')}"/></div>
+    <div class="md:col-span-2"><label class="as-lbl">Address</label><textarea id="as_address" class="as-inp" rows="2">${esc(p.address||'')}</textarea></div>
+  </div>
+  <button type="button" id="asSaveProfile" class="mt-4 w-full py-[13px] rounded-[12px] bg-[#4a6cf7] text-white font-medium text-[.9rem] flex items-center justify-center gap-2"><i class="fa-solid fa-lock text-[.8rem]"></i> Save Changes</button>
+</div>`;
+        body.querySelector('#asSaveProfile').onclick = async () => {
+          const btn = body.querySelector('#asSaveProfile');
+          btn.disabled = true; btn.textContent = 'Saving...';
+          try {
+            const payload = {
+              name: body.querySelector('#as_name').value.trim(),
+              username: body.querySelector('#as_username').value.trim(),
+              phone: body.querySelector('#as_phone').value.trim(),
+              country: body.querySelector('#as_country').value.trim(),
+              currency_code: body.querySelector('#as_currency').value,
+              state: body.querySelector('#as_state').value.trim(),
+              zip_code: body.querySelector('#as_zip').value.trim(),
+              address: body.querySelector('#as_address').value.trim(),
+            };
+            await api.put('/user/dashboard/updateacct', payload);
+            Object.assign(p, payload);
+            toast('Profile updated successfully', true);
+            paint();
+          } catch (e) {
+            toast(e.response?.data?.message || e.message, false);
+            btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-lock text-[.8rem]"></i> Save Changes';
+          }
+        };
+      } else if (tab === 'records') {
+        const alloc = r.allocation || [];
+        const tr = r.trading || {}, cp = r.copy || {}, pl = r.plans || {}, st = r.stocks || {}, nf = r.nfts || {};
+        const dep = r.deposits || {}, wd = r.withdrawals || {}, lo = r.loans || {};
+        body.innerHTML = `
+<div class="grid grid-cols-2 gap-[9px] mb-[9px]">
+  <div class="as-card p-[15px]"><div class="text-blue2 text-lg font-medium mb-1"><i class="fa-solid fa-wallet mr-1 text-sm"></i>${money(r.net_worth)}</div><div class="text-[.72rem] text-[#555]">Net Worth</div></div>
+  <div class="as-card p-[15px]"><div class="text-blue2 text-lg font-medium mb-1"><i class="fa-solid fa-chart-pie mr-1 text-sm"></i>${money(r.total_invested)}</div><div class="text-[.72rem] text-[#555]">Total Invested</div></div>
+  <div class="as-card p-[15px]"><div class="text-grn text-lg font-medium mb-1"><i class="fa-solid fa-arrow-trend-up mr-1 text-sm"></i>${plTxt(r.total_pl)}</div><div class="text-[.72rem] text-[#555]">Total P/L</div></div>
+  <div class="as-card p-[15px]"><div class="text-grn text-lg font-medium mb-1"><i class="fa-solid fa-chart-line mr-1 text-sm"></i>${Number(r.win_rate||0).toFixed(0)}%</div><div class="text-[.72rem] text-[#555]">Win Rate W / OL</div></div>
+</div>
+<div class="as-card p-[15px] mb-[9px]">
+  <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-3">Portfolio Allocation</div>
+  <div class="flex flex-col md:flex-row gap-4 items-center">
+    <div class="w-[140px] h-[140px] relative shrink-0"><canvas id="asAllocChart"></canvas>
+      <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"><div class="text-[.65rem] text-[#555]">Total</div><div class="text-white font-medium text-sm">${money(r.total_invested)}</div></div>
+    </div>
+    <div class="flex-1 w-full space-y-2">
+      ${alloc.length ? alloc.map(a=>{
+        const sum = alloc.reduce((s,x)=>s+Number(x.amount||0),0)||1;
+        const pct = (Number(a.amount)/sum*100).toFixed(1);
+        return `<div class="flex items-center justify-between text-[.82rem]"><span class="text-[#888]">${esc(a.label)}</span><span class="text-white">${money(a.amount)} <span class="text-[#555]">${pct}%</span></span></div>`;
+      }).join('') : '<div class="text-[#444] text-sm">No allocation yet</div>'}
+    </div>
+  </div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-[9px] mb-[9px]">
+  <div class="as-card p-[12px] text-center"><div class="text-[.65rem] text-[#555] mb-1">BALANCE</div><div class="text-blue2 font-medium">${money(r.balance)}</div></div>
+  <div class="as-card p-[12px] text-center"><div class="text-[.65rem] text-[#555] mb-1">PROFIT</div><div class="text-grn font-medium">${money(r.profit)}</div></div>
+  <div class="as-card p-[12px] text-center"><div class="text-[.65rem] text-[#555] mb-1">BONUS</div><div class="text-ylw font-medium">${money(r.bonus)}</div></div>
+  <div class="as-card p-[12px] text-center"><div class="text-[.65rem] text-[#555] mb-1">REFERRAL</div><div class="text-blue2 font-medium">${money(r.referral)}</div></div>
+</div>
+<div class="as-card p-[15px] mb-[9px]">
+  <div class="flex items-center gap-2 mb-3"><span class="w-8 h-8 rounded-lg bg-[rgba(74,108,247,.12)] text-blue2 flex items-center justify-center"><i class="fa-solid fa-chart-line"></i></span><div><div class="text-white text-sm font-medium">Trading</div><div class="text-[.7rem] text-[#555]">${tr.trades||0} trades</div></div></div>
+  <div class="grid grid-cols-2 gap-2">
+    <div class="bg-[#0d0d0d] rounded-[10px] p-3"><div class="text-[.65rem] text-[#555]">OPEN</div><div class="text-white">${tr.open||0}</div></div>
+    <div class="bg-[#0d0d0d] rounded-[10px] p-3"><div class="text-[.65rem] text-[#555]">INVESTED</div><div class="text-blue2">${money(tr.invested)}</div></div>
+    <div class="bg-[#0d0d0d] rounded-[10px] p-3"><div class="text-[.65rem] text-[#555]">PROFIT</div><div class="text-grn">${money(tr.profit)}</div></div>
+    <div class="bg-[#0d0d0d] rounded-[10px] p-3"><div class="text-[.65rem] text-[#555]">LOSS</div><div class="text-red2">${money(tr.loss)}</div></div>
+  </div>
+</div>
+<div class="as-card p-[15px] mb-[9px]">
+  <div class="flex items-center gap-2 mb-3"><span class="w-8 h-8 rounded-lg bg-[rgba(245,197,66,.12)] text-ylw flex items-center justify-center"><i class="fa-solid fa-copy"></i></span><div><div class="text-white text-sm font-medium">Copy Trading</div><div class="text-[.7rem] text-[#555]">${cp.active||0} active</div></div></div>
+  <div class="grid grid-cols-2 gap-2">
+    <div class="bg-[#0d0d0d] rounded-[10px] p-3"><div class="text-[.65rem] text-[#555]">INVESTED</div><div class="text-white">${money(cp.invested)}</div></div>
+    <div class="bg-[#0d0d0d] rounded-[10px] p-3"><div class="text-[.65rem] text-[#555]">PROFIT</div><div class="text-grn">${plTxt(cp.profit)}</div></div>
+  </div>
+</div>
+<div class="as-card p-[15px] mb-[9px]">
+  <div class="flex items-center gap-2 mb-3"><span class="w-8 h-8 rounded-lg bg-[rgba(74,108,247,.12)] text-blue2 flex items-center justify-center"><i class="fa-solid fa-layer-group"></i></span><div><div class="text-white text-sm font-medium">Investment Plans</div><div class="text-[.7rem] text-[#555]">${pl.active||0} active</div></div></div>
+  <div class="grid grid-cols-2 gap-2">
+    <div class="bg-[#0d0d0d] rounded-[10px] p-3"><div class="text-[.65rem] text-[#555]">INVESTED</div><div class="text-white">${money(pl.invested)}</div></div>
+    <div class="bg-[#0d0d0d] rounded-[10px] p-3"><div class="text-[.65rem] text-[#555]">EARNED</div><div class="text-grn">${plTxt(pl.earned)}</div></div>
+  </div>
+</div>
+<div class="as-card p-[15px] mb-[9px]">
+  <div class="flex items-center gap-2 mb-3"><span class="w-8 h-8 rounded-lg bg-[rgba(139,92,246,.12)] text-[#8B5CF6] flex items-center justify-center"><i class="fa-solid fa-chart-simple"></i></span><div><div class="text-white text-sm font-medium">Stock Shares</div><div class="text-[.7rem] text-[#555]">${st.positions||0} positions</div></div></div>
+  <div class="grid grid-cols-2 gap-2">
+    <div class="bg-[#0d0d0d] rounded-[10px] p-3"><div class="text-[.65rem] text-[#555]">INVESTED</div><div class="text-[#8B5CF6]">${money(st.invested)}</div></div>
+    <div class="bg-[#0d0d0d] rounded-[10px] p-3"><div class="text-[.65rem] text-[#555]">VALUE</div><div class="text-white">${money(st.value)}</div></div>
+  </div>
+</div>
+<div class="as-card p-[15px] mb-[9px]">
+  <div class="flex items-center gap-2 mb-3"><span class="w-8 h-8 rounded-lg bg-[rgba(236,72,153,.12)] text-[#EC4899] flex items-center justify-center"><i class="fa-solid fa-gem"></i></span><div><div class="text-white text-sm font-medium">NFTs</div><div class="text-[.7rem] text-[#555]">${nf.owned||0} owned</div></div></div>
+  <div class="grid grid-cols-2 gap-2">
+    <div class="bg-[#0d0d0d] rounded-[10px] p-3"><div class="text-[.65rem] text-[#555]">VALUE</div><div class="text-white">${money(nf.value)}</div></div>
+    <div class="bg-[#0d0d0d] rounded-[10px] p-3"><div class="text-[.65rem] text-[#555]">ITEMS</div><div class="text-white">${nf.owned||0}</div></div>
+  </div>
+</div>
+<div class="grid grid-cols-2 gap-[9px] mb-[9px]">
+  <div class="as-card p-[15px]"><div class="text-grn text-lg font-medium mb-1"><i class="fa-solid fa-arrow-down mr-1"></i>${money(dep.total)}</div><div class="text-[.72rem] text-[#555]">Deposits</div><div class="text-[.65rem] text-[#444]">${dep.count||0} processed</div></div>
+  <div class="as-card p-[15px]"><div class="text-red2 text-lg font-medium mb-1"><i class="fa-solid fa-arrow-up mr-1"></i>${money(wd.total)}</div><div class="text-[.72rem] text-[#555]">Withdrawals</div><div class="text-[.65rem] text-[#444]">${wd.count||0} processed</div></div>
+</div>
+<div class="as-card p-[15px] mb-[9px]">
+  <div class="flex items-center gap-2 mb-3"><span class="w-8 h-8 rounded-lg bg-[rgba(245,197,66,.12)] text-ylw flex items-center justify-center"><i class="fa-solid fa-hand-holding-dollar"></i></span><div><div class="text-white text-sm font-medium">Loans</div><div class="text-[.7rem] text-[#555]">${lo.active||0} active</div></div></div>
+  <div class="grid grid-cols-2 gap-2">
+    <div class="bg-[#0d0d0d] rounded-[10px] p-3"><div class="text-[.65rem] text-[#555]">OUTSTANDING</div><div class="text-white">${money(lo.outstanding)}</div></div>
+    <div class="bg-[#0d0d0d] rounded-[10px] p-3"><div class="text-[.65rem] text-[#555]">REPAID</div><div class="text-grn">${money(lo.repaid)}</div></div>
+  </div>
+</div>
+<div class="as-card p-[15px]">
+  <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-2">Your Referral Link</div>
+  <div class="flex gap-2 items-center">
+    <input id="asRefLink" class="as-inp flex-1" readonly value="${esc(r.ref_link||p.ref_link||'')}"/>
+    <button type="button" id="asCopyRef" class="shrink-0 px-3 py-2.5 rounded-[10px] border border-[#1e1e1e] text-[#aaa] text-sm"><i class="fa-regular fa-copy"></i> Copy</button>
+  </div>
+</div>`;
+        const canvas = body.querySelector('#asAllocChart');
+        if (canvas && window.Chart && alloc.length) {
+          const colorMap = { 'Trading':'#4a6cf7','Investments':'#6e8efb','Copy Trading':'#f5c542','Stocks':'#8B5CF6','NFTs':'#EC4899' };
+          const labels = alloc.map(a=>a.label);
+          const values = alloc.map(a=>Number(a.amount||0));
+          const colors = labels.map(l => colorMap[l] || '#333');
+          if (allocChart) try { allocChart.destroy(); } catch(_){}
+          allocChart = new Chart(canvas, {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data: values, backgroundColor: colors, borderColor: '#111', borderWidth: 2, hoverOffset: 4 }] },
+            options: {
+              responsive: true, maintainAspectRatio: true, cutout: '68%',
+              plugins: { legend: { display: false }, tooltip: {
+                backgroundColor: '#0d0d0d', titleColor: '#fff', bodyColor: '#888', borderColor: '#1e1e1e', borderWidth: 1,
+                callbacks: { label(ctx){ const total = ctx.dataset.data.reduce((a,b)=>a+b,0)||1; const pct=((ctx.raw/total)*100).toFixed(1); return ctx.label+': $'+Number(ctx.raw).toLocaleString(undefined,{minimumFractionDigits:2})+' ('+pct+'%)'; } }
+              }}
+            }
+          });
+        }
+        body.querySelector('#asCopyRef').onclick = async () => {
+          const v = body.querySelector('#asRefLink').value;
+          try { await navigator.clipboard.writeText(v); toast('Referral link copied', true); } catch(_){ toast('Could not copy', false); }
+        };
+      } else if (tab === 'settings') {
+        body.innerHTML = `
+<div class="as-card p-[15px] mb-[9px]">
+  <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-1">Change Password</div>
+  <div class="text-[.78rem] text-[#555] mb-3">You will be logged out after changing your password.</div>
+  <div class="space-y-3">
+    <div><label class="as-lbl">Current Password</label><input id="as_cur_pass" type="password" class="as-inp" autocomplete="current-password"/></div>
+    <div><label class="as-lbl">New Password</label><input id="as_new_pass" type="password" class="as-inp" autocomplete="new-password"/></div>
+    <div><label class="as-lbl">Confirm New Password</label><input id="as_conf_pass" type="password" class="as-inp" autocomplete="new-password"/></div>
+  </div>
+  <div class="flex gap-2 mt-4">
+    <button type="button" id="asChangePass" class="flex-1 py-[13px] rounded-[12px] bg-[#4a6cf7] text-white font-medium">Change Password</button>
+    <button type="button" id="asClearPass" class="px-4 py-[13px] rounded-[12px] border border-[#1e1e1e] text-[#888]">Clear</button>
+  </div>
+</div>
+<div class="as-card p-[15px] mb-[9px]">
+  <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-3">Profile Photo</div>
+  <div class="flex items-center gap-3 mb-3">
+    <div class="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-[#0052FF] to-[#3B7BFF] flex items-center justify-center text-white font-bold shrink-0" id="asPhotoPreview">
+      ${p.image ? `<img src="${esc(p.image)}" class="w-full h-full object-cover"/>` : initials(p.name)}
+    </div>
+    <label class="flex-1 border border-dashed border-[#2a2a2a] rounded-[12px] p-4 text-center cursor-pointer text-[#555] text-sm">
+      <i class="fa-solid fa-cloud-arrow-up mb-1 block"></i>
+      <span id="asPhotoLabel">Tap to select photo</span>
+      <input type="file" id="asPhotoInput" accept="image/*" class="hidden"/>
+    </label>
+  </div>
+  <button type="button" id="asUploadPhoto" class="w-full py-[13px] rounded-[12px] bg-[#4a6cf7] text-white font-medium flex items-center justify-center gap-2"><i class="fa-solid fa-upload"></i> Upload Photo</button>
+</div>
+<div class="as-card p-[15px]">
+  <div class="text-[.68rem] text-[#444] uppercase tracking-[.07em] mb-2">Your Referral Link</div>
+  <div class="flex gap-2 items-center">
+    <input id="asRefLink2" class="as-inp flex-1" readonly value="${esc(p.ref_link||r.ref_link||'')}"/>
+    <button type="button" id="asCopyRef2" class="shrink-0 px-3 py-2.5 rounded-[10px] border border-[#1e1e1e] text-[#aaa] text-sm"><i class="fa-regular fa-copy"></i> Copy</button>
+  </div>
+</div>`;
+        body.querySelector('#asClearPass').onclick = () => {
+          ['#as_cur_pass','#as_new_pass','#as_conf_pass'].forEach(s => { const el = body.querySelector(s); if (el) el.value=''; });
+        };
+        body.querySelector('#asChangePass').onclick = async () => {
+          const cur = body.querySelector('#as_cur_pass').value;
+          const neu = body.querySelector('#as_new_pass').value;
+          const conf = body.querySelector('#as_conf_pass').value;
+          if (!cur || !neu) return toast('Fill all password fields', false);
+          if (neu !== conf) return toast('Password confirmation does not match', false);
+          try {
+            await api.put('/user/dashboard/updatepass', { current_password: cur, new_password: neu, confirm_password: conf });
+            toast('Password changed. Please log in again.', true);
+            setTimeout(() => { location.href = '/login.html'; }, 1200);
+          } catch (e) { toast(e.response?.data?.message || e.message, false); }
+        };
+        body.querySelector('#asPhotoInput').onchange = (e) => {
+          photoFile = e.target.files && e.target.files[0];
+          if (photoFile) {
+            body.querySelector('#asPhotoLabel').textContent = photoFile.name;
+            const url = URL.createObjectURL(photoFile);
+            body.querySelector('#asPhotoPreview').innerHTML = `<img src="${url}" class="w-full h-full object-cover"/>`;
+          }
+        };
+        body.querySelector('#asUploadPhoto').onclick = async () => {
+          if (!photoFile) return toast('Select a photo first', false);
+          const fd = new FormData();
+          fd.append('photo', photoFile);
+          try {
+            const res = await api.post('/user/dashboard/updateprofileimage', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+            p.image = res.data.image || p.image;
+            toast('Profile photo updated', true);
+            // update topbar avatars if present
+            document.querySelectorAll('.user-avatar img, .sb-av img').forEach(img => { img.src = p.image; });
+            paint();
+          } catch (e) { toast(e.response?.data?.message || e.message, false); }
+        };
+        body.querySelector('#asCopyRef2').onclick = async () => {
+          try { await navigator.clipboard.writeText(body.querySelector('#asRefLink2').value); toast('Referral link copied', true); } catch(_){ toast('Could not copy', false); }
+        };
       }
     }
 
