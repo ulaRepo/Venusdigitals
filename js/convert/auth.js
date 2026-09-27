@@ -1,18 +1,138 @@
 // digital-grownt\frontend\js\convert\auth.js
+// Auth guard with generous retries when JWT cookie is present (weak / slow network)
+
+/** Max attempts to reach /auth/me before treating session as dead */
+var AUTH_ME_MAX_ATTEMPTS = 10;
+/** Base delay between retries (ms); grows each attempt */
+var AUTH_ME_BASE_DELAY_MS = 2000;
+/** Cap between retries (ms) */
+var AUTH_ME_MAX_DELAY_MS = 8000;
+/** Per-request axios timeout (ms) */
+var AUTH_ME_TIMEOUT_MS = 20000;
 
 function pageLoginPath() {
   const path = window.location.pathname || '';
   return path.includes('/user/') || path.includes('/admin/') ? '../login.html' : './login.html';
 }
 
+/** True when browser still has the httpOnly-visible jwt cookie name in document.cookie
+ *  Note: if cookie is httpOnly it may not appear here; we still treat localStorage user +
+ *  network errors as "keep on page" and only hard-redirect on definitive 401. */
+function hasJwtCookie() {
+  try {
+    const raw = document.cookie || '';
+    return /(?:^|;\s*)jwt=/.test(raw);
+  } catch (_) {
+    return false;
+  }
+}
+
+function hasCachedUser() {
+  try {
+    const u = JSON.parse(localStorage.getItem('user') || 'null');
+    return !!(u && (u._id || u.id || u.email));
+  } catch (_) {
+    return false;
+  }
+}
+
+function isNetworkOrTimeoutError(error) {
+  if (!error) return true;
+  // No HTTP response = network / CORS / offline / DNS / backend down
+  if (!error.response) return true;
+  const code = error.code || '';
+  if (code === 'ECONNABORTED' || code === 'ERR_NETWORK' || code === 'ETIMEDOUT') return true;
+  const msg = String(error.message || '').toLowerCase();
+  if (msg.includes('network') || msg.includes('timeout') || msg.includes('failed to fetch')) return true;
+  return false;
+}
+
+function isUnauthorizedError(error) {
+  return !!(error && error.response && error.response.status === 401);
+}
+
+function sleep(ms) {
+  return new Promise(function (resolve) { setTimeout(resolve, ms); });
+}
+
+/**
+ * Call /auth/me with long timeout and retries.
+ * - Definitive 401 → fail immediately (invalid/expired token)
+ * - Network/timeouts → keep retrying while cookie or cached user exists
+ * - Other 4xx/5xx → retry a few times then fail
+ */
+async function fetchAuthMeWithRetry(options) {
+  options = options || {};
+  const maxAttempts = options.maxAttempts != null ? options.maxAttempts : AUTH_ME_MAX_ATTEMPTS;
+  const client = (typeof api !== 'undefined' && api) || window.api;
+  if (!client) throw new Error('API client not ready');
+
+  let lastError = null;
+  for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await client.get('/auth/me', { timeout: AUTH_ME_TIMEOUT_MS });
+      if (response && response.data) {
+        localStorage.setItem('user', JSON.stringify(response.data));
+        return response.data;
+      }
+      throw new Error('Empty /auth/me response');
+    } catch (error) {
+      lastError = error;
+
+      // Hard auth failure — do not keep retrying
+      if (isUnauthorizedError(error)) {
+        localStorage.removeItem('user');
+        throw error;
+      }
+
+      const canRetry =
+        isNetworkOrTimeoutError(error) ||
+        (error.response && error.response.status >= 500) ||
+        (error.response && error.response.status === 429);
+
+      if (!canRetry || attempt >= maxAttempts) {
+        throw error;
+      }
+
+      // Stay on protected pages while waiting for a stronger network
+      var delay = Math.min(
+        AUTH_ME_BASE_DELAY_MS * Math.pow(1.45, attempt - 1),
+        AUTH_ME_MAX_DELAY_MS
+      );
+      // jitter
+      delay = Math.round(delay + Math.random() * 400);
+      console.warn(
+        '[auth] /auth/me attempt ' + attempt + '/' + maxAttempts +
+        ' failed (' + (error.message || 'network') + '). Retrying in ' + delay + 'ms…'
+      );
+      await sleep(delay);
+    }
+  }
+  throw lastError || new Error('Auth check failed');
+}
+
 async function isLoggedIn() {
   try {
-    const response = await api.get('/auth/me');
-    localStorage.setItem('user', JSON.stringify(response.data));
+    await fetchAuthMeWithRetry();
     return true;
-  } catch (_) {
-    localStorage.removeItem('user');
-    return false;
+  } catch (error) {
+    // Cookie or cached session + pure network failure → treat as still logged in
+    // so protectCurrentFrontendPage does not bounce the user to login.
+    if (isNetworkOrTimeoutError(error) && (hasJwtCookie() || hasCachedUser())) {
+      console.warn('[auth] Network weak; keeping session from cookie/cache.');
+      return true;
+    }
+    if (isUnauthorizedError(error)) {
+      localStorage.removeItem('user');
+      return false;
+    }
+    // Unknown error without cookie/cache → not logged in
+    if (!(hasJwtCookie() || hasCachedUser())) {
+      localStorage.removeItem('user');
+      return false;
+    }
+    // Soft-keep session
+    return true;
   }
 }
 
@@ -29,22 +149,44 @@ async function logout() {
 async function requireAuthPage() {
   const ok = await isLoggedIn();
   if (!ok) {
-    window.location.href = pageLoginPath();
-    return false;
+    // Only redirect when we are sure there is no valid session
+    if (!(hasJwtCookie() || hasCachedUser())) {
+      window.location.href = pageLoginPath();
+      return false;
+    }
+    // Cookie still present — stay put
+    return true;
   }
   return true;
 }
 
 async function requireAdmin() {
   try {
-    const response = await api.get('/auth/me');
-    localStorage.setItem('user', JSON.stringify(response.data));
-    if (!response.data || response.data.role !== 'ADMIN') {
+    const user = await fetchAuthMeWithRetry();
+    if (!user || user.role !== 'ADMIN') {
       window.location.href = '../index.html';
       return false;
     }
     return true;
-  } catch (_) {
+  } catch (error) {
+    if (isUnauthorizedError(error)) {
+      localStorage.removeItem('user');
+      window.location.href = '../login.html';
+      return false;
+    }
+    // Weak network: if we already know they are admin from cache, keep them
+    if (isNetworkOrTimeoutError(error) || (error.response && error.response.status >= 500)) {
+      const cached = getCurrentUser();
+      if (cached && cached.role === 'ADMIN') {
+        console.warn('[auth] Network weak; keeping admin session from cache.');
+        return true;
+      }
+      if (hasJwtCookie() || hasCachedUser()) {
+        // Don't kick admin off the page; allow shell to load, data can retry later
+        console.warn('[auth] Network weak on admin guard; staying on page.');
+        return true;
+      }
+    }
     localStorage.removeItem('user');
     window.location.href = '../login.html';
     return false;
@@ -56,12 +198,41 @@ function isProtectedFrontendPath() {
   return path.includes('/user/') || path.includes('/admin/');
 }
 
+function showAuthWaitOverlay(show) {
+  var id = 'auth-network-wait';
+  var el = document.getElementById(id);
+  if (!show) {
+    if (el) el.remove();
+    return;
+  }
+  if (el) return;
+  el = document.createElement('div');
+  el.id = id;
+  el.setAttribute('role', 'status');
+  el.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);color:#fff;font:500 14px system-ui,sans-serif;';
+  el.innerHTML = '<div style="text-align:center;padding:20px 28px;border-radius:14px;background:#111;border:1px solid #1e1e1e;max-width:280px;">' +
+    '<div style="margin-bottom:10px;font-size:22px;">⏳</div>' +
+    '<div style="margin-bottom:6px;">Connecting to server…</div>' +
+    '<div style="font-size:12px;color:#888;">Slow network detected. Please wait — you will not be logged out.</div>' +
+    '</div>';
+  document.documentElement.appendChild(el);
+}
+
 async function protectCurrentFrontendPage() {
   const path = window.location.pathname || '';
   if (!isProtectedFrontendPath()) return true;
 
   document.documentElement.style.visibility = 'hidden';
-  const allowed = path.includes('/admin/') ? await requireAdmin() : await requireAuthPage();
+  var hadSessionHint = hasJwtCookie() || hasCachedUser();
+  if (hadSessionHint) showAuthWaitOverlay(true);
+
+  var allowed = false;
+  try {
+    allowed = path.includes('/admin/') ? await requireAdmin() : await requireAuthPage();
+  } finally {
+    showAuthWaitOverlay(false);
+  }
+
   if (allowed) document.documentElement.style.visibility = 'visible';
   return allowed;
 }
