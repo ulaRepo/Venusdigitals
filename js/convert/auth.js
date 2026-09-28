@@ -129,7 +129,7 @@ async function isLoggedIn() {
   } catch (error) {
     // Cookie or cached session + pure network failure → treat as still logged in
     // so protectCurrentFrontendPage does not bounce the user to login.
-    if (isNetworkOrTimeoutError(error) && (hasJwtCookie() || hasCachedUser() || justLoggedInRecently())) {
+    if (isNetworkOrTimeoutError(error) && (hasJwtCookie() || hasCachedUser() || justLoggedInRecently() || (typeof localStorage !== 'undefined' && (localStorage.getItem('jwt_token') || localStorage.getItem('token'))))) {
       console.warn('[auth] Network weak; keeping session from cookie/cache/login.');
       return true;
     }
@@ -153,7 +153,12 @@ function getCurrentUser() {
 
 async function logout() {
   try { await api.get('/auth/logout'); } catch (_) {}
-  localStorage.removeItem('user');
+  try {
+    localStorage.removeItem('user');
+    localStorage.removeItem('jwt_token');
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('dg_just_logged_in');
+  } catch (_) {}
   window.location.href = pageLoginPath();
 }
 

@@ -2,14 +2,35 @@
   // const API_BASE_URL = 'http://127.0.0.1:3000';
     const API_BASE_URL = 'https://venusdigital-backend.onrender.com';
   window.API_BASE_URL = API_BASE_URL;
+
+  function getStoredToken() {
+    try {
+      return localStorage.getItem('jwt_token') || localStorage.getItem('token') || '';
+    } catch (_) {
+      return '';
+    }
+  }
+
   window.api = axios.create({
     baseURL: API_BASE_URL,
     withCredentials: true,
-    timeout: 20000,
+    timeout: 25000,
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json'
     }
+  });
+
+  // Always send Bearer token when cookie is missing (cross-origin / SameSite issues)
+  window.api.interceptors.request.use((config) => {
+    const token = getStoredToken();
+    if (token) {
+      config.headers = config.headers || {};
+      if (!config.headers.Authorization && !config.headers.authorization) {
+        config.headers.Authorization = 'Bearer ' + token;
+      }
+    }
+    return config;
   });
 
   function pageLoginPathFromConfig() {
@@ -17,13 +38,18 @@
     return path.includes('/user/') || path.includes('/admin/') ? '../login.html' : './login.html';
   }
 
-  function hasJwtCookieCfg() {
-    try { return /(?:^|;\s*)jwt=/.test(document.cookie || ''); } catch (_) { return false; }
-  }
-
   function isPublicPageCfg() {
     const path = window.location.pathname || '';
     return path === '/' || /(?:index|login|register|forgot-password|reset-password|reset)\.html$/i.test(path);
+  }
+
+  function isAuthLoginRequest(error) {
+    try {
+      const url = String((error.config && error.config.url) || '');
+      return /\/auth\/login\b/.test(url);
+    } catch (_) {
+      return false;
+    }
   }
 
   window.api.interceptors.response.use(
@@ -32,18 +58,33 @@
       const status = error && error.response && error.response.status;
       const noResponse = !error || !error.response;
 
-      // Weak network / timeout / backend unreachable — never force logout redirect
+      // Network / timeout — never force logout
       if (noResponse) {
         return Promise.reject(error);
       }
 
+      // Login endpoint has its own error messages (wrong password, etc.)
+      if (isAuthLoginRequest(error)) {
+        return Promise.reject(error);
+      }
+
       if (status === 401) {
-        localStorage.removeItem('user');
-        // Only bounce to login on a real 401, and only off public pages
-        if (!isPublicPageCfg()) {
-          // If cookie somehow still present, allow one soft path (auth.js retries handle protect)
-          // but definitive 401 from server means token is invalid — redirect
-          window.location.href = pageLoginPathFromConfig();
+        // Do not clear session or redirect if we just logged in and a transient request failed
+        let justIn = false;
+        try {
+          const ts = Number(sessionStorage.getItem('dg_just_logged_in') || 0);
+          justIn = ts && (Date.now() - ts) < 60 * 1000;
+        } catch (_) {}
+
+        if (!justIn) {
+          try {
+            localStorage.removeItem('user');
+            localStorage.removeItem('jwt_token');
+            localStorage.removeItem('token');
+          } catch (_) {}
+          if (!isPublicPageCfg()) {
+            window.location.href = pageLoginPathFromConfig();
+          }
         }
       }
       return Promise.reject(error);
