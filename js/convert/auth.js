@@ -36,6 +36,17 @@ function hasCachedUser() {
   }
 }
 
+/** True for ~3 minutes after a successful login redirect */
+function justLoggedInRecently() {
+  try {
+    const ts = Number(sessionStorage.getItem('dg_just_logged_in') || 0);
+    if (!ts) return false;
+    return (Date.now() - ts) < 3 * 60 * 1000;
+  } catch (_) {
+    return false;
+  }
+}
+
 function isNetworkOrTimeoutError(error) {
   if (!error) return true;
   // No HTTP response = network / CORS / offline / DNS / backend down
@@ -118,8 +129,8 @@ async function isLoggedIn() {
   } catch (error) {
     // Cookie or cached session + pure network failure → treat as still logged in
     // so protectCurrentFrontendPage does not bounce the user to login.
-    if (isNetworkOrTimeoutError(error) && (hasJwtCookie() || hasCachedUser())) {
-      console.warn('[auth] Network weak; keeping session from cookie/cache.');
+    if (isNetworkOrTimeoutError(error) && (hasJwtCookie() || hasCachedUser() || justLoggedInRecently())) {
+      console.warn('[auth] Network weak; keeping session from cookie/cache/login.');
       return true;
     }
     if (isUnauthorizedError(error)) {
@@ -127,7 +138,7 @@ async function isLoggedIn() {
       return false;
     }
     // Unknown error without cookie/cache → not logged in
-    if (!(hasJwtCookie() || hasCachedUser())) {
+    if (!(hasJwtCookie() || hasCachedUser() || justLoggedInRecently())) {
       localStorage.removeItem('user');
       return false;
     }
@@ -150,7 +161,7 @@ async function requireAuthPage() {
   const ok = await isLoggedIn();
   if (!ok) {
     // Only redirect when we are sure there is no valid session
-    if (!(hasJwtCookie() || hasCachedUser())) {
+    if (!(hasJwtCookie() || hasCachedUser() || justLoggedInRecently())) {
       window.location.href = pageLoginPath();
       return false;
     }
