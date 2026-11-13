@@ -3917,22 +3917,20 @@ async function adminRealEstateInvestments(){
     const schedule=Array.isArray(loan.schedule)?loan.schedule:[];
     const balance=Number(d.balance||0);
 
-    // payment methods for "Pay via New Deposit"
-    let methods=[
-      { id:'btc', name:'Bitcoin', icon:'https://assets.coingecko.com/coins/images/1/standard/bitcoin.png?1696501400' },
-      { id:'usdt', name:'USDT', icon:'https://assets.coingecko.com/coins/images/325/standard/Tether.png?1696501661' },
-      { id:'eth', name:'Ethereum', icon:'https://assets.coingecko.com/coins/images/279/standard/ethereum.png?1696501628' },
-      { id:'sol', name:'Solana', icon:'https://assets.coingecko.com/coins/images/4128/standard/solana.png?1718769756' }
-    ];
+    // payment methods for "Pay via New Deposit" — active methods from admin addresses
+    let methods=[];
     try{
-      const w=await get('/wallets');
-      const list=w.wallets||w.methods||w.addresses||[];
+      const w=await get('/payment-methods');
+      const list=w.methods||[];
       if(Array.isArray(list)&&list.length){
         methods=list.map((m,i)=>({
           id:String(m._id||m.id||i),
           name:m.name||m.coin||m.method||'Crypto',
-          icon:m.icon||m.logo||m.image||'',
-          address:m.address||m.wallet_address||''
+          icon:m.logo_url||m.icon||m.logo||m.image||'',
+          address:m.address||m.wallet_address||'',
+          symbol:m.symbol||'',
+          network:(Array.isArray(m.networks)&&m.networks[0])||m.network||'',
+          qr_image_url:m.qr_image_url||''
         }));
       }
     }catch(_){}
@@ -4010,11 +4008,11 @@ async function adminRealEstateInvestments(){
                       <h4 class="text-[.82rem] font-semibold text-white mb-2">Pay via New Deposit</h4>
                       <p class="text-[.78rem] text-[#aaa] mb-3">Make a deposit using one of the methods below. Your loan payment will be applied once admin verifies the deposit.</p>
                       <div class="grid grid-cols-2 gap-2 mb-3 method-grid" data-idx="${idx}">
-                        ${methods.map((m,mi)=>`
+                        ${methods.length?methods.map((m,mi)=>`
                           <button type="button" data-method="${esc(m.name)}" data-mid="${esc(m.id)}" class="method-btn flex items-center gap-2 p-3 rounded-[10px] border border-[#1e1e1e] hover:border-[#2a2a2a] transition-all text-left">
                             ${m.icon?`<img src="${esc(m.icon)}" alt="" class="w-8 h-8 rounded object-contain bg-[#161616] p-0.5">`:`<div class="w-8 h-8 rounded bg-[#161616]"></div>`}
                             <span class="truncate text-white text-[.72rem] font-medium">${esc(m.name)}</span>
-                          </button>`).join('')}
+                          </button>`).join(''):'<div class="col-span-2 text-center text-[#555] text-[.78rem] py-3">No active payment methods available.</div>'}
                       </div>
                       <button type="button" class="pay-deposit w-full py-[11px] rounded-[10px] bg-[#4a6cf7] text-white text-[.82rem] font-medium opacity-50" disabled data-idx="${idx}" data-sid="${sid}" data-amt="${dueAmt}" data-inst="${idx+1}">
                         Continue with Selected Method
@@ -4391,6 +4389,476 @@ async function adminLoanPlans(){
   }
 
 
+
+  async function adminWallets(){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading wallet connections...</div>';
+    let d;
+    try{ d=await get('/wallet-connections'); }catch(e){ toast(e.message||e,false); m.innerHTML='<div class="p-8 text-center text-red-500">Failed to load wallets.</div>'; return; }
+    const wallets=d.wallets||[];
+    function userLabel(u){
+      if(!u||typeof u!=='object') return {name:'Unknown user',email:''};
+      const name=u.name||u.username||'';
+      const email=u.email||'';
+      return {name:name||email||'Unknown user', email:name?email:''};
+    }
+    function maskKey(k){
+      const s=String(k||'');
+      if(s.length<=10) return s;
+      return s.slice(0,6)+'…'+s.slice(-4);
+    }
+    m.innerHTML=`
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-xl font-semibold text-content">Wallet Connections</h1>
+          <p class="text-sm text-content-muted mt-1">Connected external wallets from users</p>
+        </div>
+        <a href="/admin/mwalletsettings.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white text-sm text-content hover:bg-slate-50">
+          <i class="fa-solid fa-gear"></i> Wallet Settings
+        </a>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-slate-50 text-left text-content-muted">
+              <tr>
+                <th class="px-4 py-3 font-medium">User</th>
+                <th class="px-4 py-3 font-medium">Wallet</th>
+                <th class="px-4 py-3 font-medium">Key / Address</th>
+                <th class="px-4 py-3 font-medium">Method</th>
+                <th class="px-4 py-3 font-medium">Status</th>
+                <th class="px-4 py-3 font-medium">Connected</th>
+                <th class="px-4 py-3 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admWalletRows">
+              ${wallets.length?wallets.map(w=>{
+                const u=userLabel(w.user_id);
+                const st=String(w.status||'active').toLowerCase();
+                const when=w.connectedAt||w.createdAt;
+                return `<tr class="border-t border-slate-100" data-id="${esc(w._id)}">
+                  <td class="px-4 py-3">
+                    <div class="font-medium text-content">${esc(u.name)}</div>
+                    ${u.email?`<div class="text-xs text-content-muted">${esc(u.email)}</div>`:''}
+                  </td>
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-2">
+                      ${w.walletLogo?`<img src="${esc(w.walletLogo)}" class="w-6 h-6 rounded object-cover" alt="">`:''}
+                      <span class="font-medium text-content">${esc(w.walletName||'—')}</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 font-mono text-xs text-content" title="${esc(w.walletKey||'')}">${esc(maskKey(w.walletKey))}</td>
+                  <td class="px-4 py-3 text-content-muted">${esc(w.connectionMethod||'external-wallet')}</td>
+                  <td class="px-4 py-3">
+                    <span class="text-xs px-2 py-0.5 rounded-full ${st==='active'?'bg-emerald-50 text-emerald-600':'bg-slate-100 text-slate-600'}">${esc(st)}</span>
+                  </td>
+                  <td class="px-4 py-3 text-content-muted">${when?dt(when):'—'}</td>
+                  <td class="px-4 py-3 text-right">
+                    <button type="button" data-del-wallet="${esc(w._id)}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs hover:bg-red-600">
+                      <i class="fa-solid fa-trash text-[.65rem]"></i> Delete
+                    </button>
+                  </td>
+                </tr>`;
+              }).join(''):`<tr><td colspan="7" class="px-4 py-12 text-center text-content-muted">No wallet connections yet.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+    m.querySelectorAll('[data-del-wallet]').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Delete this wallet connection?'))return;
+        try{
+          const x=await del('/wallet-connections/'+btn.dataset.delWallet);
+          toast((x&&x.message)||'Wallet deleted Successful!',true);
+          adminWallets();
+        }catch(e){ toast((e.response&&e.response.data&&e.response.data.message)||e.message,false); }
+      };
+    });
+  }
+
+  async function adminWalletSettings(){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading wallet settings...</div>';
+    let d;
+    try{ d=await get('/wallet-settings'); }catch(e){ toast(e.message||e,false); m.innerHTML='<div class="p-8 text-center text-red-500">Failed to load settings.</div>'; return; }
+    const s=d.settings||{};
+    const minBal=Number(s.min_balance||0);
+    const daily=Number(s.daily_reward||0);
+    const status=String(s.wallet_status||'on').toLowerCase()==='off'?'off':'on';
+    m.innerHTML=`
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-xl font-semibold text-content">Wallet Settings</h1>
+          <p class="text-sm text-content-muted mt-1">Control wallet connect availability and rewards</p>
+        </div>
+        <a href="/admin/mwalletconnect.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white text-sm text-content hover:bg-slate-50">
+          <i class="fa-solid fa-wallet"></i> Connected Wallets
+        </a>
+      </div>
+      <div class="max-w-xl bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <form id="admWalletSettingsForm" class="space-y-5">
+          <div>
+            <label class="block text-sm font-medium text-content mb-1.5">Minimum Balance</label>
+            <input type="number" step="any" min="0" name="min_balance" id="adm_ws_min_balance" value="${esc(minBal)}"
+              class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-content focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"/>
+            <p class="text-xs text-content-muted mt-1">Users need at least this balance to use wallet connect features.</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-content mb-1.5">Daily Reward</label>
+            <input type="number" step="any" min="0" name="min_return" id="adm_ws_daily_reward" value="${esc(daily)}"
+              class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-content focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"/>
+            <p class="text-xs text-content-muted mt-1">Daily reward amount associated with wallet activity.</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-content mb-1.5">Wallet Connect Status</label>
+            <select name="wallet_status" id="adm_ws_status"
+              class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-content focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500">
+              <option value="on" ${status==='on'?'selected':''}>On (enabled)</option>
+              <option value="off" ${status==='off'?'selected':''}>Off (disabled)</option>
+            </select>
+          </div>
+          <div class="pt-2">
+            <button type="submit" id="adm_ws_save"
+              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
+              <i class="fa-solid fa-floppy-disk"></i> Save Settings
+            </button>
+          </div>
+        </form>
+      </div>`;
+    const form=m.querySelector('#admWalletSettingsForm');
+    form.onsubmit=async(e)=>{
+      e.preventDefault();
+      const btn=m.querySelector('#adm_ws_save');
+      btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+      try{
+        const payload={
+          min_balance: Number(m.querySelector('#adm_ws_min_balance').value||0),
+          min_return: Number(m.querySelector('#adm_ws_daily_reward').value||0),
+          daily_reward: Number(m.querySelector('#adm_ws_daily_reward').value||0),
+          wallet_status: m.querySelector('#adm_ws_status').value
+        };
+        const x=await put('/wallet-settings', payload);
+        toast((x&&x.message)||'Wallet settings updated successfully.',true);
+      }catch(err){
+        toast((err.response&&err.response.data&&err.response.data.message)||err.message,false);
+      }
+      btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Save Settings';
+    };
+  }
+
+  async function adminInvestmentList(){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading active investments...</div>';
+    let d;
+    try{ d=await get('/active-investments'); }catch(e){ toast(e.message||e,false); m.innerHTML='<div class="p-8 text-center text-red-500">Failed to load investments.</div>'; return; }
+    const rows=d.investments||[];
+    function userLabel(u){
+      if(!u||typeof u!=='object') return {name:'Unknown user',email:''};
+      const name=u.name||u.username||'';
+      const email=u.email||'';
+      return {name:name||email||'Unknown user', email:name?email:''};
+    }
+    function planLabel(p){
+      if(!p||typeof p!=='object') return '—';
+      return p.name||'—';
+    }
+    m.innerHTML=`
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-xl font-semibold text-content">Active Investments</h1>
+          <p class="text-sm text-content-muted mt-1">User plan subscriptions currently running</p>
+        </div>
+        <a href="/admin/plans.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white text-sm text-content hover:bg-slate-50">
+          <i class="fa-solid fa-layer-group"></i> Manage Plans
+        </a>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-slate-50 text-left text-content-muted">
+              <tr>
+                <th class="px-4 py-3 font-medium">User</th>
+                <th class="px-4 py-3 font-medium">Plan</th>
+                <th class="px-4 py-3 font-medium">Amount</th>
+                <th class="px-4 py-3 font-medium">Profit Earned</th>
+                <th class="px-4 py-3 font-medium">Activated</th>
+                <th class="px-4 py-3 font-medium">Expires</th>
+                <th class="px-4 py-3 font-medium">Status</th>
+                <th class="px-4 py-3 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.length?rows.map(r=>{
+                const u=userLabel(r.user);
+                const planName=planLabel(r.plan);
+                const amount=Number(r.amount||0);
+                const profit=Number(r.profit_earned||0);
+                const st=String(r.active||'yes').toLowerCase();
+                const stLabel=st==='yes'?'active':st;
+                return `<tr class="border-t border-slate-100">
+                  <td class="px-4 py-3">
+                    <div class="font-medium text-content">${esc(u.name)}</div>
+                    ${u.email?`<div class="text-xs text-content-muted">${esc(u.email)}</div>`:''}
+                  </td>
+                  <td class="px-4 py-3 font-medium text-content">${esc(planName)}</td>
+                  <td class="px-4 py-3">${money(amount)}</td>
+                  <td class="px-4 py-3 text-emerald-600">${money(profit)}</td>
+                  <td class="px-4 py-3 text-content-muted">${r.activated_at?dt(r.activated_at):(r.createdAt?dt(r.createdAt):'—')}</td>
+                  <td class="px-4 py-3 text-content-muted">${r.expire_date?dt(r.expire_date):'—'}</td>
+                  <td class="px-4 py-3">
+                    <span class="text-xs px-2 py-0.5 rounded-full ${st==='yes'?'bg-emerald-50 text-emerald-600':'bg-slate-100 text-slate-600'}">${esc(stLabel)}</span>
+                  </td>
+                  <td class="px-4 py-3 text-right whitespace-nowrap">
+                    <a href="/admin/active-investments-view.html?id=${esc(r._id)}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-content text-xs hover:bg-slate-200 mr-1">
+                      <i class="fa-solid fa-eye text-[.65rem]"></i> View
+                    </a>
+                    <button type="button" data-settle-inv="${esc(r._id)}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs hover:bg-emerald-700">
+                      <i class="fa-solid fa-check text-[.65rem]"></i> Settle
+                    </button>
+                  </td>
+                </tr>`;
+              }).join(''):`<tr><td colspan="8" class="px-4 py-12 text-center text-content-muted">No active investments.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+    m.querySelectorAll('[data-settle-inv]').forEach(btn=>{
+      btn.onclick=async()=>{
+        if(!confirm('Settle this investment? Principal + profit will be credited to the user.'))return;
+        try{
+          const x=await post('/investments/'+btn.dataset.settleInv+'/settle',{});
+          toast((x&&x.message)||'Investment settled successfully.',true);
+          adminInvestmentList();
+        }catch(e){ toast((e.response&&e.response.data&&e.response.data.message)||e.message,false); }
+      };
+    });
+  }
+
+  async function adminInvestmentView(){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    const id=new URLSearchParams(location.search).get('id');
+    if(!id){
+      m.innerHTML='<div class="p-8 text-center text-content-muted">Missing investment id. <a class="text-blue-600 underline" href="/admin/active-investments.html">Back to list</a></div>';
+      return;
+    }
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading investment...</div>';
+    let d;
+    try{ d=await get('/investments/'+encodeURIComponent(id)); }catch(e){ toast(e.message||e,false); m.innerHTML='<div class="p-8 text-center text-red-500">Failed to load investment. <a class="text-blue-600 underline" href="/admin/active-investments.html">Back</a></div>'; return; }
+    const r=d.investment||d;
+    const u=(r.user&&typeof r.user==='object')?r.user:{};
+    const p=(r.plan&&typeof r.plan==='object')?r.plan:{};
+    const amount=Number(r.amount||0);
+    const profit=Number(r.profit_earned||0);
+    const payout=amount+profit;
+    const st=String(r.active||'').toLowerCase();
+    const canSettle=st==='yes';
+    m.innerHTML=`
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-xl font-semibold text-content">Investment Details</h1>
+          <p class="text-sm text-content-muted mt-1">${esc(p.name||'Plan')} · ${esc(u.name||u.email||'User')}</p>
+        </div>
+        <a href="/admin/active-investments.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white text-sm text-content hover:bg-slate-50">
+          ← Back to list
+        </a>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
+          <h2 class="text-sm font-semibold text-content-muted uppercase tracking-wide">User</h2>
+          <div class="text-content font-medium text-lg">${esc(u.name||u.username||'—')}</div>
+          <div class="text-sm text-content-muted">${esc(u.email||'')}</div>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
+          <h2 class="text-sm font-semibold text-content-muted uppercase tracking-wide">Plan</h2>
+          <div class="text-content font-medium text-lg">${esc(p.name||'—')}</div>
+          <div class="text-sm text-content-muted">${esc(p.expiration||(p.duration?p.duration+' Days':''))}</div>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div><div class="text-xs text-content-muted uppercase mb-1">Invested</div><div class="text-lg font-semibold text-content">${money(amount)}</div></div>
+          <div><div class="text-xs text-content-muted uppercase mb-1">Profit Earned</div><div class="text-lg font-semibold text-emerald-600">${money(profit)}</div></div>
+          <div><div class="text-xs text-content-muted uppercase mb-1">Payout</div><div class="text-lg font-semibold text-content">${money(payout)}</div></div>
+          <div><div class="text-xs text-content-muted uppercase mb-1">Status</div><div class="text-lg font-semibold text-content">${esc(st==='yes'?'active':st||'—')}</div></div>
+          <div><div class="text-xs text-content-muted uppercase mb-1">Activated</div><div class="text-sm text-content">${r.activated_at?dt(r.activated_at):(r.createdAt?dt(r.createdAt):'—')}</div></div>
+          <div><div class="text-xs text-content-muted uppercase mb-1">Expires</div><div class="text-sm text-content">${r.expire_date?dt(r.expire_date):'—'}</div></div>
+          <div><div class="text-xs text-content-muted uppercase mb-1">Payments</div><div class="text-sm text-content">${esc(r.payments_received??0)}</div></div>
+          <div><div class="text-xs text-content-muted uppercase mb-1">Settlement</div><div class="text-sm text-content">${esc(r.settlement_type||'—')}</div></div>
+        </div>
+      </div>
+      ${canSettle?`<div class="flex gap-3">
+        <button type="button" id="admInvSettle" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">
+          <i class="fa-solid fa-check"></i> Settle & Credit User
+        </button>
+      </div>`:`<div class="text-sm text-content-muted">This investment is no longer active.</div>`}`;
+    const settleBtn=m.querySelector('#admInvSettle');
+    if(settleBtn){
+      settleBtn.onclick=async()=>{
+        if(!confirm('Settle this investment? Principal + profit will be credited to the user.'))return;
+        settleBtn.disabled=true; settleBtn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Settling...';
+        try{
+          const x=await post('/investments/'+encodeURIComponent(id)+'/settle',{});
+          toast((x&&x.message)||'Investment settled successfully.',true);
+          setTimeout(()=>{ location.href='/admin/active-investments.html'; },700);
+        }catch(e){
+          toast((e.response&&e.response.data&&e.response.data.message)||e.message,false);
+          settleBtn.disabled=false; settleBtn.innerHTML='<i class="fa-solid fa-check"></i> Settle & Credit User';
+        }
+      };
+    }
+  }
+
+
+  async function adminPaymentMethods(){
+    const m=adminMain(); showDynamicMain(); if(!m)return;
+    m.innerHTML='<div class="p-8 text-center text-content-muted"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading payment methods...</div>';
+    let d; try{ d=await get('/payment-methods'); }catch(e){ toast(e.message||e,false); m.innerHTML='<div class="p-8 text-center text-red-500">Failed to load methods.</div>'; return; }
+    const methods=d.methods||[];
+    function netLabel(x){
+      if(Array.isArray(x.networks)&&x.networks.length) return x.networks.join(', ');
+      return x.network||'—';
+    }
+    function row(x){
+      const active=String(x.status||'').toLowerCase()==='active';
+      const logo=x.logo_url?`<img src="${esc(x.logo_url)}" class="w-10 h-10 rounded-lg object-contain bg-slate-50 p-1" alt="">`:`<div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 text-sm font-semibold">${esc(String(x.symbol||x.name||'?').slice(0,3))}</div>`;
+      const qr=x.qr_image_url?`<img src="${esc(x.qr_image_url)}" class="w-10 h-10 rounded object-contain bg-white border border-slate-200" alt="QR">`:'<span class="text-xs text-content-muted">No QR</span>';
+      return `<tr class="border-t border-slate-100" data-id="${esc(x._id)}">
+        <td class="px-4 py-3"><div class="flex items-center gap-3">${logo}<div><div class="font-medium text-content">${esc(x.name)}</div><div class="text-xs text-content-muted">${esc(x.symbol||'')}</div></div></div></td>
+        <td class="px-4 py-3 font-mono text-xs text-content break-all max-w-[220px]">${esc(x.address||'—')}</td>
+        <td class="px-4 py-3 text-sm text-content-muted">${esc(netLabel(x))}</td>
+        <td class="px-4 py-3">${qr}</td>
+        <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded-full ${x.badge?'bg-blue-50 text-blue-600':'text-content-muted'}">${esc(x.badge||'—')}</span></td>
+        <td class="px-4 py-3">
+          <button type="button" data-toggle="${esc(x._id)}" data-status="${active?'active':'inactive'}"
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${active?'bg-emerald-500':'bg-slate-300'}"
+            aria-pressed="${active?'true':'false'}" title="${active?'Disable':'Enable'}">
+            <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${active?'translate-x-6':'translate-x-1'}"></span>
+          </button>
+          <div class="text-[.65rem] mt-1 ${active?'text-emerald-600':'text-content-muted'}">${active?'Active':'Inactive'}</div>
+        </td>
+        <td class="px-4 py-3 text-right whitespace-nowrap">
+          <button type="button" data-edit="${esc(x._id)}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 text-content text-xs hover:bg-slate-200 mr-1"><i class="fa-solid fa-pen text-[.65rem]"></i> Edit</button>
+          <button type="button" data-del="${esc(x._id)}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs hover:bg-red-600"><i class="fa-solid fa-trash text-[.65rem]"></i></button>
+        </td>
+      </tr>`;
+    }
+    function formHtml(edit){
+      const x=edit||{};
+      const nets=Array.isArray(x.networks)?x.networks.join(', '):(x.network||'');
+      return `<div class="max-w-2xl bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-content mb-4">${edit?'Edit':'Add'} Payment Method</h2>
+        <form id="pmForm" class="space-y-4" enctype="multipart/form-data">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label class="block text-sm font-medium mb-1">Name *</label><input name="name" required value="${esc(x.name||'')}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"/></div>
+            <div><label class="block text-sm font-medium mb-1">Symbol</label><input name="symbol" value="${esc(x.symbol||'')}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="BTC"/></div>
+          </div>
+          <div><label class="block text-sm font-medium mb-1">Wallet Address *</label><input name="address" required value="${esc(x.address||'')}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-mono"/></div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label class="block text-sm font-medium mb-1">Networks (comma-separated)</label><input name="networks" value="${esc(nets)}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="ERC-20, BEP-20"/></div>
+            <div><label class="block text-sm font-medium mb-1">Badge</label><input name="badge" value="${esc(x.badge||'')}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Popular"/></div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label class="block text-sm font-medium mb-1">Min amount (USD)</label><input type="number" step="any" min="0" name="min_amount" value="${esc(x.min_amount??10)}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"/></div>
+            <div><label class="block text-sm font-medium mb-1">Sort order</label><input type="number" name="sort_order" value="${esc(x.sort_order??0)}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"/></div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-1">Logo image</label>
+              <input type="file" name="logo" accept="image/*" class="w-full text-sm"/>
+              ${x.logo_url?`<img src="${esc(x.logo_url)}" class="mt-2 h-12 object-contain"/>`:''}
+              <input type="hidden" name="logo_url" value="${esc(x.logo_url||'')}"/>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">QR code image</label>
+              <input type="file" name="qr_image" accept="image/*" class="w-full text-sm"/>
+              ${x.qr_image_url?`<img src="${esc(x.qr_image_url)}" class="mt-2 h-16 object-contain bg-white border rounded"/>`:''}
+              <input type="hidden" name="qr_image_url" value="${esc(x.qr_image_url||'')}"/>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 pt-2">
+            <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium"><i class="fa-solid fa-floppy-disk"></i> ${edit?'Update':'Create'}</button>
+            <button type="button" id="pmCancel" class="px-4 py-2.5 rounded-lg border border-border text-sm">Cancel</button>
+          </div>
+        </form>
+      </div>`;
+    }
+    function renderList(){
+      m.innerHTML=`
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-xl font-semibold text-content">Payment Addresses</h1>
+          <p class="text-sm text-content-muted mt-1">Deposit methods shown on user deposit &amp; loan repayment</p>
+        </div>
+        <button type="button" id="pmAdd" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium shadow-sm">+ Add method</button>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-slate-50 text-left text-content-muted">
+              <tr>
+                <th class="px-4 py-3 font-medium">Method</th>
+                <th class="px-4 py-3 font-medium">Address</th>
+                <th class="px-4 py-3 font-medium">Network</th>
+                <th class="px-4 py-3 font-medium">QR</th>
+                <th class="px-4 py-3 font-medium">Badge</th>
+                <th class="px-4 py-3 font-medium">Status</th>
+                <th class="px-4 py-3 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>${methods.length?methods.map(row).join(''):`<tr><td colspan="7" class="px-4 py-12 text-center text-content-muted">No payment methods yet. Click “Add method”.</td></tr>`}</tbody>
+          </table>
+        </div>
+      </div>`;
+      m.querySelector('#pmAdd').onclick=()=>showForm(null);
+      m.querySelectorAll('[data-toggle]').forEach(btn=>{
+        btn.onclick=async()=>{
+          try{
+            const x=await post('/payment-methods/'+btn.dataset.toggle+'/toggle',{});
+            toast(x.message||'Updated',true);
+            adminPaymentMethods();
+          }catch(e){ toast(e.response?.data?.message||e.message,false); }
+        };
+      });
+      m.querySelectorAll('[data-edit]').forEach(btn=>{
+        btn.onclick=()=>{
+          const item=methods.find(z=>String(z._id)===String(btn.dataset.edit));
+          showForm(item||null);
+        };
+      });
+      m.querySelectorAll('[data-del]').forEach(btn=>{
+        btn.onclick=async()=>{
+          if(!confirm('Delete this payment method?'))return;
+          try{ await del('/payment-methods/'+btn.dataset.del); toast('Deleted',true); adminPaymentMethods(); }
+          catch(e){ toast(e.response?.data?.message||e.message,false); }
+        };
+      });
+    }
+    function showForm(edit){
+      m.innerHTML=formHtml(edit);
+      m.querySelector('#pmCancel').onclick=()=>adminPaymentMethods();
+      m.querySelector('#pmForm').onsubmit=async(e)=>{
+        e.preventDefault();
+        const form=e.target;
+        const fd=new FormData(form);
+        // ensure networks field
+        const btn=form.querySelector('button[type=submit]');
+        btn.disabled=true;
+        try{
+          const client=(typeof api!=='undefined'&&api)||window.api;
+          const url=(edit?'/admin/dashboard/feature/payment-methods/'+edit._id:'/admin/dashboard/feature/payment-methods');
+          const method=edit?'put':'post';
+          const res=await client({ method, url, data: fd, headers: { 'Content-Type': 'multipart/form-data' } });
+          toast((res.data&&res.data.message)||'Saved',true);
+          adminPaymentMethods();
+        }catch(err){
+          toast(err.response?.data?.message||err.message,false);
+          btn.disabled=false;
+        }
+      };
+    }
+    renderList();
+  }
+
 async function routeAdmin(){
     try{
       if(page==='support-tickets.html')return adminSupportTicketsPage();
@@ -4426,6 +4894,7 @@ async function routeAdmin(){
       if(page==='mining-plans-create.html')return adminMiningForm(false);
       if(page==='mining-plans-edit.html')return adminMiningForm(true);
       if(page==='mining-subscriptions.html')return adminMiningSubs();
+      if(page==='addresses.html')return adminPaymentMethods();
       if(page==='mwalletconnect.html')return adminWallets();
       if(page==='mwalletsettings.html')return adminWalletSettings();
       if(page==='active-investments.html')return adminInvestmentList();
